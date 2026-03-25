@@ -1,0 +1,41 @@
+{
+  "name": "delphi-dev",
+  "owner": {
+    "name": "Adriano Santos",
+    "email": "adrianosantospro@gmail.com"
+  },
+  "metadata": {
+    "description": "Delphi development expert for Claude Code — applies Delphi Style Guide, Clean Code, and SOLID patterns automatically."
+  },
+  "plugins": [
+    {
+      "name": "delphi-dev",
+      "source": {
+        "source": "github",
+        "repo": "adrianosantostreina/delphi-dev"
+      },
+      "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, and project scaffolding.",
+      "version": "1.1.0",
+      "author": {
+        "name": "Adriano Santos",
+        "email": "adrianosantospro@gmail.com"
+      },
+      "homepage": "https://github.com/adrianosantostreina/delphi-dev",
+      "repository": "https://github.com/adrianosantostreina/delphi-dev",
+      "license": "MIT",
+      "keywords": [
+        "delphi",
+        "object-pascal",
+        "clean-code",
+        "style-guide",
+        "code-review",
+        "audit",
+        "firemonkey",
+        "vcl",
+        "firedac",
+        "rad-studio"
+      ],
+      "category": "development"
+    }
+  ]
+}

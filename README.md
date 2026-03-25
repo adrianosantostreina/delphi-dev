@@ -32,7 +32,8 @@
 
 **Via GitHub (before marketplace approval):**
 ```bash
-/plugin install delphi-dev@github:adrianosantostreina/delphi-dev
+/plugin marketplace add adrianosantostreina/delphi-dev
+/plugin install delphi-dev@delphi-dev
 ```
 
 ---
