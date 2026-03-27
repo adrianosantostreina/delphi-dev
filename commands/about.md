@@ -6,7 +6,7 @@ Exiba as seguintes informações formatadas sobre o plugin delphi-dev:
 
 **delphi-dev** — Claude Code Plugin
 
-- **Versão:** 1.1.1
+- **Versão:** 1.2.0
 - **Autor:** Adriano Santos
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
@@ -29,6 +29,8 @@ aplica automaticamente o Delphi Style Guide, Clean Code e padrões SOLID — sem
 | `/review` | Revisão rápida de código — detecta violações e sugere correções |
 | `/write` | Escreve código novo com todos os padrões aplicados automaticamente |
 | `/new-project` | Scaffold de novo projeto com estrutura de pastas padronizada |
+| `/spec` | Cria documento de especificação de software (SPEC) do projeto ou módulo |
+| `/tdd` | Gera suite completa de testes unitários DUnitX para o projeto |
 | `/about` | Exibe estas informações |
 
 ---
