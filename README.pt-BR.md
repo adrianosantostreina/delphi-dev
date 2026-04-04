@@ -28,12 +28,7 @@
 
 ## Instalação
 
-**Via marketplace do Claude Code:**
-```bash
-/plugin install delphi-dev
-```
-
-**Via GitHub (antes da aprovação no marketplace):**
+**No Claude Code (VS Code, Cursor, Windsurf, etc.):**
 ```bash
 /plugin marketplace add adrianosantostreina/delphi-dev
 /plugin install delphi-dev@delphi-dev
@@ -45,6 +40,8 @@ claude plugin marketplace add adrianosantostreina/delphi-dev
 claude plugin install delphi-dev@delphi-dev
 ```
 
+### Após a instalação
+
 Após rodar o comando de instalação, um menu aparece pedindo o escopo da instalação:
 
 | Opção | Quando usar |
@@ -53,14 +50,29 @@ Após rodar o comando de instalação, um menu aparece pedindo o escopo da insta
 | **Install for all collaborators (project scope)** | Adiciona o plugin ao `.claude/settings.json` para que todos que clonarem o repo tenham acesso |
 | **Install for you, in this repo only (local scope)** | Disponível apenas no projeto atual, ignorado pelo git |
 
-> **Observação:** Após confirmar a instalação no menu, o plugin é instalado silenciosamente — nenhuma mensagem de confirmação é exibida. Para verificar se a instalação foi concluída, acesse a aba **Installed** no painel do `/plugin`.
+> **Observação:** Após confirmar a instalação no menu, o plugin é instalado silenciosamente — nenhuma mensagem de confirmação é exibida.
+
+**Verificar a versão instalada:**
+```
+/about
+```
+A versão atual deve ser **1.3.0**.
 
 > **Dica (Windows):** Se aparecer o erro "Host key verification failed", rode isso uma vez no terminal antes de instalar:
 > ```powershell
 > git config --global url."https://github.com/".insteadOf git@github.com:
 > ```
 
-**Desinstalando:**
+### Atualizando
+
+Para atualizar para a versão mais recente, desinstale e reinstale:
+```bash
+/plugin uninstall delphi-dev
+/plugin install delphi-dev@delphi-dev
+```
+
+### Desinstalando
+
 ```bash
 /plugin uninstall delphi-dev
 /plugin marketplace remove delphi-dev
