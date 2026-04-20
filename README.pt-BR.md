@@ -56,7 +56,7 @@ Após rodar o comando de instalação, um menu aparece pedindo o escopo da insta
 ```
 /about
 ```
-A versão atual deve ser **1.3.0**.
+A versão atual deve ser **1.4.0**.
 
 > **Dica (Windows):** Se aparecer o erro "Host key verification failed", rode isso uma vez no terminal antes de instalar:
 > ```powershell

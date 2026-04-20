@@ -56,7 +56,7 @@ After running the install command, a menu will appear asking for the installatio
 ```
 /about
 ```
-The current version should be **1.3.0**.
+The current version should be **1.4.0**.
 
 > **Tip (Windows):** If you get a "Host key verification failed" error, run this once in your terminal before installing:
 > ```powershell
