@@ -86,6 +86,31 @@ claude plugin marketplace remove delphi-dev
 
 ---
 
+## Idioma de Saída
+
+O **delphi-dev** suporta **pt-BR** (padrão) e **en-US** em tudo o que ele apresenta a você — laudos técnicos, documentos SPEC, revisões de código, perguntas e notificações.
+
+O plugin detecta automaticamente o idioma da sua **primeira mensagem** na sessão e responde nesse idioma. Você pode trocar a qualquer momento com um override explícito:
+
+- `responda em português` / `em português por favor` → pt-BR
+- `respond in English` / `in English please` / `switch to English` → en-US
+
+O que muda com a seleção de idioma:
+
+- **Templates de relatório** — `/audit` carrega `estrutura-laudo.en.md` para inglês e `estrutura-laudo.md` para português; `/spec` faz o mesmo com `spec-template[.en].md`.
+- **Labels de severidade / classificação** — ex.: `🟢 BOM / 🟡 REGULAR / 🟠 CRÍTICO / 🔴 INVIÁVEL` (pt-BR) vs. `🟢 GOOD / 🟡 FAIR / 🟠 CRITICAL / 🔴 NOT VIABLE` (en-US).
+- **Notificações** — ex.: `✅ Testes criados em TestePedidoService.pas — 7 casos de teste` vs. equivalente em inglês.
+- **Toda a prosa explicativa** em `/review`, `/write`, `/new-project`, `/tdd` e `/about`.
+
+O que **não** muda com o idioma:
+
+- **Identificadores Delphi nos exemplos de código** (`FNome`, `ACliente`, `BuscarPorCodigo`) — eles ilustram a própria convenção de nomenclatura.
+- **Prefixos de código** (`F`, `A`, `L`, `C_`, `T`, `I`, `E`).
+- **Nomes de métodos de teste** (`Test_<Metodo>_<Cenario>`).
+- **IDs de requisitos em SPECs** (`RF-001`, `RNF-001`, `RN-001`, `UC-001`).
+
+---
+
 ## Padrões Aplicados Automaticamente
 
 ### Prefixos

@@ -18,7 +18,11 @@ evitando que arquivos binarios, compilados e de configuracao de IDE sejam lidos 
 ## Idioma
 
 Detecte o idioma da primeira mensagem do usuario e responda **sempre nesse idioma**.
-Padrao: portugues brasileiro.
+Padrao: portugues brasileiro (pt-BR). Idiomas suportados: pt-BR, en-US.
+
+Honre overrides explicitos:
+- "respond in English" / "in English please" → en-US
+- "responda em portugues" → pt-BR
 
 ## Protocolo de Execucao Automatica
 
@@ -29,8 +33,9 @@ Verificar se existe `.claudeignore` na raiz do projeto.
 
 ### PASSO 2A — Se NAO existir
 Criar o arquivo `.claudeignore` imediatamente com o conteudo padrao abaixo.
-Em seguida, notificar o usuario:
+Em seguida, notificar o usuario no idioma selecionado.
 
+**pt-BR:**
 ```
 ✅ .claudeignore criado automaticamente.
 Arquivos ignorados para economizar tokens:
@@ -42,9 +47,23 @@ Arquivos ignorados para economizar tokens:
 - Historico de IDE: __history/
 ```
 
+**en-US:**
+```
+✅ .claudeignore created automatically.
+Files ignored to save tokens:
+- Binaries and compiled output: .dcu, .exe, .dll, .bpl, .dcp, .rsm
+- Resources: .res, .dres
+- IDE configuration: .dproj, .dof, .cfg, .local
+- Temporary files: .~*, .map, .drc
+- Build outputs: Win32/, Win64/, Android/, iOSDevice64/, OSX64/
+- IDE history: __history/
+```
+
 ### PASSO 2B — Se JA existir mas incompleto
-Comparar com o padrao abaixo. Se faltar entradas relevantes, sugerir atualizacao:
-"Seu .claudeignore nao inclui [X]. Deseja que eu atualize?"
+Comparar com o padrao abaixo. Se faltar entradas relevantes, sugerir atualizacao
+no idioma selecionado:
+- pt-BR → "Seu .claudeignore nao inclui [X]. Deseja que eu atualize?"
+- en-US → "Your .claudeignore is missing [X]. Would you like me to update it?"
 
 ### PASSO 3 — Nao alterar arquivos de codigo-fonte
 O `.claudeignore` nunca deve ignorar: `.pas`, `.dfm`, `.dpr`, `.dpk`, `.inc`

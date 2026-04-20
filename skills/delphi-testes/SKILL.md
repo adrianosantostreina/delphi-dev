@@ -20,7 +20,15 @@ DUnitX, TTestFixture, isolamento de dependencias e boas praticas de TDD.
 ## Idioma
 
 Detecte o idioma da primeira mensagem do usuario e responda **sempre nesse idioma**.
-Padrao: portugues brasileiro.
+Padrao: portugues brasileiro (pt-BR). Idiomas suportados: pt-BR, en-US.
+
+Honre overrides explicitos:
+- "respond in English" / "in English please" → en-US
+- "responda em portugues" → pt-BR
+
+Os nomes de metodos de teste (`Test_<Metodo>_<Cenario>`) e identificadores Delphi
+permanecem no padrao do projeto independentemente do idioma; apenas as mensagens
+de status/notificacao para o usuario sao traduzidas.
 
 ## Framework: DUnitX
 
@@ -137,7 +145,9 @@ Para cada metodo publico, crie casos de teste para:
 1. Receber a classe/unit recem-criada
 2. Analisar os metodos publicos
 3. Gerar testes automaticamente sem perguntar (modo silencioso)
-4. Notificar o usuario: "✅ Testes criados em `Teste[NomeDaClasse].pas` — N casos de teste"
+4. Notificar o usuario no idioma selecionado:
+   - pt-BR → "✅ Testes criados em `Teste[NomeDaClasse].pas` — N casos de teste"
+   - en-US → "✅ Tests created in `Teste[ClassName].pas` — N test cases"
 
 ## Prefixos e Padroes Delphi (aplicar nos testes tambem)
 

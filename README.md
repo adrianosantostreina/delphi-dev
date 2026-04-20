@@ -86,6 +86,31 @@ claude plugin marketplace remove delphi-dev
 
 ---
 
+## Output Language
+
+**delphi-dev** supports both **pt-BR** (default) and **en-US** for everything it shows you — audit reports, SPEC documents, code reviews, prompts, and notifications.
+
+The plugin auto-detects the language of your **first message** in a session and responds in that language. You can switch any time with an explicit override:
+
+- `respond in English` / `in English please` / `switch to English` → en-US
+- `responda em português` / `em português por favor` → pt-BR
+
+What changes with the language selection:
+
+- **Report templates** — `/audit` loads `estrutura-laudo.en.md` for English, `estrutura-laudo.md` for Portuguese; `/spec` does the same with `spec-template[.en].md`.
+- **Severity / classification labels** — e.g. `🟢 GOOD / 🟡 FAIR / 🟠 CRITICAL / 🔴 NOT VIABLE` (en-US) vs. `🟢 BOM / 🟡 REGULAR / 🟠 CRÍTICO / 🔴 INVIÁVEL` (pt-BR).
+- **Notifications** — e.g. `✅ Tests created in TestePedidoService.pas — 7 test cases` vs. the pt-BR equivalent.
+- **All explanatory prose** in `/review`, `/write`, `/new-project`, `/tdd`, and `/about`.
+
+What does **not** change with language:
+
+- **Delphi identifiers in example code** (`FNome`, `ACliente`, `BuscarPorCodigo`) — these illustrate the naming convention itself.
+- **Code prefixes** (`F`, `A`, `L`, `C_`, `T`, `I`, `E`).
+- **Test method names** (`Test_<Method>_<Scenario>`).
+- **Requirement IDs in SPECs** (`RF-001`, `RNF-001`, `RN-001`, `UC-001`).
+
+---
+
 ## Standards Applied Automatically
 
 ### Prefixes

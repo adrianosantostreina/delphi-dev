@@ -5,7 +5,10 @@ description: Generates DUnitX unit tests for the entire Delphi project or a spec
 Inicie a criacao de testes unitarios DUnitX para o projeto Delphi atual.
 
 **Idioma:** Detecte o idioma do usuario e responda sempre nesse idioma.
-Padrao: portugues brasileiro.
+Padrao: pt-BR. Idiomas suportados: pt-BR, en-US.
+Honre overrides: "respond in English" / "responda em portugues".
+Identificadores Delphi (nomes de teste, fields, classes) seguem a convencao do
+projeto e nao sao traduzidos — apenas a prosa, propostas e notificacoes.
 
 Este comando opera em **Fase 1 (setup inicial)**:
 

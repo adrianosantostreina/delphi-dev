@@ -22,7 +22,19 @@ Uma SPEC cobre **o projeto inteiro ou um modulo de negocio**. Nunca cubra uma un
 ## Idioma
 
 Detecte o idioma da primeira mensagem do usuario e responda **sempre nesse idioma**.
-Padrao: portugues brasileiro.
+Padrao: portugues brasileiro (pt-BR). Idiomas suportados: pt-BR, en-US.
+
+Honre overrides explicitos:
+- "respond in English" / "in English please" → en-US
+- "responda em portugues" → pt-BR
+
+**Selecao do template da SPEC:**
+- pt-BR → `references/spec-template.md`
+- en-US → `references/spec-template.en.md`
+
+Os marcadores de inferencia tambem seguem o idioma:
+- pt-BR → `[INFERIDO]`
+- en-US → `[INFERRED]`
 
 ## Protocolo de Geracao de SPEC
 
@@ -48,9 +60,14 @@ Mapeie as seguintes informacoes diretamente do codigo:
 - **Restricoes Tecnicas:** versao Delphi, banco de dados, plataforma alvo (Win32/Win64/Android/iOS)
 
 ### 4. GENERATE
-- Preencha **todas as secoes** do template `references/spec-template.md` com as informacoes extraidas.
-- Marque com `[INFERIDO]` qualquer item cuja intencao nao esteja explicita no codigo (ex: regra de negocio deduzida de uma validacao sem comentario).
-- Nao deixe secoes em branco: se uma secao nao se aplicar, escreva "Nao identificado no codigo-fonte."
+- Carregue o template do idioma selecionado:
+  - pt-BR → `references/spec-template.md`
+  - en-US → `references/spec-template.en.md`
+- Preencha **todas as secoes** com as informacoes extraidas.
+- Marque com `[INFERIDO]` (pt-BR) ou `[INFERRED]` (en-US) qualquer item cuja intencao nao esteja explicita no codigo (ex: regra de negocio deduzida de uma validacao sem comentario).
+- Nao deixe secoes em branco. Texto de placeholder por idioma:
+  - pt-BR → "Nao identificado no codigo-fonte."
+  - en-US → "Not identified in source code."
 
 ### 5. SAVE
 - Grave o documento como `SPEC.md` na raiz do projeto (diretorio de trabalho atual).
@@ -65,9 +82,9 @@ Mapeie as seguintes informacoes diretamente do codigo:
 
 ## Template
 
-Use o template completo em `references/spec-template.md`.
-
-Carregue o arquivo de referencia antes de iniciar a geracao do documento.
+Carregue o template do idioma selecionado antes de iniciar a geracao:
+- pt-BR → `references/spec-template.md`
+- en-US → `references/spec-template.en.md`
 
 ## Convencoes de Numeracao
 
@@ -87,4 +104,5 @@ Carregue o arquivo de referencia antes de iniciar a geracao do documento.
 
 ## Referencias
 
-- `references/spec-template.md`: Template completo com todas as secoes obrigatorias
+- `references/spec-template.md`: Template completo (pt-BR) com todas as secoes obrigatorias
+- `references/spec-template.en.md`: Template completo (en-US)

@@ -31,7 +31,15 @@ limpos, isolados e confiáveis que seguem os mesmos padroes de qualidade do codi
 ## Idioma
 
 Detecte o idioma da primeira mensagem do usuario e responda **sempre nesse idioma**.
-Padrao: portugues brasileiro.
+Padrao: portugues brasileiro (pt-BR). Idiomas suportados: pt-BR, en-US.
+
+Honre overrides explicitos:
+- "respond in English" / "in English please" → en-US
+- "responda em portugues" → pt-BR
+
+Identificadores Delphi (nomes de classes, metodos de teste, fields) seguem o padrao
+do projeto e nao mudam com o idioma — apenas mensagens, propostas de suite e
+notificacoes para o usuario sao traduzidas.
 
 ## Dois Modos de Operacao
 
@@ -54,8 +62,9 @@ Identificar o que pode e deve ser testado (prioridade):
 Ignorar: Forms (TForm), DataModules, units de infraestrutura sem logica.
 
 ### PASSO 2 — Proposta da Suite
-Apresentar ao usuario a lista de casos de teste por classe:
+Apresentar ao usuario a lista de casos de teste por classe no idioma selecionado.
 
+**pt-BR:**
 ```
 Suite de Testes Proposta:
 
@@ -74,6 +83,29 @@ Suite de Testes Proposta:
 
 Deseja prosseguir com a geracao?
 ```
+
+**en-US:**
+```
+Proposed Test Suite:
+
+[TPedidoService] — 7 cases
+  ✓ Test_CriarPedido_DadosValidos_RetornaPedidoCriado
+  ✓ Test_CriarPedido_ClienteIdZero_LancaExcecao
+  ✓ Test_CriarPedido_SemEstoque_LancaExcecao
+  ✓ Test_CancelarPedido_PedidoExistente_Cancela
+  ✓ Test_CancelarPedido_PedidoNaoEncontrado_LancaExcecao
+  ✓ Test_BuscarPorId_IdValido_RetornaPedido
+  ✓ Test_BuscarPorId_IdZero_LancaExcecao
+
+[TClienteService] — 5 cases
+  ✓ Test_Salvar_ClienteValido_Salva
+  ...
+
+Proceed with generation?
+```
+
+Os identificadores Delphi nos exemplos acima seguem o estilo do projeto e nao sao
+traduzidos — apenas o texto ao redor (`Suite Proposta`, `casos`, pergunta final).
 
 ### PASSO 3 — Aguardar Aprovacao
 Somente gerar o codigo apos confirmacao do usuario.
@@ -94,10 +126,23 @@ Nao interromper o usuario. Executar silenciosamente:
 2. Analisar os metodos publicos da interface
 3. Gerar automaticamente o arquivo `Teste[NomeDaClasse].pas`
 4. Cobrir: cenario feliz, edge cases, excecoes esperadas para cada metodo publico
-5. Notificar o usuario ao final:
+5. Notificar o usuario ao final no idioma selecionado.
 
+**pt-BR:**
 ```
 ✅ Testes criados em TestePedidoService.pas — 7 casos de teste
+   Test_CriarPedido_DadosValidos_RetornaPedidoCriado
+   Test_CriarPedido_ClienteIdZero_LancaExcecao
+   Test_CriarPedido_SemEstoque_LancaExcecao
+   Test_CancelarPedido_PedidoExistente_Cancela
+   Test_CancelarPedido_PedidoNaoEncontrado_LancaExcecao
+   Test_BuscarPorId_IdValido_RetornaPedido
+   Test_BuscarPorId_IdZero_LancaExcecao
+```
+
+**en-US:**
+```
+✅ Tests created in TestePedidoService.pas — 7 test cases
    Test_CriarPedido_DadosValidos_RetornaPedidoCriado
    Test_CriarPedido_ClienteIdZero_LancaExcecao
    Test_CriarPedido_SemEstoque_LancaExcecao

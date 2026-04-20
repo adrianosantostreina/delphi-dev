@@ -4,6 +4,11 @@ description: Scaffold de novo projeto Delphi com estrutura de pastas e arquivos 
 
 Crie a estrutura inicial de um novo projeto Delphi seguindo boas práticas de arquitetura.
 
+**Idioma de saída:** Detecte o idioma da primeira mensagem do usuário e conduza
+o levantamento e as explicações nesse idioma. Padrão: pt-BR. Suportados: pt-BR, en-US.
+Honre overrides: "respond in English" / "responda em português".
+Nomes de pastas e arquivos do scaffold seguem a convenção e não são traduzidos.
+
 **Passo 1 — Levantar requisitos**
 
 Pergunte ao usuário:

@@ -4,6 +4,11 @@ description: Inicia sessão de escrita de código Delphi novo com todos os padr�
 
 Inicie uma sessão de escrita de código Delphi padronizado.
 
+**Idioma de saída:** Detecte o idioma da primeira mensagem do usuário e produza
+perguntas, propostas e explicações nesse idioma. Padrão: pt-BR. Suportados: pt-BR, en-US.
+Honre overrides: "respond in English" / "responda em português".
+Identificadores Delphi seguem a convenção do projeto e não são traduzidos.
+
 **Passo 1 — Entender o que será criado**
 
 Pergunte ao usuário (se não informado):

@@ -9,7 +9,12 @@ codigo-fonte do projeto Delphi no diretorio de trabalho atual.
 Nunca para uma unica unit ou classe.
 
 **Idioma:** Detecte o idioma do usuario e responda sempre nesse idioma.
-Padrao: portugues brasileiro.
+Padrao: pt-BR. Idiomas suportados: pt-BR, en-US.
+Honre overrides: "respond in English" / "responda em portugues".
+
+**Selecao do template:**
+- pt-BR → `references/spec-template.md`
+- en-US → `references/spec-template.en.md`
 
 Siga este protocolo sem interromper o usuario com perguntas:
 
@@ -30,9 +35,11 @@ Siga este protocolo sem interromper o usuario com perguntas:
    - Integracoes (HTTP, COM, DLL, WebService)
    - Restricoes Tecnicas (versao Delphi, banco, SO alvo)
 
-4. **GENERATE** — Preencha todas as secoes do template carregando a skill `delphi-spec`
-   e o arquivo `references/spec-template.md`. Marque com `[INFERIDO]` itens cuja intencao
-   nao esteja explicita no codigo. Nunca deixe secoes em branco.
+4. **GENERATE** — Preencha todas as secoes do template do idioma selecionado:
+   - pt-BR → `references/spec-template.md` — marque inferencias com `[INFERIDO]`
+   - en-US → `references/spec-template.en.md` — marque inferencias com `[INFERRED]`
+   Nunca deixe secoes em branco (use "Nao identificado no codigo-fonte." / "Not
+   identified in source code.").
 
 5. **SAVE** — Grave o documento como `SPEC.md` na raiz do projeto.
 

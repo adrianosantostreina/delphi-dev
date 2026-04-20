@@ -5,6 +5,14 @@ description: Gera laudo técnico profissional completo de um projeto Delphi
 Execute um laudo técnico completo do projeto Delphi atual ou dos arquivos
 informados pelo usuário.
 
+**Idioma de saída:** Detecte o idioma da primeira mensagem do usuário e gere o
+laudo nesse idioma. Padrão: pt-BR. Idiomas suportados: pt-BR, en-US.
+Honre overrides: "respond in English" / "responda em português".
+
+Carregue o template do idioma selecionado:
+- pt-BR → `references/estrutura-laudo.md`
+- en-US → `references/estrutura-laudo.en.md`
+
 Siga este protocolo:
 
 1. **Levantamento** — colete: versão do Delphi, banco de dados, componente de
