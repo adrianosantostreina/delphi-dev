@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffolds a new project with standardized layered folder structure |
 | **`/spec`** | Analyzes the current project source code and auto-generates a complete `SPEC.md` |
 | **`/tdd`** | Generates a complete DUnitX unit test suite for the project |
+| **`/dashboard`** | Displays GitHub repository metrics — stars, forks, issues, PRs, commits, releases, contributors |
 | **`/about`** | Displays plugin info, version, and available commands |
 
 ---
@@ -56,7 +57,7 @@ After running the install command, a menu will appear asking for the installatio
 ```
 /about
 ```
-The current version should be **1.4.0**.
+The current version should be **1.5.0**.
 
 > **Tip (Windows):** If you get a "Host key verification failed" error, run this once in your terminal before installing:
 > ```powershell
@@ -168,6 +169,12 @@ What does **not** change with language:
 | `delphi-writer` | Writes complete, production-ready Delphi code following all standards |
 | `delphi-spec-writer` | Generates the SPEC document from source code analysis |
 | `delphi-tester` | Creates DUnitX unit test suites for Delphi classes |
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for what is planned and how to influence priorities. Phases under discussion include automatic encoding handling (UTF-8/BOM), mobile FMX scaffolding, Spring4D dependency injection, and a build/validation pipeline that lets Claude actually compile and verify the code it generates.
 
 ---
 

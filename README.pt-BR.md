@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffold de novo projeto com estrutura de pastas em camadas padronizada |
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
+| **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
 
 ---
@@ -56,7 +57,7 @@ Após rodar o comando de instalação, um menu aparece pedindo o escopo da insta
 ```
 /about
 ```
-A versão atual deve ser **1.4.0**.
+A versão atual deve ser **1.5.0**.
 
 > **Dica (Windows):** Se aparecer o erro "Host key verification failed", rode isso uma vez no terminal antes de instalar:
 > ```powershell
@@ -168,6 +169,12 @@ O que **não** muda com o idioma:
 | `delphi-writer` | Escreve código Delphi completo e pronto para produção seguindo todos os padrões |
 | `delphi-spec-writer` | Gera o documento SPEC a partir da análise do código-fonte |
 | `delphi-tester` | Cria suites de testes unitários DUnitX para classes Delphi |
+
+---
+
+## Roadmap
+
+Veja [ROADMAP.pt-BR.md](ROADMAP.pt-BR.md) para o que está planejado e como influenciar prioridades. Fases em discussão incluem tratamento automático de encoding (UTF-8/BOM), scaffold mobile FMX, injeção de dependência com Spring4D, e um pipeline de build/validação que permite ao Claude efetivamente compilar e verificar o código que gera.
 
 ---
 

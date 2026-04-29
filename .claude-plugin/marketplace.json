@@ -15,7 +15,7 @@
         "url": "https://github.com/adrianosantostreina/delphi-dev.git"
       },
       "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, and project scaffolding.",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "author": {
         "name": "Adriano Santos",
         "email": "adrianosantospro@gmail.com"
