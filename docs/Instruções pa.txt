@@ -1,0 +1,51 @@
+● Aqui estão todas as instruções para submeter o delphi-dev ao marketplace oficial:                                                    
+                                                                                                                                       
+  ---                                                                                                                                  
+  Submissão ao Claude Code Plugin Directory                                                                                                                                                                                                                                   
+  1. Formulário de submissão (passo principal)                                                                                                                                                                                                                                
+  Acesse: https://clau.de/plugin-directory-submission                                                                                  
+
+  Esse é o canal oficial para external plugins (terceiros). Você precisará informar:
+  - URL do repositório GitHub: https://github.com/adrianosantostreina/delphi-dev
+  - Nome do plugin: delphi-dev
+  - Descrição
+  - Contato do autor
+
+  ---
+  2. Antes de submeter — checklist
+
+  O marketplace exige que o plugin atenda requisitos de qualidade e segurança. Verifique:
+
+  Obrigatório:
+  - .claude-plugin/plugin.json com campos name, description, author
+  - README.md documentando o plugin
+  - LICENSE (MIT)
+  - Repositório público no GitHub
+
+  Recomendado para aprovação mais rápida:
+  - Completar o plugin.json com os campos version, homepage, repository, keywords — já feito
+  - Descrever claramente o que o plugin faz e como usar no README — já feito
+  - Não incluir código executável ou MCP servers suspeitos (o plugin é puro markdown/JSON — ótimo)
+
+  ---
+  3. Ajuste final no plugin.json (recomendado)
+
+  O marketplace exige ao menos name, description e author. O nosso já tem tudo, mas o campo version deve seguir semver. Está correto   
+  com "version": "1.0.0".
+
+  ---
+  4. Documentação para referência
+
+  - Docs oficiais do plugin system: https://code.claude.com/docs/en/plugins
+  - Marketplace no GitHub (para referência de estrutura): github.com/anthropics/claude-plugins-official
+
+  ---
+  5. Após aprovação
+
+  O plugin ficará disponível para instalação global via:
+  /plugin install delphi-dev
+  ou via /plugin > Discover no Claude Code.
+
+  ---
+  Resumo: O único passo necessário agora é preencher o formulário em https://clau.de/plugin-directory-submission com a URL do
+  repositório. O plugin já está estruturalmente correto e publicado no GitHub.

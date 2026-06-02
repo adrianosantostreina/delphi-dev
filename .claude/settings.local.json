@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(gh repo:*)",
+      "Bash(claude plugin:*)",
+      "Bash(claude:*)",
+      "Read(//c/Users/User/.claude/plugins/cache/**)",
+      "Read(//c/Users/User/.claude/plugins/**)",
+      "Bash(python:*)",
+      "Bash(gh release:*)",
+      "Read(//c/Users/User/.claude/**)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:bitbucket.org)",
+      "WebFetch(domain:spring4d.4delphi.com)",
+      "WebFetch(domain:blogs.embarcadero.com)",
+      "WebFetch(domain:delphisorcery.blogspot.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "WebFetch(domain:www.spring4d.org)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:learndelphi.org)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:wiert.me)",
+      "WebFetch(domain:copyprogramming.com)",
+      "WebFetch(domain:groups.google.com)",
+      "WebFetch(domain:www.oreilly.com)",
+      "WebFetch(domain:www.yanniel.info)",
+      "Bash(cmd //c \"rmdir /s /q C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\delphi-dev\")",
+      "Bash(mkdir -p /tmp/empty_dir)",
+      "Bash(cmd //c \"robocopy C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\empty_dir C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\delphi-dev /MIR /R:1 /W:1\")",
+      "Bash(cmd //c \"rmdir /s /q \\\\\\\\\\\\\\\\?\\\\\\\\C:\\\\\\\\Users\\\\\\\\User\\\\\\\\.claude\\\\\\\\plugins\\\\\\\\cache\\\\\\\\delphi-dev\")",
+      "Bash(powershell -Command \"Remove-Item -LiteralPath 'C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\delphi-dev' -Recurse -Force\")",
+      "Bash(powershell -NoProfile -Command '[System.IO.Directory]::Delete\\('\\\\''C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\delphi-dev'\\\\'', $true\\)')"
+    ]
+  }
+}
