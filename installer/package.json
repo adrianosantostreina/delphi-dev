@@ -1,9 +1,9 @@
 {
   "name": "delphi-dev",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Delphi expert plugin for Claude Code — installs in one command",
   "bin": {
-    "delphi-dev": "./dist/index.js"
+    "delphi-dev": "dist/index.js"
   },
   "main": "./dist/index.js",
   "files": [
@@ -14,12 +14,18 @@
     "test": "vitest run",
     "prepublishOnly": "npm run build && npm test"
   },
-  "keywords": ["delphi", "claude-code", "plugin", "rad-studio", "firemonkey"],
+  "keywords": [
+    "delphi",
+    "claude-code",
+    "plugin",
+    "rad-studio",
+    "firemonkey"
+  ],
   "author": "Adriano Santos <adrianosantospro@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/adrianosantostreina/delphi-dev"
+    "url": "git+https://github.com/adrianosantostreina/delphi-dev.git"
   },
   "engines": {
     "node": ">=18"
