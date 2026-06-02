@@ -29,60 +29,28 @@
 
 ## Instalação
 
-**No Claude Code (VS Code, Cursor, Windsurf, etc.):**
 ```bash
-/plugin marketplace add adrianosantostreina/delphi-dev
-/plugin install delphi-dev@delphi-dev
+npx delphi-dev
 ```
 
-**Via terminal (CLI):**
-```bash
-claude plugin marketplace add adrianosantostreina/delphi-dev
-claude plugin install delphi-dev@delphi-dev
-```
+Este único comando:
+- Instala o plugin no Claude Code
+- Baixa a base de conhecimento RAG
+- Instala a extensão VS Code (se detectado)
+- Registra hooks de automação
 
-### Após a instalação
+**Requisitos:** Node.js 18+, Claude Code CLI, git
 
-Após rodar o comando de instalação, um menu aparece pedindo o escopo da instalação:
-
-| Opção | Quando usar |
-|---|---|
-| **Install for you (user scope)** | Recomendado para uso individual — disponível em todos os projetos da sua máquina |
-| **Install for all collaborators (project scope)** | Adiciona o plugin ao `.claude/settings.json` para que todos que clonarem o repo tenham acesso |
-| **Install for you, in this repo only (local scope)** | Disponível apenas no projeto atual, ignorado pelo git |
-
-> **Observação:** Após confirmar a instalação no menu, o plugin é instalado silenciosamente — nenhuma mensagem de confirmação é exibida.
-
-**Verificar a versão instalada:**
-```
-/about
-```
-A versão atual deve ser **1.5.0**.
-
-> **Dica (Windows):** Se aparecer o erro "Host key verification failed", rode isso uma vez no terminal antes de instalar:
-> ```powershell
-> git config --global url."https://github.com/".insteadOf git@github.com:
-> ```
-
-### Atualizando
-
-Para atualizar para a versão mais recente, desinstale e reinstale:
-```bash
-/plugin uninstall delphi-dev
-/plugin install delphi-dev@delphi-dev
-```
-
-### Desinstalando
+### Atualizar
 
 ```bash
-/plugin uninstall delphi-dev
-/plugin marketplace remove delphi-dev
+npx delphi-dev update
 ```
 
-Ou via CLI:
+### Verificar instalação
+
 ```bash
-claude plugin uninstall delphi-dev
-claude plugin marketplace remove delphi-dev
+npx delphi-dev verify
 ```
 
 ---

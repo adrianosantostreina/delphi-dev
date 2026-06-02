@@ -1,0 +1,41 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    paths:
+      - 'packages/vscode/package.json'
+    branches:
+      - main
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: check
+        run: |
+          OLD=$(git show HEAD^:packages/vscode/package.json | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).version))")
+          NEW=$(node -e "console.log(require('./packages/vscode/package.json').version)")
+          echo "Old: $OLD, New: $NEW"
+          [ "$OLD" != "$NEW" ] && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+
+  publish:
+    needs: check-version
+    if: needs.check-version.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --workspace=packages/vscode
+      - run: npm run build --workspace=packages/vscode
+      - name: Publish to VS Code Marketplace
+        run: npx vsce publish --no-dependencies
+        working-directory: packages/vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}

@@ -29,60 +29,28 @@
 
 ## Installation
 
-**In Claude Code (VS Code, Cursor, Windsurf, etc.):**
 ```bash
-/plugin marketplace add adrianosantostreina/delphi-dev
-/plugin install delphi-dev@delphi-dev
+npx delphi-dev
 ```
 
-**Via terminal (CLI):**
-```bash
-claude plugin marketplace add adrianosantostreina/delphi-dev
-claude plugin install delphi-dev@delphi-dev
-```
+This single command:
+- Installs the Claude Code plugin
+- Downloads the RAG knowledge base
+- Installs the VS Code extension (if VS Code is detected)
+- Registers automation hooks
 
-### After installation
+**Requirements:** Node.js 18+, Claude Code CLI, git
 
-After running the install command, a menu will appear asking for the installation scope:
-
-| Option | When to use |
-|---|---|
-| **Install for you (user scope)** | Recommended for individual developers — available in all projects on your machine |
-| **Install for all collaborators (project scope)** | Adds the plugin to `.claude/settings.json` so everyone who clones the repo gets it |
-| **Install for you, in this repo only (local scope)** | Available only in the current project, gitignored |
-
-> **Note:** After confirming the installation in the menu, the plugin will be installed silently — no confirmation message is shown.
-
-**Verify the installed version:**
-```
-/about
-```
-The current version should be **1.5.0**.
-
-> **Tip (Windows):** If you get a "Host key verification failed" error, run this once in your terminal before installing:
-> ```powershell
-> git config --global url."https://github.com/".insteadOf git@github.com:
-> ```
-
-### Updating
-
-To update to the latest version, uninstall and reinstall:
-```bash
-/plugin uninstall delphi-dev
-/plugin install delphi-dev@delphi-dev
-```
-
-### Uninstalling
+### Update
 
 ```bash
-/plugin uninstall delphi-dev
-/plugin marketplace remove delphi-dev
+npx delphi-dev update
 ```
 
-Or via CLI:
+### Verify installation
+
 ```bash
-claude plugin uninstall delphi-dev
-claude plugin marketplace remove delphi-dev
+npx delphi-dev verify
 ```
 
 ---
