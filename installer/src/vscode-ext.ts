@@ -1,26 +1,34 @@
-import { spawnSync } from 'child_process';
+import { execSync } from 'child_process';
 
 const EXTENSION_ID = 'adrianosantos.delphi-dev-vscode';
+const MARKETPLACE_URL = 'https://marketplace.visualstudio.com/items?itemName=adrianosantos.delphi-dev-vscode';
 
-// shell: true is required on Windows so Node.js finds code.cmd via PATH
-const SHELL = process.platform === 'win32';
-
-function spawn(cmd: string, args: string[]): void {
-  const result = spawnSync(cmd, args, { stdio: 'inherit', shell: SHELL });
-  if (result.status !== 0) {
-    throw new Error(`Command failed: ${cmd} ${args.join(' ')}`);
-  }
+// On Windows, use execSync with a string command so Node finds code.cmd via PATH
+// without the DEP0190 shell+args deprecation warning.
+function run(cmd: string): string {
+  return execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' });
 }
 
 export function installVSCodeExtension(): void {
-  spawn('code', ['--install-extension', EXTENSION_ID]);
+  try {
+    execSync(`code --install-extension ${EXTENSION_ID}`, { stdio: 'inherit' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('not found') || msg.includes('not be found')) {
+      throw new Error(
+        `VS Code extension not yet on the Marketplace.\n` +
+        `Install manually when available: ${MARKETPLACE_URL}\n` +
+        `Or search "Delphi Dev" inside VS Code Extensions panel.`
+      );
+    }
+    throw err;
+  }
 }
 
 export function isVSCodeExtensionInstalled(): boolean {
   try {
-    const result = spawnSync('code', ['--list-extensions'], { encoding: 'utf-8', shell: SHELL });
-    if (result.status !== 0) return false;
-    return (result.stdout ?? '').toLowerCase().includes('adrianosantos.delphi-dev-vscode');
+    const output = run('code --list-extensions');
+    return output.toLowerCase().includes('adrianosantos.delphi-dev-vscode');
   } catch {
     return false;
   }
@@ -28,8 +36,8 @@ export function isVSCodeExtensionInstalled(): boolean {
 
 export function isVSCodeAvailable(): boolean {
   try {
-    const result = spawnSync('code', ['--version'], { stdio: 'ignore', shell: SHELL });
-    return result.status === 0;
+    run('code --version');
+    return true;
   } catch {
     return false;
   }

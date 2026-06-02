@@ -58,8 +58,13 @@ program
       try {
         installVSCodeExtension();
         success('VS Code extension installed');
-      } catch {
-        warn('VS Code extension install failed — install manually: adrianosantos.delphi-dev-vscode');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('not yet on the Marketplace')) {
+          warn('VS Code extension not yet on the Marketplace — search "Delphi Dev" in VS Code Extensions when available');
+        } else {
+          warn('VS Code extension install failed — install manually: adrianosantos.delphi-dev-vscode');
+        }
       }
     } else {
       warn('VS Code not detected — skipping extension install');
