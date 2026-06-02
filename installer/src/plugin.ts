@@ -19,7 +19,25 @@ export function installPlugin(): void {
   } else {
     spawn('git', ['clone', '--depth=1', REPO_URL, PLUGIN_DEST]);
   }
-  spawn('claude', ['plugin', 'install', PLUGIN_DEST]);
+
+  // claude plugin install <path> does not support local paths directly.
+  // The correct sequence is: marketplace add → plugin install <name>@<source>
+  try {
+    spawn('claude', ['plugin', 'marketplace', 'add', PLUGIN_DEST]);
+    spawn('claude', ['plugin', 'install', 'delphi-dev@delphi-dev']);
+  } catch {
+    // Fallback: some Claude Code versions use a different command
+    try {
+      spawn('claude', ['plugin', 'install', '--from-path', PLUGIN_DEST]);
+    } catch {
+      throw new Error(
+        `Could not register the plugin automatically.\n\n` +
+        `Please open Claude Code and run these two commands:\n` +
+        `  /plugin marketplace add ${PLUGIN_DEST}\n` +
+        `  /plugin install delphi-dev@delphi-dev\n`
+      );
+    }
+  }
 }
 
 export function isPluginInstalled(): boolean {

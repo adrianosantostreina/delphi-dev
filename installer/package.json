@@ -1,6 +1,6 @@
 {
   "name": "delphi-dev",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Delphi expert plugin for Claude Code — installs in one command",
   "bin": {
     "delphi-dev": "dist/index.js"
