@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import { openDb, searchSimilar, type SearchResult } from './db';
 import { embedTexts } from './embed';
 
-const RAG_DB_PATH = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
+const RAG_DB_PATH =
+  process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 export function formatSearchResults(results: SearchResult[]): string {
   if (results.length === 0) return '';

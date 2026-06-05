@@ -4,7 +4,8 @@ import * as os from 'os';
 import { openDb, insertChunk } from './db';
 import { chunkText, normalizeChunks, type Category } from './capture';
 
-const RAG_DB_PATH = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
+const RAG_DB_PATH =
+  process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 interface FeatureTensor {
   data: Float32Array;

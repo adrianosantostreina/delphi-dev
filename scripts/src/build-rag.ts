@@ -7,9 +7,8 @@ import { embedFile } from './embed';
 const DEFAULT_KNOWLEDGE_DIR = path.join(
   os.homedir(), '.claude', 'plugins', 'delphi-dev', 'knowledge'
 );
-const DEFAULT_DB_PATH = path.join(
-  os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db'
-);
+const DEFAULT_DB_PATH =
+  process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 function findMarkdownFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
