@@ -2,18 +2,19 @@
 import { Command } from 'commander';
 import { detectSystem } from './detect';
 import { installPlugin, isPluginInstalled } from './plugin';
-import { installVSCodeExtension, isVSCodeAvailable } from './vscode-ext';
+import { installVSCodeExtension, isVSCodeAvailable, isVSCodeExtensionInstalled } from './vscode-ext';
 import { registerHooks, removeHooks } from './hooks';
 import { fetchLatestRelease, getRagDownloadUrl, downloadRagDb } from './rag';
 import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, spinner, summary } from './ui';
+import chalk from 'chalk';
 import * as os from 'os';
 import * as path from 'path';
 
 const RAG_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 const program = new Command();
-program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.0.0');
+program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.0.5');
 
 program
   .command('install', { isDefault: true })
@@ -74,10 +75,16 @@ program
     summary([
       { label: 'Claude Code CLI', ok: result.claudeOk },
       { label: 'delphi-dev plugin active', ok: result.pluginOk },
-      { label: 'RAG database ready', ok: result.ragOk },
-      { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'VS Code not detected' : undefined },
+      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'coming in v2.1 — run "npx delphi-dev sync-kb" when available' : undefined },
+      { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'not detected' : undefined },
       { label: 'Hooks registered', ok: result.hooksOk },
     ]);
+
+    if (!isVSCodeAvailable() || !isVSCodeExtensionInstalled()) {
+      console.log(chalk.dim('💡 Tip: Install the Delphi Dev extension for VS Code — search "Delphi Dev" in the Extensions panel or run:'));
+      console.log(chalk.dim('   code --install-extension adrianosantos.delphi-dev-vscode'));
+      console.log('');
+    }
 
     if (!result.pluginOk) {
       error('Plugin not active. Try: claude plugin list');
@@ -122,7 +129,7 @@ program
     summary([
       { label: 'Claude Code CLI', ok: result.claudeOk },
       { label: 'Plugin active', ok: result.pluginOk },
-      { label: 'RAG database', ok: result.ragOk },
+      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'run "npx delphi-dev sync-kb" to download' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk },
       { label: 'Hooks registered', ok: result.hooksOk },
     ]);
