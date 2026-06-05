@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffold de novo projeto com estrutura de pastas em camadas padronizada |
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
+| **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária |
 | **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
 
