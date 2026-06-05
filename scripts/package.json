@@ -4,7 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && npm run build:hooks",
+    "build:hooks": "tsc --project ../hooks/tsconfig.json",
     "test": "vitest run",
     "build:watch": "tsc --project tsconfig.json --watch"
   },
