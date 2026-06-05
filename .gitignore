@@ -1,0 +1,20 @@
+# Environment / secrets
+.env
+.env.local
+*.env
+
+# Node
+node_modules/
+installer/node_modules/
+packages/*/node_modules/
+scripts/node_modules/
+
+# Build output (dist is published to npm, not committed to git)
+installer/dist/
+
+# Vitest
+installer/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
