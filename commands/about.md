@@ -15,7 +15,7 @@ Honor explicit overrides:
 
 **delphi-dev** — Claude Code Plugin
 
-- **Version:** 2.0.0
+- **Version:** 2.1.0
 - **Author:** Adriano Santos
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
@@ -46,6 +46,7 @@ user's first message and responds in that language. Switch any time with
 | `/new-project` | Scaffolds a new project with a standardized folder structure |
 | `/spec` | Generates a software specification document (SPEC) for the project or module |
 | `/tdd` | Generates a complete DUnitX unit test suite for the project |
+| `/contribute-kb` | Packages local learnings and opens a PR to the community knowledge base |
 | `/dashboard` | Shows GitHub repository metrics (stars, forks, issues, PRs, commits, releases) |
 | `/about` | Shows this information |
 
@@ -63,7 +64,7 @@ user's first message and responds in that language. Switch any time with
 
 **delphi-dev** — Claude Code Plugin
 
-- **Versão:** 2.0.0
+- **Versão:** 2.1.0
 - **Autor:** Adriano Santos
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
@@ -94,6 +95,7 @@ mensagem do usuário e responde nesse idioma. Troque a qualquer momento com
 | `/new-project` | Scaffold de novo projeto com estrutura de pastas padronizada |
 | `/spec` | Cria documento de especificação de software (SPEC) do projeto ou módulo |
 | `/tdd` | Gera suite completa de testes unitários DUnitX para o projeto |
+| `/contribute-kb` | Empacota os aprendizados locais e abre um PR para a base de conhecimento comunitária |
 | `/dashboard` | Exibe métricas do repositório GitHub (estrelas, forks, issues, PRs, commits, releases) |
 | `/about` | Exibe estas informações |
 

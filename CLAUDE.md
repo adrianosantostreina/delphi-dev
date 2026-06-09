@@ -12,7 +12,7 @@ Test changes by installing the plugin from a local checkout (`/plugin marketplac
 
 Three primitives, each loaded by Claude Code differently:
 
-- **Skills** (`skills/<name>/SKILL.md`) — auto-activated when their `description:` frontmatter matches user intent or detected files. They form the always-available knowledge layer. Some skills (`delphi-laudo`, `delphi-spec`, `delphi-standards`, `delphi-testes`) have a `references/` subdirectory the skill loads on demand to keep the base SKILL.md small.
+- **Skills** (`skills/<name>/SKILL.md`) — auto-activated when their `description:` frontmatter matches user intent or detected files. They form the always-available knowledge layer. Some skills (`delphi-laudo`, `delphi-spec`, `delphi-standards`, `delphi-tests`) have a `references/` subdirectory the skill loads on demand to keep the base SKILL.md small.
 - **Commands** (`commands/<name>.md`) — explicit slash commands (`/audit`, `/write`, etc.). Commands are thin orchestrators that delegate to skills + agents.
 - **Agents** (`agents/<name>.md`) — subagents invoked via the Agent tool for heavier, isolated work (deep audit, full code generation, SPEC writing, test generation).
 
@@ -34,7 +34,7 @@ The internal prompt text in skill/agent files is in pt-BR — that's fine, Claud
 
 - **Report templates have parallel files**: pt-BR keeps the original name, en-US uses a `.en.md` suffix (e.g. `estrutura-laudo.md` ↔ `estrutura-laudo.en.md`, `spec-template.md` ↔ `spec-template.en.md`). The skill picks the file based on detected language. When you add a new template-driven feature, ship both files together or the en-US user gets pt-BR output.
 - **Severity / classification labels** are bilingual: pt-BR `🚨 CRÍTICO / ⚠️ ATENÇÃO / 💡 RECOMENDAÇÃO / 🟢 BOM / 🟡 REGULAR / 🟠 CRÍTICO / 🔴 INVIÁVEL` ↔ en-US `🚨 CRITICAL / ⚠️ WARNING / 💡 RECOMMENDATION / 🟢 GOOD / 🟡 FAIR / 🟠 CRITICAL / 🔴 NOT VIABLE`. The mapping table lives at the bottom of `estrutura-laudo.en.md`.
-- **User-facing notification strings** in skills/agents (`delphi-claudeignore`, `delphi-testes`, `delphi-tester`) are written as bilingual blocks — both translations live in the file under `**pt-BR:**` and `**en-US:**` headers; Claude picks the matching block at runtime.
+- **User-facing notification strings** in skills/agents (`delphi-claudeignore`, `delphi-tests`, `delphi-tester`) are written as bilingual blocks — both translations live in the file under `**pt-BR:**` and `**en-US:**` headers; Claude picks the matching block at runtime.
 - **`commands/about.md`** holds both language blocks; Claude renders only the matching one.
 
 What stays in pt-BR regardless of selected language:

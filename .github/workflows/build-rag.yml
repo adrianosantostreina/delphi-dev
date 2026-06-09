@@ -1,0 +1,58 @@
+name: Build RAG Database
+
+on:
+  push:
+    paths:
+      - 'knowledge/core/**'
+      - 'knowledge/fmx/**'
+      - 'knowledge/community/**'
+    branches:
+      - master
+
+jobs:
+  build-rag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Restore the transformer model cache BEFORE building so a warm cache
+      # skips the ~90MB MiniLM / NLI downloads. Saved automatically at job end.
+      - name: Cache transformer models
+        uses: actions/cache@v4
+        with:
+          path: .cache/xenova
+          key: xenova-models-${{ hashFiles('scripts/package.json') }}
+
+      # No package-lock.json is committed (it is gitignored), so install rather
+      # than ci. Installing at the repo root resolves the npm workspaces.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build scripts
+        run: npm run build --workspace=scripts
+
+      - name: Build RAG database
+        run: node scripts/dist/build-rag.js ./knowledge ./rag/rag.db
+        env:
+          XENOVA_CACHE_DIR: ${{ github.workspace }}/.cache/xenova
+
+      - name: Get release tag
+        id: tag
+        run: echo "tag=$(node -e "console.log(require('./.claude-plugin/plugin.json').version)")" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release with rag.db
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.tag.outputs.tag }}
+          name: delphi-dev v${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: rag/rag.db
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

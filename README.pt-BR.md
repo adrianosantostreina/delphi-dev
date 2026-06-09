@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffold de novo projeto com estrutura de pastas em camadas padronizada |
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
+| **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária |
 | **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
 
@@ -124,7 +125,7 @@ O que **não** muda com o idioma:
 | `delphi-write` | Ativada ao escrever código Delphi novo |
 | `delphi-laudo` | Ativada pelo comando `/audit` |
 | `delphi-spec` | Ativada pelo comando `/spec` |
-| `delphi-testes` | Ativada pelo comando `/tdd` ou automaticamente após o `delphi-write` |
+| `delphi-tests` | Ativada pelo comando `/tdd` ou automaticamente após o `delphi-write` |
 | `delphi-claudeignore` | Ativada automaticamente ao detectar projeto Delphi para otimizar tokens |
 
 ---

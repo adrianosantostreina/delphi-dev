@@ -1,5 +1,5 @@
 ---
-name: delphi-testes
+name: delphi-tests
 description: >
   Especialista em testes unitarios para projetos Delphi usando DUnitX.
   Use esta skill SEMPRE que o usuario mencionar: teste unitario, unit test, DUnitX, DUnit,

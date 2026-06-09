@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffolds a new project with standardized layered folder structure |
 | **`/spec`** | Analyzes the current project source code and auto-generates a complete `SPEC.md` |
 | **`/tdd`** | Generates a complete DUnitX unit test suite for the project |
+| **`/contribute-kb`** | Packages local learnings captured by the hooks and opens a PR to the community knowledge base |
 | **`/dashboard`** | Displays GitHub repository metrics — stars, forks, issues, PRs, commits, releases, contributors |
 | **`/about`** | Displays plugin info, version, and available commands |
 
@@ -124,7 +125,7 @@ What does **not** change with language:
 | `delphi-write` | Activated when writing new Delphi code |
 | `delphi-laudo` | Activated by the `/audit` command |
 | `delphi-spec` | Activated by the `/spec` command |
-| `delphi-testes` | Activated by the `/tdd` command or automatically after `delphi-write` |
+| `delphi-tests` | Activated by the `/tdd` command or automatically after `delphi-write` |
 | `delphi-claudeignore` | Auto-activated on Delphi project detection to optimize token usage |
 
 ---

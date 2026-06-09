@@ -113,7 +113,7 @@ Somente gerar o codigo apos confirmacao do usuario.
 ### PASSO 4 — Geracao da Suite Completa
 Gerar todos os arquivos `Teste[NomeDaClasse].pas` e o projeto `TestRunner.dpr`.
 
-Seguir rigorosamente os padroes da skill `delphi-testes` e `references/dunitx-patterns.md`.
+Seguir rigorosamente os padroes da skill `delphi-tests` e `references/dunitx-patterns.md`.
 
 ---
 
@@ -156,7 +156,7 @@ Nao interromper o usuario. Executar silenciosamente:
 
 ## Padroes Obrigatorios
 
-Seguir rigorosamente a skill `delphi-testes`:
+Seguir rigorosamente a skill `delphi-tests`:
 
 - Framework: **DUnitX** (nunca DUnit legado)
 - Nomenclatura: `Test_[Metodo]_[Cenario]`
