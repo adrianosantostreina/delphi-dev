@@ -45,3 +45,46 @@ Crie os arquivos iniciais:
 - Form principal com nomenclatura correta
 
 Aplique todos os padrões do Delphi Style Guide em cada arquivo gerado.
+
+---
+
+## Fluxo adicional para projeto FMX
+
+Quando o usuário escolher **FMX** no Passo 1, faça estas perguntas extras antes de gerar:
+
+1. **Plataformas alvo:** Windows / Android / iOS / macOS / Linux? (múltipla escolha)
+2. Se Android ou iOS selecionado:
+   - Orientação: Portrait / Landscape / Both?
+   - Banco de dados local: SQLite via FireDAC? (s/n)
+   - Permissões necessárias: câmera / GPS / storage / contatos? (múltipla escolha)
+   - Push notifications FCM/APNS? (s/n)
+
+### Estrutura gerada para projeto mobile
+
+```
+NomeApp/
+├── src/
+│   ├── model/
+│   ├── interfaces/
+│   ├── service/
+│   ├── repository/
+│   ├── presentation/
+│   │   ├── forms/
+│   │   └── frames/
+│   └── shared/
+├── assets/          # config.ini, .db, .json para deployment
+├── resources/       # ícones, splash, .dres
+├── tests/
+├── docs/
+└── NomeApp.dproj
+```
+
+### Regras aplicadas (consultar a KB FMX antes de gerar)
+
+Antes de gerar qualquer form/unit mobile, consultar `knowledge/fmx/INDEX.md`:
+
+- `knowledge/fmx/dimensoes-form-mobile.md` → ClientWidth=400, ClientHeight=750
+- `knowledge/fmx/unit-naming-android.md` → sem pontos no nome da unit
+- `knowledge/fmx/uses-fmx-components.md` → uses corretos FMX/FireDAC
+- `knowledge/core/firedac-registro-drivers.md` → DataModule com registro explícito de drivers
+- `knowledge/fmx/deployment-arquivos-extras.md` → Deployment pré-configurado de assets
