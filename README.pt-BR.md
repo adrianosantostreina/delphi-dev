@@ -127,6 +127,14 @@ O que **não** muda com o idioma:
 | `delphi-spec` | Ativada pelo comando `/spec` |
 | `delphi-tests` | Ativada pelo comando `/tdd` ou automaticamente após o `delphi-write` |
 | `delphi-claudeignore` | Ativada automaticamente ao detectar projeto Delphi para otimizar tokens |
+| `delphi-encoding` | Ativada automaticamente em problemas de encoding/BOM/acentos em arquivos Delphi |
+| `delphi-fmx` | Ativada automaticamente para FireMonkey e desenvolvimento mobile Android/iOS |
+| `delphi-firedac` | Ativada automaticamente para código de acesso a dados FireDAC |
+| `delphi-acbr` | Ativada automaticamente para componentes fiscais ACBr (NFe/NFCe/boleto) |
+| `delphi-async` | Ativada automaticamente para código assíncrono/threads (TTask, TThread, Synchronize) |
+| `delphi-build` | Ativada automaticamente para build/compilação via linha de comando e erros de build |
+| `delphi-spring4d` | Ativada automaticamente para DI container e collections do Spring4D |
+| `delphi-legacy` | Ativada automaticamente para modernização/migração de código legado |
 
 ---
 

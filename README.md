@@ -127,6 +127,14 @@ What does **not** change with language:
 | `delphi-spec` | Activated by the `/spec` command |
 | `delphi-tests` | Activated by the `/tdd` command or automatically after `delphi-write` |
 | `delphi-claudeignore` | Auto-activated on Delphi project detection to optimize token usage |
+| `delphi-encoding` | Auto-activated on encoding/BOM/mojibake issues in Delphi files |
+| `delphi-fmx` | Auto-activated for FireMonkey and Android/iOS mobile development |
+| `delphi-firedac` | Auto-activated for FireDAC data-access code |
+| `delphi-acbr` | Auto-activated for ACBr fiscal components (NFe/NFCe/boleto) |
+| `delphi-async` | Auto-activated for async/threading (TTask, TThread, Synchronize) |
+| `delphi-build` | Auto-activated for command-line build/compilation and build errors |
+| `delphi-spring4d` | Auto-activated for Spring4D DI container and collections |
+| `delphi-legacy` | Auto-activated for legacy code modernization/migration |
 
 ---
 
