@@ -125,7 +125,7 @@ What does **not** change with language:
 | `delphi-write` | Activated when writing new Delphi code |
 | `delphi-laudo` | Activated by the `/audit` command |
 | `delphi-spec` | Activated by the `/spec` command |
-| `delphi-testes` | Activated by the `/tdd` command or automatically after `delphi-write` |
+| `delphi-tests` | Activated by the `/tdd` command or automatically after `delphi-write` |
 | `delphi-claudeignore` | Auto-activated on Delphi project detection to optimize token usage |
 
 ---

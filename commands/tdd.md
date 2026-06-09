@@ -33,4 +33,4 @@ o agente `delphi-tester` cria os testes da nova classe automaticamente e notific
 o usuario com a lista dos casos criados.
 
 Use o agente `delphi-tester` para executar a analise e geracao.
-Carregue a skill `delphi-testes` e os padroes em `references/dunitx-patterns.md`.
+Carregue a skill `delphi-tests` e os padroes em `references/dunitx-patterns.md`.

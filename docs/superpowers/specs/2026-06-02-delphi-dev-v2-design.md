@@ -43,7 +43,7 @@ delphi-dev/
 │   ├── delphi-standards/            ← existente (melhorado)
 │   ├── delphi-laudo/                ← existente (melhorado)
 │   ├── delphi-spec/                 ← existente
-│   ├── delphi-testes/               ← existente (melhorado)
+│   ├── delphi-tests/                ← existente (melhorado)
 │   ├── delphi-write/                ← existente
 │   ├── delphi-claudeignore/         ← existente (melhorado)
 │   ├── delphi-encoding/             ← NOVO (Fase 1 roadmap)
@@ -381,7 +381,7 @@ DUnitX. Nomenclatura `Test_{Metodo}_{Cenario}`. Padrão AAA (Arrange/Act/Assert)
 - Passa a carregar `rules/` completo em vez de só as references de `skills/delphi-standards/references/`
 - Adiciona referências cruzadas com a KB (`knowledge/core/`)
 
-#### `delphi-testes` (melhorado)
+#### `delphi-tests` (melhorado)
 - Integra com `delphi-build`: após gerar testes, instrui o usuário a rodar `/build --tests`
 - Carrega `rules/testing.md` automaticamente
 

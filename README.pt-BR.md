@@ -125,7 +125,7 @@ O que **não** muda com o idioma:
 | `delphi-write` | Ativada ao escrever código Delphi novo |
 | `delphi-laudo` | Ativada pelo comando `/audit` |
 | `delphi-spec` | Ativada pelo comando `/spec` |
-| `delphi-testes` | Ativada pelo comando `/tdd` ou automaticamente após o `delphi-write` |
+| `delphi-tests` | Ativada pelo comando `/tdd` ou automaticamente após o `delphi-write` |
 | `delphi-claudeignore` | Ativada automaticamente ao detectar projeto Delphi para otimizar tokens |
 
 ---
