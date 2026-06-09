@@ -89,3 +89,14 @@ Carregue a referência relevante conforme a necessidade:
 - `references/forbidden-commands.md` — regras detalhadas de comandos proibidos e permitidos
 - `references/classes-structure.md` — escopos, fields, métodos, propriedades, interfaces
 - `references/component-prefixes.md` — tabela completa de prefixos de componentes VCL/FMX
+
+## Regras obrigatórias — carregar antes de qualquer geração de código
+
+As regras detalhadas (com exemplos de certo/errado) vivem em `rules/` na raiz do plugin:
+
+- `rules/naming.md` — prefixos F/A/L/C_/T/I/E e nomenclatura completa
+- `rules/architecture.md` — SOLID, camadas, constructor injection, um recurso por try..finally
+- `rules/forbidden.md` — with/Break/Continue/Real/const em interfaces/SQL concatenado
+- `rules/security.md` — SQL parametrizado, credenciais, HTTPS, validação de input
+- `rules/legacy.md` — estratégia incremental para código legado
+- `rules/testing.md` — DUnitX, padrão AAA, nomenclatura Test_Metodo_Cenario

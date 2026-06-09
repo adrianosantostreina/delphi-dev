@@ -43,6 +43,7 @@ Arquivos ignorados para economizar tokens:
 - Recursos: .res, .dres
 - Configuracao de IDE: .dproj, .dof, .cfg, .local
 - Temporarios: .~*, .map, .drc
+- Logs de build: build_log.txt, test_log.txt, compile_output.txt
 - Saidas de compilacao: Win32/, Win64/, Android/, iOSDevice64/, OSX64/
 - Historico de IDE: __history/
 ```
@@ -55,6 +56,7 @@ Files ignored to save tokens:
 - Resources: .res, .dres
 - IDE configuration: .dproj, .dof, .cfg, .local
 - Temporary files: .~*, .map, .drc
+- Build logs: build_log.txt, test_log.txt, compile_output.txt
 - Build outputs: Win32/, Win64/, Android/, iOSDevice64/, OSX64/
 - IDE history: __history/
 ```
@@ -115,6 +117,11 @@ Esses arquivos contem o codigo-fonte e devem sempre ser lidos.
 *.bak
 *.tmp
 *.log
+
+# --- Logs e saidas de build via .bat ---
+build_log.txt
+test_log.txt
+compile_output.txt
 
 # --- Saidas de compilacao por plataforma ---
 Win32/
