@@ -54,6 +54,52 @@ npx delphi-dev update
 npx delphi-dev verify
 ```
 
+### Reinstalação limpa (atualizar a partir da v1.x)
+
+Se você já tinha uma versão antiga (v1.x) instalada e quer ir para a versão nova partindo do zero, **remova primeiro a instalação antiga dentro do Claude Code** e só depois reinstale.
+
+**1. Remover a versão antiga** — comandos executados dentro do Claude Code:
+
+```text
+/plugin list                            # veja o que está instalado
+/plugin uninstall delphi-dev@delphi-dev # desinstala o plugin
+/plugin marketplace remove delphi-dev   # remove o marketplace antigo
+```
+
+> Remover o marketplace também desinstala os plugins que vieram dele. Aceita as formas curtas `/plugin market` e `rm`.
+
+**2. (Opcional) limpar o cache de plugins**, caso algo fique preso:
+
+```bash
+rm -rf ~/.claude/plugins/cache
+```
+
+**3. Instalação limpa** — no terminal:
+
+```bash
+npx delphi-dev
+```
+
+**4. Recarregar** — reinicie o Claude Code ou rode `/reload-plugins` para carregar a versão nova.
+
+#### Instalação local (desenvolvimento / testes)
+
+Para testar a partir de um checkout local do repositório — útil ao desenvolver o próprio plugin:
+
+```text
+/plugin marketplace add <caminho-do-checkout>
+/plugin install delphi-dev@delphi-dev
+```
+
+Alterações em `.md` / `.json` só têm efeito após reinstalar. Para repetir o ciclo de teste com um estado limpo, desinstale e readicione:
+
+```text
+/plugin uninstall delphi-dev@delphi-dev
+/plugin marketplace remove delphi-dev
+/plugin marketplace add <caminho-do-checkout>
+/plugin install delphi-dev@delphi-dev
+```
+
 ---
 
 ## Idioma de Saída
