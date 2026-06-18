@@ -5,7 +5,11 @@
 
 ## Estado atual (2026-06-18) — HOTFIX v2.2.2 (instalação limpa no Windows)
 
-- **v2.2.2 — patch de urgência, EM ANDAMENTO.** Usuários relataram falha de instalação no v2.x no Windows ("registro + hooks sem build"). Investigado e corrigido. **Ainda NÃO commitado/publicado** (ver "Próximo passo" abaixo).
+- **v2.2.2 — patch de urgência, RELEASED (2026-06-18).** Usuários relataram falha de instalação no v2.x no Windows ("registro + hooks sem build"). Investigado e corrigido. **Commitado, pushado, release publicado e npm publicado** — ciclo completo.
+  - Commit `73b9025` em `master` (pushado).
+  - GitHub Release `v2.2.2` (latest) com `rag.db` anexado: https://github.com/adrianosantostreina/delphi-dev/releases/tag/v2.2.2
+  - **npm: `delphi-dev@2.2.2` publicado como `latest`** (confirmado via `npm view delphi-dev version` → 2.2.2). `npx delphi-dev@latest` agora pega a versão corrigida.
+  - **Detalhe do publish:** a conta exige 2FA; tokens clássicos/read-only davam E403. Resolvido com **Granular Access Token (read+write, bypass 2FA)** em `~/.npmrc`. **AÇÃO PENDENTE DE SEGURANÇA:** o token foi colado no chat durante a sessão — **revogar/rotacionar** em npmjs.com → Access Tokens.
 - **Causa raiz (2 bugs, só no Windows / instalação limpa):**
   1. **Registro falha.** `installer/src/plugin.ts` usava `spawnSync('claude', …, {shell:false})`. No Windows o `claude` é shim `.cmd`/`.ps1`, não `.exe` → `CreateProcess` ignora PATHEXT → `ENOENT` → `marketplace add`/`install` falham.
   2. **Hooks sem build.** Tanto `plugin.json` quanto `installer/src/hooks.ts` apontavam para `scripts/search.js`, `scripts/capture.js`, `hooks/fix-encoding.js`, mas o `tsconfig` compila em `outDir: ./dist` (paths reais `scripts/dist/…`, `hooks/dist/…`). Pior: `dist/` **não é versionado** e o instalador faz `git clone --depth=1` **sem rodar `npm install`/`npm run build`** → os `.js` não existem no ambiente do usuário, e ainda dependem de libs nativas pesadas (`better-sqlite3`, `@xenova/transformers`, `sqlite-vec`). O bloco `hooks` do `plugin.json` é auto-carregado pelo Claude Code → erro a cada prompt.
