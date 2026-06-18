@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import { detectSystem } from './detect';
 import { installPlugin, isPluginInstalled } from './plugin';
 import { installVSCodeExtension, isVSCodeAvailable, isVSCodeExtensionInstalled } from './vscode-ext';
-import { registerHooks, removeHooks } from './hooks';
+import { removeHooks } from './hooks';
 import { fetchLatestRelease, getRagDownloadUrl, downloadRagDb } from './rag';
 import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, spinner, summary } from './ui';
@@ -14,13 +14,13 @@ import * as path from 'path';
 const RAG_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 const program = new Command();
-program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.0.5');
+program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
 
 program
   .command('install', { isDefault: true })
   .description('Install delphi-dev plugin, VS Code extension, and RAG database')
   .action(async () => {
-    header('Installing delphi-dev v2.0');
+    header('Installing delphi-dev v2.2');
 
     const sys = detectSystem();
     if (!sys.hasClaudeCLI) {
@@ -36,9 +36,13 @@ program
     installPlugin();
     success('Plugin installed');
 
-    step('Registering hooks in ~/.claude/settings.json...');
-    registerHooks();
-    success('Hooks registered');
+    // v2.2.2: hooks (RAG-search/capture/auto-BOM) are disabled. They depend on
+    // built JS + native deps that aren't shipped/built in the user environment,
+    // which broke clean installs on Windows. Proactively strip any stale hooks a
+    // previous broken v2.x install left in settings.json so prompts stop erroring.
+    step('Cleaning up legacy hooks in ~/.claude/settings.json...');
+    removeHooks();
+    success('Legacy hooks cleaned (hooks return in v3.0)');
 
     const s = spinner('Downloading RAG knowledge base...');
     try {
@@ -77,7 +81,6 @@ program
       { label: 'delphi-dev plugin active', ok: result.pluginOk },
       { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'coming in v2.1 — run "npx delphi-dev sync-kb" when available' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'not detected' : undefined },
-      { label: 'Hooks registered', ok: result.hooksOk },
     ]);
 
     if (!isVSCodeAvailable() || !isVSCodeExtensionInstalled()) {
@@ -131,9 +134,8 @@ program
       { label: 'Plugin active', ok: result.pluginOk },
       { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'run "npx delphi-dev sync-kb" to download' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk },
-      { label: 'Hooks registered', ok: result.hooksOk },
     ]);
-    const allOk = Object.values(result).every(Boolean);
+    const allOk = result.claudeOk && result.pluginOk && result.vscodeOk;
     process.exit(allOk ? 0 : 1);
   });
 

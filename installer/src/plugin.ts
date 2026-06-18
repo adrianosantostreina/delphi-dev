@@ -7,7 +7,13 @@ const PLUGIN_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev');
 const REPO_URL = 'https://github.com/adrianosantostreina/delphi-dev.git';
 
 function spawn(cmd: string, args: string[]): void {
-  const result = spawnSync(cmd, args, { stdio: 'inherit', shell: false });
+  // On Windows the `claude` CLI is a `.cmd`/`.ps1` shim, not a `.exe`. With
+  // shell:false, CreateProcess ignores PATHEXT and fails with ENOENT. Using the
+  // shell on Windows lets the shim be resolved. POSIX keeps shell:false (safer).
+  const result = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' });
+  if (result.error) {
+    throw new Error(`Command failed: ${cmd} ${args.join(' ')} — ${result.error.message}`);
+  }
   if (result.status !== 0) {
     throw new Error(`Command failed: ${cmd} ${args.join(' ')}`);
   }

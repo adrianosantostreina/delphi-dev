@@ -3,7 +3,38 @@
 > Onde estamos e qual o próximo passo. Atualizado em **2026-06-17**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Estado atual (2026-06-17)
+## Estado atual (2026-06-18) — HOTFIX v2.2.2 (instalação limpa no Windows)
+
+- **v2.2.2 — patch de urgência, EM ANDAMENTO.** Usuários relataram falha de instalação no v2.x no Windows ("registro + hooks sem build"). Investigado e corrigido. **Ainda NÃO commitado/publicado** (ver "Próximo passo" abaixo).
+- **Causa raiz (2 bugs, só no Windows / instalação limpa):**
+  1. **Registro falha.** `installer/src/plugin.ts` usava `spawnSync('claude', …, {shell:false})`. No Windows o `claude` é shim `.cmd`/`.ps1`, não `.exe` → `CreateProcess` ignora PATHEXT → `ENOENT` → `marketplace add`/`install` falham.
+  2. **Hooks sem build.** Tanto `plugin.json` quanto `installer/src/hooks.ts` apontavam para `scripts/search.js`, `scripts/capture.js`, `hooks/fix-encoding.js`, mas o `tsconfig` compila em `outDir: ./dist` (paths reais `scripts/dist/…`, `hooks/dist/…`). Pior: `dist/` **não é versionado** e o instalador faz `git clone --depth=1` **sem rodar `npm install`/`npm run build`** → os `.js` não existem no ambiente do usuário, e ainda dependem de libs nativas pesadas (`better-sqlite3`, `@xenova/transformers`, `sqlite-vec`). O bloco `hooks` do `plugin.json` é auto-carregado pelo Claude Code → erro a cada prompt.
+- **Correção aplicada (decisão: "Skills ON, hooks OFF" até o v3.0):**
+  - `.claude-plugin/plugin.json` — **removido o bloco `hooks`** inteiro (mata os erros por-prompt na instalação via marketplace). Bump 2.2.1→2.2.2.
+  - `installer/src/plugin.ts` — `shell: process.platform === 'win32'` + trata `result.error` (ENOENT).
+  - `installer/src/index.ts` — versão 2.0.5→**2.2.2**; header "v2.0"→"v2.2"; passo de hooks trocado de `registerHooks()` para **`removeHooks()`** (limpa hooks quebrados que instalações v2.x anteriores deixaram em `settings.json`); removidas as linhas "Hooks registered" dos summaries; `allOk` do `verify` agora = claude+plugin+vscode (não exige rag/hooks).
+  - Versão sincronizada: `marketplace.json`, `commands/about.md` (2 linhas), `installer/package.json` (estava em 2.0.5!).
+  - `installer/src/hooks.ts` mantido intacto (`registerHooks`/`removeHooks` ainda existem; os 3 testes de hooks passam).
+- **Validação:** `cd installer && npm run build && npm test` → **build OK, 10/10 testes passam**.
+- **MCP local fica para v3.0+** (decisão do usuário). É a correção definitiva (expõe a KB sem depender de hooks com libs nativas no ambiente do usuário).
+
+### Próximo passo concreto (publicar o hotfix)
+
+1. **Commitar** as mudanças em `master` (plugin.json, marketplace.json, about.md, installer/src/{plugin,index}.ts, installer/package.json, handoff).
+2. **Publicar novo npx no npmjs** — o `npx delphi-dev` É a pasta `installer/` (`bin`). NÃO há CI de publish npm (só `build-rag.yml` e `publish-vscode.yml`). Fluxo manual:
+   ```
+   cd installer
+   npm run build        # gera dist/ (prepublishOnly também roda build+test)
+   npm publish          # precisa estar logado: npm whoami / npm login
+   ```
+   `files: ["dist/"]` → publica só o compilado. Confirmar que o publish saiu como **2.2.2**.
+3. **Criar release/tag `v2.2.2`** no GitHub e **anexar o `rag.db`** (release que não toca `knowledge/` NÃO dispara a CI; sem o asset, `latest` quebra `npx … install` — pegar o `rag.db` do release v2.2.1 e reanexar, é byte-idêntico).
+4. Verificar instalação limpa no Windows: `npx delphi-dev@latest` sem erro de registro e sem erro por-prompt.
+
+### Armadilha específica do hotfix
+- **Não re-registrar hooks** nem recolocar o bloco `hooks` no `plugin.json` até existir pipeline de build (commitar `dist/` + `node_modules` de prod, OU MCP local no v3.0). Hooks voltam no v3.0.
+
+## Estado anterior (2026-06-17)
 
 - **v2.2.1 RELEASED** — patch doc-only. Commit `cec3fa1` em `master`, tag `v2.2.1` pushada, release publicado com `rag.db` anexado.
   - O que entrou: seção **"Reinstalação limpa / Clean reinstall"** nos dois READMEs (desinstalar versão antiga via `/plugin uninstall` + `/plugin marketplace remove`, limpar cache, instalação limpa, e o loop de instalação local para dev/testes). Bump de versão em `plugin.json`, `marketplace.json`, `about.md` (2 linhas).
@@ -43,6 +74,7 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
    - v2.6: VS Code WebView de aprendizados RAG + status bar com versão/RAG
    - v2.7: skills `delphi-doc`, `delphi-mocks`, `delphi-rest-horse`, `delphi-livebindings`
 4. **SDD avançado** (em discussão) — `/propose` → `/apply` → `/archive` + spec viva, 2 trilhos (legacy→spec reversa, novo→spec forward). Exige brainstorming antes. Detalhes na memória `project_roadmap.md` (seção "Fase futura — SDD avançado").
+5. **Servidor MCP local (brainstorm)** — criar um MCP server local que exponha a base de conhecimento (RAG) e outros recursos do plugin que fizerem sentido como tools/resources MCP, deixando a KB acessível de forma agnóstica ao cliente (além do hook `UserPromptSubmit` atual). **Exige brainstorm antes** — escopo a definir: quais recursos expor (busca na KB, `/contribute-kb`, padrões, templates de laudo/spec?), transporte (stdio local), como versionar/distribuir junto do plugin, relação com a Governança do RAG (item 1).
 
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
