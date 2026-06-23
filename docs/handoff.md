@@ -1,9 +1,34 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-06-17**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-06-23**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Estado atual (2026-06-18) — HOTFIX v2.2.2 (instalação limpa no Windows)
+## Ponto de retomada (2026-06-23)
+
+- Sessão de consulta: usuário perguntou "o que está pendente para construirmos no plugin?". Sem alterações de código nesta sessão.
+- **Próximo passo concreto continua sendo a sprint v3.0** — backlog priorizado mais abaixo (seção "Próxima sprint = v3.0"). Recomendação: começar pela **Governança do RAG (Abordagem 1)**, que já tem desenho aprovado e ainda precisa de spec + implementação.
+- Estado do repo: branch `master`, sincronizada. Pendências de higiene ainda abertas: `scripts/dist/`, `hooks/dist/`, `package-lock.json` aparecem como untracked (candidatos a `.gitignore`, ver Armadilhas).
+- **Ação de segurança ainda pendente** (do hotfix v2.2.2): revogar/rotacionar o Granular Access Token do npm que foi colado no chat — npmjs.com → Access Tokens.
+
+## Estado atual (2026-06-22) — Bug da extensão VS Code: "Unknown language" (correção fica em OUTRO repo)
+
+- **Sintoma:** usuário instalou a versão nova da extensão "Delphi Dev for Claude Code" e o Runtime Status do VS Code exibe 2 erros na ativação:
+  ```
+  Unknown language in contributes.delphi-dev-vscode.language. Provided value: pascal
+  Unknown language in contributes.delphi-dev-vscode.language. Provided value: objectpascal
+  ```
+- **Causa raiz (diagnosticada nesta sessão):** o `package.json` da extensão **referencia** os language IDs `pascal` e `objectpascal` em 3 lugares — `activationEvents` (`onLanguage:pascal`/`objectpascal`), `contributes.snippets` e `contributes.configurationDefaults` (`[pascal]`/`[objectpascal]`) — mas **nunca os declara** via `contributes.languages`. No VS Code um language ID só existe se alguma extensão o registrar; sem extensão Pascal instalada, o VS Code emite "Unknown language". **Erros inofensivos** (não quebram a integração Claude Code), mas poluem o Runtime Status e impedem a associação de menus/snippets aos `.pas`.
+- **Onde corrigir:** NÃO neste repo. A cópia em `packages/vscode/package.json` é só espelho; o **repositório dedicado da extensão** (`delphi-dev-vscode`, https://github.com/AdrianosantosTreina/delphi-dev-vscode) é o fonte de verdade. O usuário vai rodar a correção lá, em outra sessão.
+- **Solução (a aplicar no repo da extensão):**
+  1. Adicionar bloco `contributes.languages` declarando `pascal` (com `extensions: [.pas,.dpr,.dpk,.dfm,.fmx,.inc]` + `configuration: ./language-configuration.json`) e `objectpascal` **sem `extensions`** (evita dupla associação dos mesmos arquivos). Sem conflito se a extensão do alefragnani estiver instalada junto.
+  2. Criar `language-configuration.json` (comentários `//` e `{ }`/`(* *)`, brackets, auto-closing de `'`).
+  3. Bump de versão (patch) da extensão + CHANGELOG.
+  4. Validar com `vsce package` / modo dev → Runtime Status sem os erros.
+- **Status:** apenas diagnóstico + **prompt pronto** entregue ao usuário para colar na sessão do repo da extensão. Nenhuma alteração de código feita nesta sessão. O usuário pausou para **atualizar o VS Code**.
+- **Próximo passo:** rodar o prompt no repo `delphi-dev-vscode`; depois, opcionalmente, sincronizar a mesma correção no espelho `packages/vscode/package.json` deste repo para não divergir.
+- **Nota de versão:** a extensão tem versionamento próprio (`packages/vscode/package.json` → `2.0.0`), independente do plugin (`2.2.2`). Não confundir os dois ao bumpar.
+
+## Estado anterior (2026-06-18) — HOTFIX v2.2.2 (instalação limpa no Windows)
 
 - **v2.2.2 — patch de urgência, RELEASED (2026-06-18).** Usuários relataram falha de instalação no v2.x no Windows ("registro + hooks sem build"). Investigado e corrigido. **Commitado, pushado, release publicado e npm publicado** — ciclo completo.
   - Commit `73b9025` em `master` (pushado).
