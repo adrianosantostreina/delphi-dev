@@ -10,6 +10,11 @@ const DEFAULT_KNOWLEDGE_DIR = path.join(
 const DEFAULT_DB_PATH =
   process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
+export function tierForPath(relativePath: string): 'canonical' | 'community' {
+  const first = relativePath.split(/[\\/]/)[0];
+  return first === 'community' ? 'community' : 'canonical';
+}
+
 function findMarkdownFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -42,8 +47,9 @@ async function main(): Promise<void> {
   let totalChunks = 0;
   for (const file of files) {
     const relative = path.relative(knowledgeDir, file);
-    process.stdout.write(`  Embedding: ${relative}... `);
-    const count = await embedFile(file, dbPath);
+    const tier = tierForPath(relative);
+    process.stdout.write(`  Embedding: ${relative} [${tier}]... `);
+    const count = await embedFile(file, dbPath, tier);
     console.log(`${count} chunks`);
     totalChunks += count;
   }
