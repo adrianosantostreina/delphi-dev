@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { openDb, insertChunk, countChunks, clearDb, searchSimilar, type KnowledgeChunk } from '../src/db';
+import { openDb, insertChunk, countChunks, clearDb, searchSimilar, selectByTier, RELEVANCE_FLOOR, type KnowledgeChunk, type SearchResult } from '../src/db';
 
 // Unique DB path per test avoids EBUSY races on Windows, where WAL -shm/-wal
 // files can linger briefly after close() and block the next test's cleanup.
@@ -90,5 +90,42 @@ describe('db operations', () => {
     const results = searchSimilar(db, new Float32Array(384).fill(0.5), 1);
     expect(results[0].tier).toBe('community');
     db.close();
+  });
+});
+
+function res(tier: string, distance: number, content = tier + distance): SearchResult {
+  return { content, category: 'general', path: content + '.md', distance, tier };
+}
+
+describe('selectByTier', () => {
+  it('fills slots with relevant canonical first, community only on leftovers', () => {
+    const canonical = [res('canonical', 0.2), res('canonical', 0.4)];
+    const community = [res('community', 0.1)];
+    const out = selectByTier(canonical, community, 3, RELEVANCE_FLOOR);
+    expect(out.map((r) => r.tier)).toEqual(['canonical', 'canonical', 'community']);
+  });
+
+  it('drops community entirely when canonical fills every slot', () => {
+    const canonical = [res('canonical', 0.1), res('canonical', 0.2), res('canonical', 0.3)];
+    const community = [res('community', 0.05)];
+    const out = selectByTier(canonical, community, 3, RELEVANCE_FLOOR);
+    expect(out).toHaveLength(3);
+    expect(out.every((r) => r.tier === 'canonical')).toBe(true);
+  });
+
+  it('lets a strong community beat a weak canonical above the floor', () => {
+    const canonical = [res('canonical', 1.8)]; // > floor 1.0 => held back
+    const community = [res('community', 0.1)];
+    const out = selectByTier(canonical, community, 1, RELEVANCE_FLOOR);
+    expect(out).toHaveLength(1);
+    expect(out[0].tier).toBe('community');
+  });
+
+  it('falls back to above-floor canonical when nothing else fills the slot', () => {
+    const canonical = [res('canonical', 1.8)];
+    const community: SearchResult[] = [];
+    const out = selectByTier(canonical, community, 1, RELEVANCE_FLOOR);
+    expect(out).toHaveLength(1);
+    expect(out[0].tier).toBe('canonical');
   });
 });

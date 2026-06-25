@@ -72,6 +72,34 @@ export function clearDb(db: Database.Database): void {
   db.exec('DELETE FROM knowledge; DELETE FROM knowledge_vec;');
 }
 
+// Slot-precedence selection: relevant canonical (distance <= floor) claims slots
+// first; community fills only the leftovers; above-floor canonical is the last
+// fallback so we never return fewer results than available.
+export function selectByTier(
+  canonical: SearchResult[],
+  community: SearchResult[],
+  topK: number,
+  relevanceFloor: number
+): SearchResult[] {
+  const out: SearchResult[] = [];
+  const relevantCanonical = canonical.filter((r) => r.distance <= relevanceFloor);
+  const weakCanonical = canonical.filter((r) => r.distance > relevanceFloor);
+
+  for (const r of relevantCanonical) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  for (const r of community) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  for (const r of weakCanonical) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  return out.slice(0, topK);
+}
+
 export function searchSimilar(
   db: Database.Database,
   queryEmbedding: Float32Array,
@@ -79,9 +107,9 @@ export function searchSimilar(
   agentFilter?: string
 ): SearchResult[] {
   const vecBytes = Buffer.from(queryEmbedding.buffer);
-  // The LIMIT must sit on the vec0 KNN scan itself, so the nearest-neighbour
-  // search runs inside a CTE; the metadata join happens afterwards.
-  const base = db.prepare(`
+  // Pull a wide candidate pool so tier partitioning has enough to choose from.
+  const pool = Math.max(topK * 6, 24);
+  const poolQuery = db.prepare(`
     WITH matches AS (
       SELECT rowid, distance
       FROM knowledge_vec
@@ -89,35 +117,22 @@ export function searchSimilar(
       ORDER BY distance
       LIMIT ?
     )
-    SELECT k.content, k.category, k.path, k.tier, m.distance
+    SELECT k.content, k.category, k.path, k.tier, k.agent, m.distance
     FROM matches m
     JOIN knowledge k ON k.id = m.rowid
     ORDER BY m.distance
   `);
-  // Agent-scoped search: pull a wider candidate pool from the vec0 scan, then
-  // filter by agent in the outer query (agent lives on the metadata table).
-  const withAgent = db.prepare(`
-    WITH matches AS (
-      SELECT rowid, distance
-      FROM knowledge_vec
-      WHERE embedding MATCH ?
-      ORDER BY distance
-      LIMIT ?
-    )
-    SELECT k.content, k.category, k.path, k.tier, m.distance
-    FROM matches m
-    JOIN knowledge k ON k.id = m.rowid
-    WHERE k.agent = ?
-    ORDER BY m.distance
-    LIMIT ?
-  `);
-  if (agentFilter) {
-    const pool = Math.max(topK * 4, 12);
-    const agentResults = withAgent.all(vecBytes, pool, agentFilter, Math.ceil(topK / 2)) as SearchResult[];
-    const globalResults = base.all(vecBytes, topK) as SearchResult[];
-    const seen = new Set(agentResults.map((r) => r.path + r.content));
-    const merged = [...agentResults, ...globalResults.filter((r) => !seen.has(r.path + r.content))];
-    return merged.slice(0, topK);
-  }
-  return base.all(vecBytes, topK) as SearchResult[];
+  const rows = poolQuery.all(vecBytes, pool) as Array<SearchResult & { agent: string | null }>;
+
+  // Agent-scoped memory floats matching chunks to the front of their own tier,
+  // without overriding tier precedence.
+  const ordered = agentFilter
+    ? [...rows].sort((a, b) => Number(b.agent === agentFilter) - Number(a.agent === agentFilter))
+    : rows;
+
+  const canonical = ordered.filter((r) => r.tier === 'canonical');
+  const community = ordered.filter((r) => r.tier === 'community');
+  return selectByTier(canonical, community, topK, RELEVANCE_FLOOR).map(
+    ({ content, category, path, distance, tier }) => ({ content, category, path, distance, tier })
+  );
 }
