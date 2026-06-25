@@ -59,6 +59,8 @@ export function insertChunk(db: Database.Database, chunk: KnowledgeChunk): void 
   const insertVec = db.prepare(`INSERT INTO knowledge_vec (rowid, embedding) VALUES (?, ?)`);
   const transaction = db.transaction((c: KnowledgeChunk) => {
     const result = insertKnowledge.run(c.path, c.chunkIndex, c.content, c.category, c.agent, c.tier);
+    // sqlite-vec requires the rowid bound as a strict integer (BigInt). A plain
+    // number is rejected with "Only integers are allowed for primary key values".
     insertVec.run(BigInt(result.lastInsertRowid), Buffer.from(c.embedding.buffer));
   });
   transaction(chunk);

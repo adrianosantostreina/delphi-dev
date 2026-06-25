@@ -60,12 +60,10 @@ async function main(): Promise<void> {
 
   const finalDb = openDb(dbPath);
   const final = countChunks(finalDb);
+  const communityCount = countByTier(finalDb, 'community');
   finalDb.close();
   console.log(`\nRAG build complete: ${final} chunks from ${files.length} files (${totalChunks} embedded)`);
 
-  const capDb = openDb(dbPath);
-  const communityCount = countByTier(capDb, 'community');
-  capDb.close();
   if (communityCount > COMMUNITY_CAP) {
     console.warn(
       `\nWARNING: community chunks ${communityCount} exceed cap ${COMMUNITY_CAP}. ` +
@@ -74,7 +72,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
