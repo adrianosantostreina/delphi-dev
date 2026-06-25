@@ -1,0 +1,36 @@
+name: Validate Community Contributions
+
+on:
+  pull_request:
+    paths:
+      - 'knowledge/community/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build scripts
+        run: npm run build --workspace=scripts
+
+      - name: Collect changed community files
+        id: changed
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          files=$(git diff --name-only --diff-filter=AM "$base" "$head" -- 'knowledge/community/**/*.md' | tr '\n' ' ')
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+      - name: Validate frontmatter and size
+        if: steps.changed.outputs.files != ''
+        run: node scripts/dist/validate-contribution.js ${{ steps.changed.outputs.files }}
