@@ -42,6 +42,7 @@ describe('db operations', () => {
       embedding: new Float32Array(384).fill(0.1),
       category: 'patterns',
       agent: 'delphi-writer',
+      tier: 'canonical',
     };
     insertChunk(db, chunk);
     expect(countChunks(db)).toBe(1);
@@ -53,6 +54,7 @@ describe('db operations', () => {
     const chunk: KnowledgeChunk = {
       path: 'test.md', chunkIndex: 0, content: 'x',
       embedding: new Float32Array(384), category: 'general', agent: null,
+      tier: 'canonical',
     };
     insertChunk(db, chunk);
     clearDb(db);
@@ -65,14 +67,28 @@ describe('db operations', () => {
     insertChunk(db, {
       path: 'a.md', chunkIndex: 0, content: 'near',
       embedding: new Float32Array(384).fill(0.5), category: 'patterns', agent: null,
+      tier: 'canonical',
     });
     insertChunk(db, {
       path: 'b.md', chunkIndex: 0, content: 'far',
       embedding: new Float32Array(384).fill(-0.5), category: 'bugs', agent: null,
+      tier: 'canonical',
     });
     const results = searchSimilar(db, new Float32Array(384).fill(0.5), 1);
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('near');
+    db.close();
+  });
+
+  it('persists and returns the tier of a chunk', () => {
+    const db = openDb(TEST_DB);
+    insertChunk(db, {
+      path: 'knowledge/community/x.md', chunkIndex: 0, content: 'community note',
+      embedding: new Float32Array(384).fill(0.5), category: 'general', agent: null,
+      tier: 'community',
+    });
+    const results = searchSimilar(db, new Float32Array(384).fill(0.5), 1);
+    expect(results[0].tier).toBe('community');
     db.close();
   });
 });

@@ -3,6 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as sqliteVec from 'sqlite-vec';
 
+// Max L2 distance for a canonical chunk to win a retrieval slot. Embeddings are
+// normalized, so L2 distance ranges 0 (identical) .. ~2 (opposite). Calibrable.
+export const RELEVANCE_FLOOR = 1.0;
+
 export interface KnowledgeChunk {
   path: string;
   chunkIndex: number;
@@ -10,6 +14,7 @@ export interface KnowledgeChunk {
   embedding: Float32Array;
   category: 'bugs' | 'architecture' | 'patterns' | 'failures' | 'general';
   agent: string | null;
+  tier: 'canonical' | 'community';
 }
 
 export interface SearchResult {
@@ -17,6 +22,7 @@ export interface SearchResult {
   category: string;
   path: string;
   distance: number;
+  tier: string;
 }
 
 const SCHEMA = `
@@ -28,10 +34,12 @@ CREATE TABLE IF NOT EXISTS knowledge (
   content     TEXT NOT NULL,
   category    TEXT NOT NULL,
   agent       TEXT,
+  tier        TEXT NOT NULL DEFAULT 'canonical',
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vec USING vec0(embedding float[384]);
 CREATE INDEX IF NOT EXISTS idx_knowledge_category ON knowledge(category);
+CREATE INDEX IF NOT EXISTS idx_knowledge_tier ON knowledge(tier);
 `;
 
 export function openDb(dbPath: string): Database.Database {
@@ -46,13 +54,11 @@ export function openDb(dbPath: string): Database.Database {
 
 export function insertChunk(db: Database.Database, chunk: KnowledgeChunk): void {
   const insertKnowledge = db.prepare(
-    `INSERT INTO knowledge (path, chunk_index, content, category, agent) VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO knowledge (path, chunk_index, content, category, agent, tier) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insertVec = db.prepare(`INSERT INTO knowledge_vec (rowid, embedding) VALUES (?, ?)`);
   const transaction = db.transaction((c: KnowledgeChunk) => {
-    const result = insertKnowledge.run(c.path, c.chunkIndex, c.content, c.category, c.agent);
-    // sqlite-vec requires the rowid bound as a strict integer (BigInt). A plain
-    // number is rejected with "Only integers are allowed for primary key values".
+    const result = insertKnowledge.run(c.path, c.chunkIndex, c.content, c.category, c.agent, c.tier);
     insertVec.run(BigInt(result.lastInsertRowid), Buffer.from(c.embedding.buffer));
   });
   transaction(chunk);
@@ -83,7 +89,7 @@ export function searchSimilar(
       ORDER BY distance
       LIMIT ?
     )
-    SELECT k.content, k.category, k.path, m.distance
+    SELECT k.content, k.category, k.path, k.tier, m.distance
     FROM matches m
     JOIN knowledge k ON k.id = m.rowid
     ORDER BY m.distance
@@ -98,7 +104,7 @@ export function searchSimilar(
       ORDER BY distance
       LIMIT ?
     )
-    SELECT k.content, k.category, k.path, m.distance
+    SELECT k.content, k.category, k.path, k.tier, m.distance
     FROM matches m
     JOIN knowledge k ON k.id = m.rowid
     WHERE k.agent = ?
