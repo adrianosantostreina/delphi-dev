@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { openDb, clearDb, countChunks } from './db';
+import { openDb, clearDb, countChunks, countByTier } from './db';
 import { embedFile } from './embed';
 
 const DEFAULT_KNOWLEDGE_DIR = path.join(
@@ -9,6 +9,10 @@ const DEFAULT_KNOWLEDGE_DIR = path.join(
 );
 const DEFAULT_DB_PATH =
   process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
+
+// Community chunks past this count trigger a curation/promotion WARNING. The
+// build is NOT blocked and nothing is evicted — the decision stays human.
+const COMMUNITY_CAP = 500;
 
 export function tierForPath(relativePath: string): 'canonical' | 'community' {
   const first = relativePath.split(/[\\/]/)[0];
@@ -58,6 +62,16 @@ async function main(): Promise<void> {
   const final = countChunks(finalDb);
   finalDb.close();
   console.log(`\nRAG build complete: ${final} chunks from ${files.length} files (${totalChunks} embedded)`);
+
+  const capDb = openDb(dbPath);
+  const communityCount = countByTier(capDb, 'community');
+  capDb.close();
+  if (communityCount > COMMUNITY_CAP) {
+    console.warn(
+      `\nWARNING: community chunks ${communityCount} exceed cap ${COMMUNITY_CAP}. ` +
+      `Curate or promote community knowledge before the next release.`
+    );
+  }
 }
 
 main().catch((err) => {

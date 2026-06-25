@@ -68,6 +68,10 @@ export function countChunks(db: Database.Database): number {
   return (db.prepare('SELECT COUNT(*) as n FROM knowledge').get() as { n: number }).n;
 }
 
+export function countByTier(db: Database.Database, tier: string): number {
+  return (db.prepare('SELECT COUNT(*) as n FROM knowledge WHERE tier = ?').get(tier) as { n: number }).n;
+}
+
 export function clearDb(db: Database.Database): void {
   db.exec('DELETE FROM knowledge; DELETE FROM knowledge_vec;');
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { openDb, insertChunk, countChunks, clearDb, searchSimilar, selectByTier, RELEVANCE_FLOOR, type KnowledgeChunk, type SearchResult } from '../src/db';
+import { openDb, insertChunk, countChunks, clearDb, searchSimilar, selectByTier, countByTier, RELEVANCE_FLOOR, type KnowledgeChunk, type SearchResult } from '../src/db';
 
 // Unique DB path per test avoids EBUSY races on Windows, where WAL -shm/-wal
 // files can linger briefly after close() and block the next test's cleanup.
@@ -89,6 +89,16 @@ describe('db operations', () => {
     });
     const results = searchSimilar(db, new Float32Array(384).fill(0.5), 1);
     expect(results[0].tier).toBe('community');
+    db.close();
+  });
+
+  it('countByTier counts only chunks of the given tier', () => {
+    const db = openDb(TEST_DB);
+    insertChunk(db, { path: 'a.md', chunkIndex: 0, content: 'a', embedding: new Float32Array(384), category: 'general', agent: null, tier: 'canonical' });
+    insertChunk(db, { path: 'b.md', chunkIndex: 0, content: 'b', embedding: new Float32Array(384), category: 'general', agent: null, tier: 'community' });
+    insertChunk(db, { path: 'c.md', chunkIndex: 0, content: 'c', embedding: new Float32Array(384), category: 'general', agent: null, tier: 'community' });
+    expect(countByTier(db, 'community')).toBe(2);
+    expect(countByTier(db, 'canonical')).toBe(1);
     db.close();
   });
 });
