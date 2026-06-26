@@ -7,10 +7,15 @@ import { embedTexts } from './embed';
 const RAG_DB_PATH =
   process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
+const PRECEDENCE_DIRECTIVE =
+  'Canonical é autoritativo; community é complementar e nunca sobrepõe o canonical.';
+
 export function formatSearchResults(results: SearchResult[]): string {
   if (results.length === 0) return '';
-  const lines = results.map((r) => `[${r.category}] ${r.content.trim()}`).join('\n\n');
-  return `\n[RELEVANT KNOWLEDGE FROM DELPHI-DEV RAG]\n${lines}\n[/RELEVANT KNOWLEDGE]\n`;
+  const lines = results
+    .map((r) => `[${r.tier}/${r.category}] ${r.content.trim()}`)
+    .join('\n\n');
+  return `\n[RELEVANT KNOWLEDGE FROM DELPHI-DEV RAG]\n(${PRECEDENCE_DIRECTIVE})\n\n${lines}\n[/RELEVANT KNOWLEDGE]\n`;
 }
 
 async function main(): Promise<void> {

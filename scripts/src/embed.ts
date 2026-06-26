@@ -44,7 +44,11 @@ function parseCategoryFromContent(content: string): Category {
   return 'general';
 }
 
-export async function embedFile(mdPath: string, dbPath: string = RAG_DB_PATH): Promise<number> {
+export async function embedFile(
+  mdPath: string,
+  dbPath: string = RAG_DB_PATH,
+  tier: 'canonical' | 'community' = 'canonical'
+): Promise<number> {
   const content = fs.readFileSync(mdPath, 'utf-8');
   const db = openDb(dbPath);
 
@@ -65,6 +69,7 @@ export async function embedFile(mdPath: string, dbPath: string = RAG_DB_PATH): P
       embedding: embeddings[i],
       category,
       agent: null,
+      tier,
     });
     inserted++;
   }

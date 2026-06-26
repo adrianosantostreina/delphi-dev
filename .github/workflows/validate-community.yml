@@ -1,0 +1,58 @@
+name: Validate Community Contributions
+
+on:
+  pull_request:
+    paths:
+      - 'knowledge/community/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build scripts
+        run: npm run build --workspace=scripts
+
+      # SHAs and the resulting file list are attacker-controlled on a
+      # pull_request trigger, so they are passed via env vars (never
+      # interpolated into the shell) and every path is checked against a
+      # strict allowlist. The allowlist forbids spaces and shell
+      # metacharacters, which makes the later word-split expansion safe.
+      - name: Collect and validate changed community files
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t paths < <(git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" -- 'knowledge/community/**/*.md')
+          safe=()
+          for p in "${paths[@]}"; do
+            if [[ "$p" =~ ^knowledge/community/[A-Za-z0-9._/-]+\.md$ ]]; then
+              safe+=("$p")
+            else
+              echo "Rejected unsafe community path: $p"
+              exit 1
+            fi
+          done
+          echo "files=${safe[*]}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate frontmatter and size
+        if: steps.changed.outputs.files != ''
+        env:
+          FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          set -euo pipefail
+          # FILES holds allowlist-checked paths (no spaces/metacharacters), so
+          # the unquoted word-split here is safe and feeds each path as argv.
+          node scripts/dist/validate-contribution.js $FILES

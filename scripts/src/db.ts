@@ -3,6 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as sqliteVec from 'sqlite-vec';
 
+// Max L2 distance for a canonical chunk to win a retrieval slot. Embeddings are
+// normalized, so L2 distance ranges 0 (identical) .. ~2 (opposite). Calibrable.
+export const RELEVANCE_FLOOR = 1.0;
+
 export interface KnowledgeChunk {
   path: string;
   chunkIndex: number;
@@ -10,6 +14,7 @@ export interface KnowledgeChunk {
   embedding: Float32Array;
   category: 'bugs' | 'architecture' | 'patterns' | 'failures' | 'general';
   agent: string | null;
+  tier: 'canonical' | 'community';
 }
 
 export interface SearchResult {
@@ -17,6 +22,7 @@ export interface SearchResult {
   category: string;
   path: string;
   distance: number;
+  tier: string;
 }
 
 const SCHEMA = `
@@ -28,10 +34,12 @@ CREATE TABLE IF NOT EXISTS knowledge (
   content     TEXT NOT NULL,
   category    TEXT NOT NULL,
   agent       TEXT,
+  tier        TEXT NOT NULL DEFAULT 'canonical',
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vec USING vec0(embedding float[384]);
 CREATE INDEX IF NOT EXISTS idx_knowledge_category ON knowledge(category);
+CREATE INDEX IF NOT EXISTS idx_knowledge_tier ON knowledge(tier);
 `;
 
 export function openDb(dbPath: string): Database.Database {
@@ -46,11 +54,11 @@ export function openDb(dbPath: string): Database.Database {
 
 export function insertChunk(db: Database.Database, chunk: KnowledgeChunk): void {
   const insertKnowledge = db.prepare(
-    `INSERT INTO knowledge (path, chunk_index, content, category, agent) VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO knowledge (path, chunk_index, content, category, agent, tier) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insertVec = db.prepare(`INSERT INTO knowledge_vec (rowid, embedding) VALUES (?, ?)`);
   const transaction = db.transaction((c: KnowledgeChunk) => {
-    const result = insertKnowledge.run(c.path, c.chunkIndex, c.content, c.category, c.agent);
+    const result = insertKnowledge.run(c.path, c.chunkIndex, c.content, c.category, c.agent, c.tier);
     // sqlite-vec requires the rowid bound as a strict integer (BigInt). A plain
     // number is rejected with "Only integers are allowed for primary key values".
     insertVec.run(BigInt(result.lastInsertRowid), Buffer.from(c.embedding.buffer));
@@ -62,8 +70,40 @@ export function countChunks(db: Database.Database): number {
   return (db.prepare('SELECT COUNT(*) as n FROM knowledge').get() as { n: number }).n;
 }
 
+export function countByTier(db: Database.Database, tier: string): number {
+  return (db.prepare('SELECT COUNT(*) as n FROM knowledge WHERE tier = ?').get(tier) as { n: number }).n;
+}
+
 export function clearDb(db: Database.Database): void {
   db.exec('DELETE FROM knowledge; DELETE FROM knowledge_vec;');
+}
+
+// Slot-precedence selection: relevant canonical (distance <= floor) claims slots
+// first; community fills only the leftovers; above-floor canonical is the last
+// fallback so we never return fewer results than available.
+export function selectByTier(
+  canonical: SearchResult[],
+  community: SearchResult[],
+  topK: number,
+  relevanceFloor: number
+): SearchResult[] {
+  const out: SearchResult[] = [];
+  const relevantCanonical = canonical.filter((r) => r.distance <= relevanceFloor);
+  const weakCanonical = canonical.filter((r) => r.distance > relevanceFloor);
+
+  for (const r of relevantCanonical) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  for (const r of community) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  for (const r of weakCanonical) {
+    if (out.length >= topK) break;
+    out.push(r);
+  }
+  return out.slice(0, topK);
 }
 
 export function searchSimilar(
@@ -73,9 +113,9 @@ export function searchSimilar(
   agentFilter?: string
 ): SearchResult[] {
   const vecBytes = Buffer.from(queryEmbedding.buffer);
-  // The LIMIT must sit on the vec0 KNN scan itself, so the nearest-neighbour
-  // search runs inside a CTE; the metadata join happens afterwards.
-  const base = db.prepare(`
+  // Pull a wide candidate pool so tier partitioning has enough to choose from.
+  const pool = Math.max(topK * 6, 24);
+  const poolQuery = db.prepare(`
     WITH matches AS (
       SELECT rowid, distance
       FROM knowledge_vec
@@ -83,35 +123,22 @@ export function searchSimilar(
       ORDER BY distance
       LIMIT ?
     )
-    SELECT k.content, k.category, k.path, m.distance
+    SELECT k.content, k.category, k.path, k.tier, k.agent, m.distance
     FROM matches m
     JOIN knowledge k ON k.id = m.rowid
     ORDER BY m.distance
   `);
-  // Agent-scoped search: pull a wider candidate pool from the vec0 scan, then
-  // filter by agent in the outer query (agent lives on the metadata table).
-  const withAgent = db.prepare(`
-    WITH matches AS (
-      SELECT rowid, distance
-      FROM knowledge_vec
-      WHERE embedding MATCH ?
-      ORDER BY distance
-      LIMIT ?
-    )
-    SELECT k.content, k.category, k.path, m.distance
-    FROM matches m
-    JOIN knowledge k ON k.id = m.rowid
-    WHERE k.agent = ?
-    ORDER BY m.distance
-    LIMIT ?
-  `);
-  if (agentFilter) {
-    const pool = Math.max(topK * 4, 12);
-    const agentResults = withAgent.all(vecBytes, pool, agentFilter, Math.ceil(topK / 2)) as SearchResult[];
-    const globalResults = base.all(vecBytes, topK) as SearchResult[];
-    const seen = new Set(agentResults.map((r) => r.path + r.content));
-    const merged = [...agentResults, ...globalResults.filter((r) => !seen.has(r.path + r.content))];
-    return merged.slice(0, topK);
-  }
-  return base.all(vecBytes, topK) as SearchResult[];
+  const rows = poolQuery.all(vecBytes, pool) as Array<SearchResult & { agent: string | null }>;
+
+  // Agent-scoped memory floats matching chunks to the front of their own tier,
+  // without overriding tier precedence.
+  const ordered = agentFilter
+    ? [...rows].sort((a, b) => Number(b.agent === agentFilter) - Number(a.agent === agentFilter))
+    : rows;
+
+  const canonical = ordered.filter((r) => r.tier === 'canonical');
+  const community = ordered.filter((r) => r.tier === 'community');
+  return selectByTier(canonical, community, topK, RELEVANCE_FLOOR).map(
+    ({ content, category, path, distance, tier }) => ({ content, category, path, distance, tier })
+  );
 }
