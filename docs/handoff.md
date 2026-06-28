@@ -1,14 +1,24 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-06-23**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-06-28**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-06-23)
+## Ponto de retomada (2026-06-28) — v3.0 item 1 (Governança do RAG) FECHADO e MERGEADO (local, sem push)
 
-- Sessão de consulta: usuário perguntou "o que está pendente para construirmos no plugin?". Sem alterações de código nesta sessão.
-- **Próximo passo concreto continua sendo a sprint v3.0** — backlog priorizado mais abaixo (seção "Próxima sprint = v3.0"). Recomendação: começar pela **Governança do RAG (Abordagem 1)**, que já tem desenho aprovado e ainda precisa de spec + implementação.
-- Estado do repo: branch `master`, sincronizada. Pendências de higiene ainda abertas: `scripts/dist/`, `hooks/dist/`, `package-lock.json` aparecem como untracked (candidatos a `.gitignore`, ver Armadilhas).
-- **Ação de segurança ainda pendente** (do hotfix v2.2.2): revogar/rotacionar o Granular Access Token do npm que foi colado no chat — npmjs.com → Access Tokens.
+- **Sprint v3.0, item 1 = Governança do RAG (Abordagem 1): CONCLUÍDO.** Brainstorm → spec → plano → implementação (subagent-driven, 9 tasks TDD) → revisão whole-branch (READY TO MERGE) → **merge `--no-ff` em `master`** (merge commit `97239d0`). Branch `feature/v3.0-rag-governance` já deletada. **30 testes verdes, build limpo, v3.0.0** sincronizada (plugin.json, marketplace.json, about.md). Hooks continuam **OFF**.
+  - Spec: `docs/superpowers/specs/2026-06-25-rag-governance-design.md`. Plano: `docs/superpowers/plans/2026-06-25-v3.0-rag-governance.md`. Doc de governança: `docs/rag-governance.md`.
+  - O que mudou no código: coluna `tier` no schema (`scripts/src/db.ts`); `tierForPath` no build deriva canonical(core/fmx)/community; `selectByTier` faz precedência por slot + piso `RELEVANCE_FLOOR=1.0`; `formatSearchResults` rotula `[tier/category]` + diretriz fixa; `scripts/src/validate-contribution.ts` (validadores frontmatter/tamanho + primitivo `nearestDistance`); workflow `.github/workflows/validate-community.yml`; WARNING de cap `COMMUNITY_CAP=500` no build; `knowledge/community/` criada (`.gitkeep` + `INDEX.md`).
+  - **Segurança:** o review automático de commit pegou um **GitHub Actions injection (HIGH)** na workflow (paths de PR interpolados em `run:`). Corrigido antes do merge (commit `0c45e7a`): SHAs/lista via env vars + allowlist regex `^knowledge/community/[A-Za-z0-9._/-]+\.md$`.
+
+- **PRÓXIMO PASSO CONCRETO ao retomar (em ordem):**
+  1. **Push do `master`** (está só local — segura-se push por política da sessão; usuário decide quando). O push dispara a CI `build-rag.yml` porque `knowledge/community/` foi criada.
+  2. **Após o push: confirmar o release v3.0.0** — a CI deve criar o release e anexar o `rag.db` (spec §7). Sem o asset, `npx delphi-dev` quebra. Verificar via `gh release list`.
+  3. Decidir os demais itens da v3.0 (ver backlog abaixo) — recomendação: **dedup completo no CI (Task 7b)** é o follow-up natural do item 1.
+
+- **Pendências que NÃO bloqueiam, mas seguem abertas:**
+  - **Dedup no CI (Task 7b, deferido por design):** o primitivo `nearestDistance` está pronto e testado, mas ligá-lo contra o `rag.db` no PR (baixar rag.db do release + comparar embeddings) ficou para depois. Spec §8 / Task 7 do plano documentam.
+  - **Higiene:** `scripts/dist/`, `hooks/dist/`, `package-lock.json` continuam untracked por design (candidatos a `.gitignore`).
+  - **Segurança (do hotfix v2.2.2):** revogar/rotacionar o Granular Access Token do npm colado no chat — npmjs.com → Access Tokens.
 
 ## Estado atual (2026-06-22) — Bug da extensão VS Code: "Unknown language" (correção fica em OUTRO repo)
 
@@ -94,7 +104,7 @@
 
 Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1) — é a preocupação central do usuário, já tem desenho aprovado, e blinda o pipeline antes da base de usuários crescer.
 
-1. **Governança do RAG (Abordagem 1)** — spec + implementação (ver seção acima). *Recomendado primeiro.*
+1. ~~**Governança do RAG (Abordagem 1)** — spec + implementação.~~ **✅ CONCLUÍDO e mergeado em `master` (2026-06-28, merge `97239d0`).** Ver "Ponto de retomada (2026-06-28)" no topo. Follow-up restante: dedup completo no CI (Task 7b).
 2. **Fechar os 2 testes interativos do v2.2** — hook `UserPromptSubmit` injetando `[RELEVANT KNOWLEDGE]` numa sessão real com o plugin instalado; `/contribute-kb` abrindo um PR de verdade (precisa `gh` autenticado).
 3. **Continuar roadmap v2.x** (planos em `docs/superpowers/plans/`). As SKILLS de conhecimento foram puxadas para o v2.2, mas faltam os commands/agents/integrações:
    - v2.3: comando `/build` + agent `delphi-builder` (skill `delphi-build` já existe)
