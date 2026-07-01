@@ -1,9 +1,18 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-06-28**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-07-01**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-06-28) — v3.0 item 1 (Governança do RAG) FECHADO e MERGEADO (local, sem push)
+## Ponto de retomada (2026-07-01) — v3.0.0 ESTÁVEL PUBLICADA (push + release + rag.db) ✅
+
+- **`master` PUSHADO** para `origin` (`84f3676`). A CI `build-rag.yml` rodou com sucesso (gatilho `knowledge/community/**`) e **criou o release `v3.0.0` como Latest** (não-draft, não-prerelease) **com `rag.db` anexado (1.73 MB)**. Instalações via `npx delphi-dev@latest` já pegam a KB nova. Estado verificado: 30 testes scripts + 10 testes installer verdes, builds limpos, versões do plugin sincronizadas em 3.0.0.
+- **NÃO republicado no npm** (por design): o installer (`installer/package.json`) segue em **2.2.2** — a governança de RAG mexeu em `scripts/`, não no installer, e o `npx@2.2.2` baixa o `rag.db` do release `latest`. Só bumpar/republicar o installer se quiser que o `npx` anuncie 3.0.0.
+
+- **PRÓXIMO PASSO ao retomar (escolher):**
+  1. **Dedup completo no CI (Task 7b)** — follow-up natural do item 1 (`nearestDistance` pronto/testado; falta ligar contra o `rag.db` no PR). Ver backlog v3.0 abaixo.
+  2. **Segurança pendente:** rotacionar o Granular Access Token do npm colado no chat (hotfix v2.2.2).
+
+## Ponto anterior (2026-06-28) — v3.0 item 1 (Governança do RAG) FECHADO e MERGEADO (local, sem push)
 
 - **Sprint v3.0, item 1 = Governança do RAG (Abordagem 1): CONCLUÍDO.** Brainstorm → spec → plano → implementação (subagent-driven, 9 tasks TDD) → revisão whole-branch (READY TO MERGE) → **merge `--no-ff` em `master`** (merge commit `97239d0`). Branch `feature/v3.0-rag-governance` já deletada. **30 testes verdes, build limpo, v3.0.0** sincronizada (plugin.json, marketplace.json, about.md). Hooks continuam **OFF**.
   - Spec: `docs/superpowers/specs/2026-06-25-rag-governance-design.md`. Plano: `docs/superpowers/plans/2026-06-25-v3.0-rag-governance.md`. Doc de governança: `docs/rag-governance.md`.
