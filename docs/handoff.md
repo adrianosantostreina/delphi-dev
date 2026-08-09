@@ -1,9 +1,32 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-07-01**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-08-09**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-07-01) — v3.0.0 ESTÁVEL PUBLICADA (push + release + rag.db) ✅
+## Ponto de retomada (2026-08-09) — BRAINSTORM `delphi-e2e` EM ANDAMENTO (interrompido) ⏸️
+
+**Nova capacidade em desenho: `/e2e` — Playwright para desktop Delphi.** Executor de cenários
+de teste end-to-end que builda, abre o `.exe` e opera as telas, com veredito por cenário e
+correlação com o log do app. Nenhum código escrito ainda — só design.
+
+- **ESTADO COMPLETO EM [`docs/superpowers/specs/2026-08-09-delphi-e2e-design.md`](superpowers/specs/2026-08-09-delphi-e2e-design.md).**
+  Ler esse arquivo por inteiro antes de retomar — ele tem as 11 decisões já travadas com o
+  usuário, o design apresentado, os achados de validação e o que falta. **Não refazer as
+  perguntas**, elas já foram respondidas.
+- **Onde parou:** brainstorming (`superpowers:brainstorming`) interrompido na aprovação das
+  seções 1–3 do design. O usuário reiniciou a sessão antes de responder.
+- **Próximo passo:** reapresentar §5.1–5.3 do design (com destaque para o **corte do agente** e
+  os **quatro vereditos**), seguir para §6, promover a spec, e só então invocar `writing-plans`.
+- **Fontes externas do conhecimento** (fora deste repo, ler ao retomar):
+  - `D:\1. Exemplos Cursos\PDV Android\docs\automacao-ui-delphi-fmx.md` — documento completo (726 linhas)
+  - `C:\Users\User\.claude\shared\delphi-knowledge\fmx-win32-janela-automacao-externa.md` — versão condensada
+- **Correções de rota importantes desta sessão:** o propósito **não** é smoke test com galeria
+  de screenshots (era o que o documento-fonte propunha) — é execução de cenários com veredito.
+  E hooks continuam **OFF**, então entrada no RAG não injeta em sessão hoje; o que entrega
+  capacidade é a skill + o command.
+- **Sem alterações de código.** `master` segue em `7434d04`, 1 commit à frente do origin.
+
+## Ponto anterior (2026-07-01) — v3.0.0 ESTÁVEL PUBLICADA (push + release + rag.db) ✅
 
 - **`master` PUSHADO** para `origin` (`84f3676`). A CI `build-rag.yml` rodou com sucesso (gatilho `knowledge/community/**`) e **criou o release `v3.0.0` como Latest** (não-draft, não-prerelease) **com `rag.db` anexado (1.73 MB)**. Instalações via `npx delphi-dev@latest` já pegam a KB nova. Estado verificado: 30 testes scripts + 10 testes installer verdes, builds limpos, versões do plugin sincronizadas em 3.0.0.
 - **NÃO republicado no npm** (por design): o installer (`installer/package.json`) segue em **2.2.2** — a governança de RAG mexeu em `scripts/`, não no installer, e o `npx@2.2.2` baixa o `rag.db` do release `latest`. Só bumpar/republicar o installer se quiser que o `npx` anuncie 3.0.0.
