@@ -308,3 +308,43 @@ suíte de regressão. É quase de graça (o agente já lê/escreve markdown) e "
 
 **Processo:** este design saiu da skill `superpowers:brainstorming`. O terminal dela é
 `writing-plans` — não invocar nenhuma outra skill de implementação antes disso.
+
+---
+
+## 8. Cronologia da sessão — e por que a ordem importa
+
+Registrado porque a sequência muda a leitura das decisões da §4.
+
+1. O usuário trouxe o aprendizado da outra sessão (build + execução + navegação autônoma num
+   app FMX), colou o que aquela sessão afirmou, o prompt que ela gerou, e pediu **validação**.
+2. Validei contra o repo real → §1 e §2 deste documento. O erro mais grave foi ela ter lido a
+   cópia do marketplace e concluído que o repo era markdown puro, ignorando a KB RAG.
+3. Perguntei escopo e nomenclatura → decisões **1 e 2**.
+4. Rodei `superpowers:brainstorming`. Perguntas 1 a 4 → decisões **3, 4, 5, 6**.
+5. Apresentei as abordagens A/B/C → decisão **7** (C: skill + agente + comando).
+6. **⚠️ AQUI VEIO O REFRAME.** O usuário explicou o propósito real (§3) — Playwright para
+   desktop, cenários com veredito, leitura de log. O design anterior era outro produto.
+7. Reperguntei sob o enquadramento novo → decisões **8, 9, 10, 11**.
+8. Apresentei §5.1–5.3. O usuário interrompeu para reiniciar/desligar antes de aprovar.
+
+### ⚠️ Decisões tomadas ANTES do reframe — revalidar ao retomar
+
+**A decisão 7 já está superada:** a 8 (execução no contexto principal) esvazia o agente
+executor da abordagem C. É exatamente o "ponto aberto" da §5.1 — perguntei e o usuário não
+respondeu. **Não tratar a 7 como válida sem confirmar.**
+
+As decisões **3, 4, 5 e 6** foram tomadas sob o enquadramento antigo (smoke test). Minha
+leitura é que sobrevivem ao reframe, mas vale conferir com o usuário em vez de assumir:
+
+| # | Decisão | Sobrevive ao reframe? |
+|---|---|---|
+| 3 | Delegar build à `delphi-build` | Sim, sem ressalva — independe do enquadramento. |
+| 4 | Gate explícito antes do 1º clique | Sim, e **ganhou peso**: agora o gate também lista quais cenários gravam dados (decisão 9). |
+| 5 | FMX validado + VCL fallback, Android fora | Sim, sem ressalva. |
+| 6 | Roteiro livre por padrão, dirigido por argumento | Sim, mas **mudou de significado**: "dirigido" agora quer dizer *cenários de teste* (`/e2e login: senha em branco, senha errada`), não *telas a visitar*. |
+
+### O que o usuário NÃO pediu (não inventar ao retomar)
+
+- Trilha Android/`adb` — recusada explicitamente: *"Android não faremos essa navegação no app"*.
+- Persistência de cenários como suíte de regressão — é ideia minha (§6.8), nunca foi pedida.
+- Instrumentar o app à revelia — a decisão 10 é **oferecer** a unit de logging, nunca impor.

@@ -24,7 +24,7 @@ correlação com o log do app. Nenhum código escrito ainda — só design.
   de screenshots (era o que o documento-fonte propunha) — é execução de cenários com veredito.
   E hooks continuam **OFF**, então entrada no RAG não injeta em sessão hoje; o que entrega
   capacidade é a skill + o command.
-- **Sem alterações de código.** `master` segue em `7434d04`, 1 commit à frente do origin.
+- **Sem alterações de código.** Só docs. `master` em `67970e2`, **2 commits à frente do origin** — push segurado por política da sessão, você decide quando.
 
 ## Ponto anterior (2026-07-01) — v3.0.0 ESTÁVEL PUBLICADA (push + release + rag.db) ✅
 
