@@ -338,7 +338,30 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 11. **Corrigir o `/new-project` — não builda de primeira (NOVO, 2026-08-30).** Reportado pelo
     usuário após teste real. **Diagnóstico completo em
     [`docs/ideas/2026-08-30-new-project-gaps.md`](ideas/2026-08-30-new-project-gaps.md).**
-    - **Causa raiz: o `.dproj` nunca é gerado.** A árvore do comando mostra `NomeProjeto.dproj`,
+    - **✅ DIAGNOSTICADO EMPIRICAMENTE em 2026-08-30 — compilei um scaffold real** (`ApiGT004`,
+      API Horse em `D:\Temp\Projeto Novo com Delphi-Dev`, RAD Studio 37.0 / Delphi 13).
+      **São TRÊS defeitos independentes, não um.** Ver §7 do doc.
+      1. **`DCC_DebugInformation` booleano** → `F1026: File not found: 'true.dpr'`, **antes de
+         compilar qualquer linha**. A propriedade é enum numérico no Delphi moderno (a IDE emite
+         `0` e usa `DCC_DebugInfoInExe` para o booleano); o valor `true` vaza como token solto na
+         linha do `dcc32`, que o toma pelo arquivo-fonte.
+      2. **`class var` vazando para os campos de instância** → 6× `E2356` na 1ª unit. `class var`
+         abre seção que **linha em branco não fecha** — todos os campos viraram variáveis de
+         classe e as propriedades de instância não podem lê-las.
+      3. **API de terceiros alucinada** → `E2003`/`E2066`/`E2250` + `W1074`. O gerador escreveu
+         `Swagger.Title(...)` (o `Title` vive em `IGBSwaggerInfo`) e `Horse.GBSwagger.Middleware`
+         (o real é `HorseSwagger`), contra versões que o `boss` instalou e cujo **fonte está em
+         `modules/`**. Princípio a incorporar: **após `boss install`, ler a API real em
+         `modules/`** antes de escrever código de framework.
+    - **⚠️ DUAS AFIRMAÇÕES MINHAS ANTERIORES ESTAVAM ERRADAS** (feitas por leitura do comando, sem
+      artefato): o `.dproj` **é** gerado, com GUID válido e `DCCReference`; e o
+      `DCC_UnitSearchPath` **existe** — as 11 units de `src/` compilam. A estrutura em camadas
+      funciona. Ver §7.0.
+    - **✅ CONFIRMADO e reforçado:** o comando **nunca compila o que gerou**. Um laço "buildar até
+      `Build OK`" teria pego os defeitos 1 e 2 sozinho.
+    - **2 aprendizados novos para a KB** (nenhum existe hoje): `DCC_DebugInformation` numérico e
+      o vazamento de `class var`.
+    - ~~**Causa raiz: o `.dproj` nunca é gerado.**~~ (superado pela §7) A árvore do comando mostra `NomeProjeto.dproj`,
       mas o Passo 3 só manda gerar `.dpr` + units. `.dpr` ≠ `.dproj` — sem o arquivo MSBuild o
       msbuild não tem o que construir. Isto sozinho explica o sintoma.
     - **Segunda causa: sem `DCC_UnitSearchPath`.** O scaffold espalha units por `src/model`,
