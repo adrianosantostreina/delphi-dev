@@ -1,10 +1,12 @@
 # Design — `delphi-e2e`: execução de cenários E2E em app Delphi desktop
 
-> **STATUS: DESIGN EM ANDAMENTO — NÃO APROVADO.**
-> Brainstorming interrompido na aprovação das seções 1–3 (usuário reiniciou a sessão).
-> Este arquivo é o estado completo para retomar sem refazer as perguntas.
-> Ao retomar: reapresentar as seções 1–3 para aprovação, seguir para as seções 4–7,
+> **STATUS: DESIGN EM ANDAMENTO — §5 APROVADA, §6 EM APROVAÇÃO.**
+> Atualizado em **2026-08-30**.
+> §5.1–5.3 **aprovadas** (decisões 12, 13, 14 na §4). §6.1–6.3 apresentadas e aceitas
+> ("Certo"); §6.4–6.8 ainda **não apresentadas**.
+> Ao retomar: apresentar §6.4–6.7 (mecânicas) e decidir §6.8 (persistência de cenários),
 > depois converter em spec aprovada e invocar `writing-plans`.
+> **Não refazer as perguntas já respondidas** — 14 decisões travadas na §4.
 
 ## 0. Origem
 
@@ -158,10 +160,13 @@ Três consequências levantadas e aceitas:
 | 9 | Gravação de dados | **Grava só se o cenário pedir**, declarado e confirmado no gate |
 | 10 | Log do app | **Ler log existente + oferecer instrumentação quando não houver** |
 | 11 | Nome final | **`delphi-e2e`** + **`/e2e`** — "E2E" não colide com DUnitX nos gatilhos |
+| 12 | Agente executor | **CORTADO** (2026-08-30). Entrega = **skill + command + entrada no RAG**. A decisão 8 (execução no contexto principal) esvazia o agente; a instrumentação delega ao `delphi-writer`. **Substitui formalmente a decisão 7.** |
+| 13 | Vocabulário de veredito | **Quatro**: ✅ PASSOU · ❌ FALHOU · ⛔ BLOQUEADO · ⏭️ PULADO (2026-08-30) |
+| 14 | Isolamento entre cenários | **Navegar de volta pela UI; reiniciar o `.exe` se falhar** — tenta `Cancelar`/`Voltar`/`Esc` e confere pelo screenshot; após 2 tentativas sem sucesso, mata o processo e reabre (2026-08-30) |
 
 ---
 
-## 5. Design apresentado (seções 1–3 — aguardando aprovação)
+## 5. Design APROVADO (§5.1–5.3, em 2026-08-30)
 
 ### 5.1 Artefatos
 
@@ -173,10 +178,10 @@ Três consequências levantadas e aceitas:
 | `commands/e2e.md` | Porta explícita, aceita cenários como argumento |
 | `knowledge/fmx/fmx-win32-janela-automacao-externa.md` | Conhecimento no RAG, tier canonical |
 
-**PONTO ABERTO — corte proposto, não confirmado:** *não* criar agente novo. A decisão 8
+**RESOLVIDO (2026-08-30) — decisão 12: agente CORTADO.** Não se cria agente novo. A decisão 8
 (execução no contexto principal) esvazia o agente executor; a instrumentação delega ao
-`delphi-writer` existente. Se depois quisermos varredura ampla isolada, o agente entra numa
-segunda iteração. **O usuário foi perguntado e não respondeu antes de reiniciar.**
+`delphi-writer` existente. Se depois surgir necessidade de varredura ampla isolada, o agente
+entra numa segunda iteração. A tabela de artefatos acima já reflete o corte.
 
 **Materialização do `gui.ps1`:** o agente **lê** de `references/` e **escreve** em `%TEMP%`,
 dot-sourcing de lá. Dois motivos: o diretório do plugin é cache sobrescrito a cada
@@ -226,9 +231,16 @@ cenário declara seu ponto de partida, o agente reconduz até lá antes de come�
 conseguir reconduzir, sai BLOQUEADO — nunca FALHOU**. Relatório que acusa bug onde só houve
 contaminação de estado é pior que nenhum relatório.
 
+**Como reconduz (decisão 14, aprovada em 2026-08-30):** tenta pela UI (`Cancelar`/`Voltar`/`Esc`)
+e **confere pelo screenshot** se chegou ao ponto de partida. Se após **2 tentativas** não chegou,
+**mata o processo e reabre o `.exe`**. Rápido no caso comum, com saída garantida quando a tela
+trava — e nunca reporta FALHOU por contaminação. Reiniciar sempre foi descartado: paga
+splash + conexão de banco a cada cenário e perde o estado de sessão que alguns cenários
+pressupõem (ex.: "já logado, agora finalizar venda").
+
 ---
 
-## 6. Seções ainda NÃO apresentadas (rascunho — continuar daqui)
+## 6. Seções 6.1–6.3 APRESENTADAS E ACEITAS (2026-08-30); 6.4–6.8 NÃO apresentadas
 
 ### 6.1 Descoberta e leitura do log
 
@@ -296,15 +308,17 @@ suíte de regressão. É quase de graça (o agente já lê/escreve markdown) e "
 
 ---
 
-## 7. Próximo passo ao retomar
+## 7. Próximo passo ao retomar (atualizado 2026-08-30)
 
-1. Reapresentar §5.1–5.3 e obter aprovação — em especial: **o corte do agente** (§5.1) e se os
-   **quatro vereditos** são úteis ou cerimônia demais.
-2. Apresentar §6.1–6.7 por seções, com aprovação a cada uma.
-3. Decidir §6.8 (persistência de cenários).
-4. Promover este arquivo a spec aprovada (remover o cabeçalho de STATUS), rodar a
+1. ~~Reapresentar §5.1–5.3~~ **FEITO** — aprovadas, decisões 12/13/14.
+2. ~~Apresentar §6.1–6.3~~ **FEITO** — aceitas.
+3. **Apresentar §6.4–6.7** (armadilhas técnicas, relatório bilíngue, guarda Windows-only,
+   versionamento) — são mecânicas, podem ir num bloco só.
+4. **Decidir §6.8** — persistência de cenários em `docs/e2e/*.md` como suíte de regressão.
+   É a única pergunta de escopo que resta. Proposta original: fora do v1.
+5. Promover este arquivo a spec aprovada (remover o cabeçalho de STATUS), rodar a
    auto-revisão do spec, submeter à revisão do usuário.
-5. Invocar `writing-plans` para o plano de implementação.
+6. Invocar `writing-plans` para o plano de implementação.
 
 **Processo:** este design saiu da skill `superpowers:brainstorming`. O terminal dela é
 `writing-plans` — não invocar nenhuma outra skill de implementação antes disso.
@@ -329,9 +343,9 @@ Registrado porque a sequência muda a leitura das decisões da §4.
 
 ### ⚠️ Decisões tomadas ANTES do reframe — revalidar ao retomar
 
-**A decisão 7 já está superada:** a 8 (execução no contexto principal) esvazia o agente
-executor da abordagem C. É exatamente o "ponto aberto" da §5.1 — perguntei e o usuário não
-respondeu. **Não tratar a 7 como válida sem confirmar.**
+**A decisão 7 foi RESOLVIDA em 2026-08-30:** confirmada como superada. A 8 (execução no
+contexto principal) esvaziava o agente executor da abordagem C, e o usuário aprovou o corte
+— ver **decisão 12**. A abordagem final é **skill + command + RAG**, sem agente.
 
 As decisões **3, 4, 5 e 6** foram tomadas sob o enquadramento antigo (smoke test). Minha
 leitura é que sobrevivem ao reframe, mas vale conferir com o usuário em vez de assumir:
@@ -348,3 +362,22 @@ leitura é que sobrevivem ao reframe, mas vale conferir com o usuário em vez de
 - Trilha Android/`adb` — recusada explicitamente: *"Android não faremos essa navegação no app"*.
 - Persistência de cenários como suíte de regressão — é ideia minha (§6.8), nunca foi pedida.
 - Instrumentar o app à revelia — a decisão 10 é **oferecer** a unit de logging, nunca impor.
+
+
+---
+
+## 9. Sessão de 2026-08-30 — o que andou
+
+1. Retomei lendo `docs/handoff.md` e este arquivo. Nenhuma pergunta refeita.
+2. Reapresentei **§5.1** (artefatos, fronteira com `delphi-build`, `gui.ps1` de `%TEMP%`) e
+   fiz a única pergunta aberta → **decisão 12: agente cortado**.
+3. Reapresentei **§5.2** (modelo de cenário) → **decisão 13: quatro vereditos**.
+4. Reapresentei **§5.3** (ciclo de execução) com a pergunta que faltava — *como* reconduzir o
+   app entre cenários → **decisão 14: navegar de volta, reiniciar se falhar**.
+5. Apresentei **§6.1–6.3** (descoberta/leitura de log, instrumentação, regras de segurança).
+   Aceitas.
+6. O usuário interrompeu aqui para registrar uma **ideia nova** (métricas de adoção de IA no
+   time) → `docs/ideas/2026-08-30-ai-adoption-metrics.md`. Não faz parte do `/e2e`.
+
+**Nada de código escrito.** Só docs. O `writing-plans` continua sendo o terminal deste
+brainstorm — não invocar skill de implementação antes dele.

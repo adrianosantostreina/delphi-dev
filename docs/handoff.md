@@ -1,9 +1,50 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-08-09**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-08-30**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-08-09) — BRAINSTORM `delphi-e2e` EM ANDAMENTO (interrompido) ⏸️
+## Ponto de retomada (2026-08-30) — BRAINSTORM `delphi-e2e`: §5 APROVADA, §6 EM CURSO ⏸️
+
+**Continuação direta do ponto de 2026-08-09.** O brainstorm do `/e2e` avançou: as seções 5.1–5.3
+do design foram **aprovadas** e as 6.1–6.3 **aceitas**. Ainda não há código — só docs.
+
+- **ESTADO COMPLETO em [`docs/superpowers/specs/2026-08-09-delphi-e2e-design.md`](superpowers/specs/2026-08-09-delphi-e2e-design.md)**
+  (agora com §9 = cronologia desta sessão). **Ler por inteiro antes de retomar.**
+  São **14 decisões travadas** na §4 — **não refazer as perguntas.**
+
+- **Três decisões novas desta sessão:**
+  - **12 — Agente CORTADO.** Entrega = **skill + command + entrada no RAG**, sem agente novo.
+    A decisão 8 (execução no contexto principal) esvaziava o agente executor. **Substitui
+    formalmente a decisão 7** ("skill + agente + comando"), que era pré-reframe.
+  - **13 — Quatro vereditos:** ✅ PASSOU · ❌ FALHOU (o app está errado) · ⛔ BLOQUEADO (não deu
+    para executar) · ⏭️ PULADO (grava dados, não autorizado no gate). O ⛔ existe para não
+    acusar bug onde só houve contaminação de estado entre cenários.
+  - **14 — Isolamento entre cenários:** navegar de volta pela UI (`Cancelar`/`Voltar`/`Esc`),
+    conferindo pelo screenshot; após **2 tentativas** sem sucesso, **matar o processo e reabrir
+    o `.exe`**. Reiniciar sempre foi descartado (custo de splash/banco + perde estado de sessão).
+
+- **§6.1–6.3 aceitas:** descoberta do log (usuário → `config.ini` → `*.log` no dir do `.exe` →
+  degrada para veredito visual **declarado**), delta por byte offset, instrumentação **oferecida
+  e nunca imposta**, e as 7 regras de segurança reescritas (a chave: *nunca gravar por
+  iniciativa própria* — a regra original inviabilizava "testa se a venda finaliza").
+
+- **PRÓXIMO PASSO CONCRETO:**
+  1. Apresentar **§6.4–6.7** (armadilhas técnicas herdadas, relatório bilíngue, guarda
+     Windows-only, versionamento 3.0.0 → 3.1.0). São mecânicas — cabem num bloco só.
+  2. Decidir **§6.8** — persistência de cenários em `docs/e2e/*.md` como suíte de regressão.
+     Única pergunta de escopo que resta. Proposta original: fora do v1.
+  3. Promover o design a spec aprovada, auto-revisão, revisão do usuário.
+  4. **Só então** invocar `writing-plans`. É o terminal do `superpowers:brainstorming` —
+     nenhuma outra skill de implementação antes disso.
+
+- **IDEIA NOVA registrada (fora do `/e2e`):** **métricas de adoção de IA no time** →
+  [`docs/ideas/2026-08-30-ai-adoption-metrics.md`](ideas/2026-08-30-ai-adoption-metrics.md).
+  Ver item 6 do backlog abaixo.
+
+- **Sem alterações de código.** `master` **4 commits à frente do origin** — push segurado por
+  política da sessão, o usuário decide quando.
+
+## Ponto anterior (2026-08-09) — brainstorm `delphi-e2e` iniciado (interrompido)
 
 **Nova capacidade em desenho: `/e2e` — Playwright para desktop Delphi.** Executor de cenários
 de teste end-to-end que builda, abre o `.exe` e opera as telas, com veredito por cenário e
@@ -147,6 +188,26 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 4. **SDD avançado** (em discussão) — `/propose` → `/apply` → `/archive` + spec viva, 2 trilhos (legacy→spec reversa, novo→spec forward). Exige brainstorming antes. Detalhes na memória `project_roadmap.md` (seção "Fase futura — SDD avançado").
 5. **Servidor MCP local (brainstorm)** — criar um MCP server local que exponha a base de conhecimento (RAG) e outros recursos do plugin que fizerem sentido como tools/resources MCP, deixando a KB acessível de forma agnóstica ao cliente (além do hook `UserPromptSubmit` atual). **Exige brainstorm antes** — escopo a definir: quais recursos expor (busca na KB, `/contribute-kb`, padrões, templates de laudo/spec?), transporte (stdio local), como versionar/distribuir junto do plugin, relação com a Governança do RAG (item 1).
 
+6. **Métricas de adoção de IA no time (ideia nova, 2026-08-30)** — relatório de "quantas horas
+   de IA" e "% de código produzido com IA" num período, para o Adriano acompanhar a adoção pelo
+   time que ele lidera. **Ideia registrada, não desenhada** → [`docs/ideas/2026-08-30-ai-adoption-metrics.md`](ideas/2026-08-30-ai-adoption-metrics.md).
+   **Exige `superpowers:brainstorming` do zero** — as 4 perguntas em aberto (§7 do doc) nunca
+   foram feitas. Achados que já mudam o desenho:
+   - **O dado já existe local, verificado nesta máquina:** `~/.claude/projects/**/*.jsonl`
+     (651 sessões, 820 MB — com `timestamp`, `cwd`, `gitBranch`, tool_use de Edit/Write com
+     `file_path` e conteúdo, `usage`, `attributionSkill`), `~/.claude/history.jsonl`,
+     `~/.claude/file-history/`, e o `usage-log.txt` do hook próprio do usuário.
+   - **Logo, o v1 pode ser analisador post-hoc read-only — NÃO depende de hooks voltarem.**
+     Isso contorna o bloqueio dos hooks OFF (item 5 deste backlog).
+   - **Riscos que precisam entrar no desenho:** Goodhart/vigilância (recomendação forte:
+     agregado de time por padrão, per-dev só com opt-in), cobertura parcial (só vê Claude Code
+     na máquina com coletor), privacidade (digest exportado **nunca** carrega conteúdo, só
+     contagens), retenção (transcript expira — coleta tem que ser incremental).
+   - **Verificar ANTES de construir:** se o time está em plano Team/Enterprise da Anthropic, o
+     dashboard de analytics pode já entregar metade do pedido.
+   - **Conflito de escopo em aberto:** isto é métrica de processo, não conhecimento Delphi —
+     pode fazer mais sentido como plugin separado do `delphi-dev`.
+
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
 ## Armadilhas / o que não fazer
@@ -166,5 +227,8 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 
 ## Branch / sincronização
 
-- Branch: `master`, sincronizada com `origin/master` (`cec3fa1`).
-- Tags `v2.2.1` (e anteriores) pushadas. Release v2.2.1 publicado como `latest`.
+- Branch: `master`. **4 commits à frente de `origin/master`** (2026-08-30) — todos doc-only
+  (design do `/e2e` + ideia de métricas). Push segurado por política da sessão.
+- Última sincronização real com o origin: `84f3676` (v3.0.0). Release `v3.0.0` publicado como
+  `latest` com `rag.db` anexado.
+- Tags `v2.2.1` (e anteriores) pushadas.
