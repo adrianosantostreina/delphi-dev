@@ -203,8 +203,24 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
      agregado de time por padrão, per-dev só com opt-in), cobertura parcial (só vê Claude Code
      na máquina com coletor), privacidade (digest exportado **nunca** carrega conteúdo, só
      contagens), retenção (transcript expira — coleta tem que ser incremental).
-   - **Verificar ANTES de construir:** se o time está em plano Team/Enterprise da Anthropic, o
-     dashboard de analytics pode já entregar metade do pedido.
+   - **⚠️ VALIDADO em 2026-08-30 — a recomendação MUDOU (ver §10 do doc).** A Anthropic já
+     entrega nativamente as duas métricas. O dashboard Team/Enterprise
+     (`claude.ai/analytics/claude-code`) dá "PRs with Claude Code (%)", linhas com CC,
+     leaderboard por usuário e export CSV — com atribuição por PR feita melhor do que faríamos
+     (janela de 21 dias, descarta código reescrito em >20%, exclui lockfile/gerado/`dist/`). E o
+     OpenTelemetry (`CLAUDE_CODE_ENABLE_TELEMETRY=1`, **qualquer plano**) exporta
+     **`claude_code.active_time.total`** — a métrica de horas pronta, já sem ociosidade — com
+     atribuição per-dev nativa (`user.email`, `organization.id`).
+   - **Logo: hook próprio virou o PIOR caminho.** Recomendação revisada — **Caminho 1:** ligar o
+     dashboard nativo (custo zero) se houver Team/Enterprise. **Caminho 2 (provável):**
+     `/ai-metrics on` **configura OTel** em vez de contar sozinho, apontando para um collector
+     no VPS Hostinger que o usuário já opera. **Caminho 3** (hook próprio): só sem
+     Team/Enterprise e sem apetite para collector.
+   - **DESTRAVA A ESCOLHA:** em que plano o time está (Team/Enterprise vs Pro/Max individual) e
+     se usa GitHub. Pendente com o usuário.
+   - **Decisões do usuário (2026-08-30):** relatório **per-dev**; persistência **global com
+     override por projeto**; **parte do `delphi-dev`** (não plugin separado); e *"nem precisa ser
+     exato"* — o que reforça o Caminho 2.
    - **Nome já decidido: `/ai-metrics`** (skill `delphi-ai-metrics`). Superfície proposta:
      `on` / `off` / `status` / `report <período>`.
    - **O comando NÃO pode ser o contador** — slash command roda dentro do turno e morre com

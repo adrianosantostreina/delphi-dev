@@ -5,7 +5,10 @@
 > uma sprint futura. Ao pegar isto: rodar `superpowers:brainstorming` do zero — as
 > perguntas da §7 nunca foram feitas. **Nome já decidido: `/ai-metrics` (§8.7).**
 > **§8 tem o refinamento do usuário** (ativação por comando) e a restrição técnica que
-> vem do postmortem da v2.2.2 — ler antes de desenhar o hook.
+> vem do postmortem da v2.2.2.
+> **⚠️ LER A §10 PRIMEIRO.** A validação de 2026-08-30 mudou a recomendação: a Anthropic já
+> entrega nativamente as duas métricas pedidas. Construir do zero seria reimplementar — pior —
+> o que já existe. A §9 (esboço de v1 custom) está **superada** pela §10.
 
 ## 1. O pedido, nas palavras do usuário
 
@@ -204,3 +207,110 @@ Comando `/ai-metrics report`, analisador post-hoc read-only:
   padrão do `rag.db` que o plugin já usa.
 - Encaixe técnico: `scripts/` já tem TypeScript + `better-sqlite3` + vitest. O analisador
   cai natural ali.
+
+
+---
+
+## 10. ⚠️ VALIDAÇÃO (2026-08-30) — a Anthropic já entrega isso; a recomendação MUDOU
+
+O usuário pediu que eu validasse a questão 7.2 ("o time está em plano Team/Enterprise?").
+A resposta reescreve a ideia inteira.
+
+### 10.1 Decisões do usuário registradas nesta rodada
+
+| Pergunta (§7) | Resposta |
+|---|---|
+| 7.3 — per-dev ou agregado? | **Per-dev**, com **configuração de "onde" persistir** (o time todo usa o plugin) |
+| — escopo do ledger | **Global**, com **override por projeto** se der |
+| 7.4 — plugin separado? | **Parte do `delphi-dev`** |
+| 7.2 — plano Team/Enterprise? | **Delegada a mim para validar** → §10.2 |
+
+Relaxamento importante declarado pelo usuário: *"Nem precisa ser exato, apenas fazer cálculos
+durante as sessões e ir armazenando."* Isso derruba a exigência de precisão da métrica 2
+(§4) — e, combinado com a §10.2, muda qual caminho vale a pena.
+
+### 10.2 O que já existe nativamente (verificado na doc oficial)
+
+**A) Dashboard de analytics — planos Claude for Teams / Enterprise**
+`claude.ai/analytics/claude-code` (Admin/Owner). Entrega:
+
+- **Lines of code with CC** e **PRs with CC** — o numerador da métrica 2
+- **PRs with Claude Code (%)** — literalmente o "X% do código foi produzido com IA"
+- **Suggestion accept rate**, daily active users, sessions
+- **Leaderboard por usuário** + **export CSV de todos os usuários**
+- Atribuição por PR feita **exatamente** como eu propus na §4(b) — casa as linhas do diff do PR
+  contra a saída das sessões, com normalização — **e com refinamentos que nós erraríamos:**
+  janela de 21 dias antes / 2 dias depois do merge, código reescrito pelo humano em >20% deixa
+  de ser atribuído, e exclusão automática de lockfiles, código gerado, `dist/`, minificados e
+  linhas >1000 chars. PRs merged ganham label `claude-code-assisted` no GitHub.
+
+**B) OpenTelemetry — qualquer plano**
+`CLAUDE_CODE_ENABLE_TELEMETRY=1` + exporter OTLP. Métricas exportadas:
+
+| Métrica | Relevância |
+|---|---|
+| **`claude_code.active_time.total`** (segundos) | **É a métrica 1 pronta** — tempo ativo, já excluindo ociosidade, calculado pelo próprio Claude Code |
+| `claude_code.lines_of_code.count` | linhas modificadas |
+| `claude_code.commit.count` / `pull_request.count` | volume entregue |
+| `claude_code.token.usage` / `cost.usage` | custo |
+| `claude_code.session.count` | sessões |
+
+Com atribuição per-dev nativa: `user.email`, `user.account_uuid`, `organization.id`,
+`session.id`. **Responde a decisão "per-dev" sem escrever uma linha de código.**
+
+**C) APIs de export**
+Enterprise: Claude Enterprise Analytics API (escopo `read:analytics`) — **não disponível no
+plano Teams**. Clientes de API/Console: Claude Code Analytics API com Admin API key.
+
+### 10.3 O que isso invalida do desenho anterior
+
+- **§3 (cálculo de horas com corte de ociosidade):** desnecessário. `active_time.total` já faz,
+  e melhor.
+- **§4 (cruzar transcript com git para o % de código):** desnecessário **se** houver
+  Team/Enterprise + GitHub. A implementação deles é mais cuidadosa que a nossa seria.
+- **§8.3 (hook `.js` sem dependência):** só se justifica no cenário sem Team/Enterprise **e**
+  sem collector OTel.
+- **§9 (esboço de v1 custom):** **superado.** Mantido no arquivo só como registro.
+
+### 10.4 Lacunas reais — onde o plugin AINDA agrega
+
+O nativo não cobre tudo. Vale construir onde:
+
+1. **O time não está em Team/Enterprise.** Se são contas Pro/Max individuais, o dashboard de
+   contribuição **não existe** para eles. Só sobra OTel.
+2. **Contribution metrics exigem GitHub** (Cloud ou Enterprise Server) + GitHub App instalado
+   por admin + role Owner no claude.ai. GitLab / Azure DevOps / Bitbucket ficam de fora.
+3. **Zero Data Retention desliga** as contribution metrics.
+4. **Cobre só usuários dentro da org claude.ai** — uso via Console API não entra.
+5. **Nada disso é específico de Delphi**, nem sabe separar `.pas`/`.dfm`/`.dpr` de outros
+   arquivos, nem correlacionar com as skills do `delphi-dev`.
+6. **Setup é chato:** OTel exige env vars + collector. Um comando que configura isso tem valor
+   real, mesmo sem medir nada por conta própria.
+
+### 10.5 Recomendação revisada — três caminhos, em ordem de custo
+
+**Caminho 1 — Dashboard nativo (custo ~zero).** Se o time está em Team/Enterprise: ligar o
+GitHub App e o toggle de analytics. Entrega as duas métricas pedidas em 24h, sem código.
+`/ai-metrics` vira, no máximo, um leitor do CSV exportado que renderiza o relatório no
+terminal com recorte Delphi.
+
+**Caminho 2 — OTel + collector (custo baixo, recomendado se não houver Team/Enterprise).**
+`/ai-metrics on` **configura a telemetria** (env vars + endpoint) em vez de implementar
+contador próprio. O `active_time.total` já resolve a métrica 1 corretamente. O destino do
+endpoint responde a pergunta do usuário sobre "onde persistir" para o time inteiro — e ele já
+opera um VPS Hostinger com Docker Swarm + Traefik, onde um collector + Grafana caberia.
+Configuração global em `~/.claude/settings.json` com override por projeto em
+`.claude/settings.json` — que é exatamente como o Claude Code já resolve configuração.
+
+**Caminho 3 — Hook próprio (custo alto).** Só se: sem Team/Enterprise **e** sem apetite para
+rodar collector. Aí valem a §8.3 e a §8.4. Dado o "nem precisa ser exato", um hook simples
+contando eventos e tempo entre eles por sessão é suficiente — mas ainda é a opção mais cara
+para o pior resultado.
+
+### 10.6 Pergunta que destrava a escolha
+
+**Em que plano o time está?** Team/Enterprise → Caminho 1. Contas individuais Pro/Max →
+Caminho 2. É a única informação que falta para decidir.
+
+Segunda pergunta, menor: **o time usa GitHub?** Se for GitLab/Azure DevOps, o Caminho 1 perde
+as contribution metrics mesmo com Team/Enterprise, e cai no Caminho 2.
