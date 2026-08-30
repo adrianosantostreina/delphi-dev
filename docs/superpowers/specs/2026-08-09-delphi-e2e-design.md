@@ -7,6 +7,9 @@
 > Ao retomar: apresentar §6.4–6.7 (mecânicas) e decidir §6.8 (persistência de cenários),
 > depois converter em spec aprovada e invocar `writing-plans`.
 > **Não refazer as perguntas já respondidas** — 14 decisões travadas na §4.
+> **LER A §10 ANTES DE CONTINUAR.** Em 2026-08-30 apareceu na KB compartilhada uma técnica
+> NOVA de automação (`fmx-automacao-windows-sem-foco.md`) que substitui o mecanismo em que
+> este design inteiro foi baseado. Invalida parte da §6.3 e da §6.4.
 
 ## 0. Origem
 
@@ -381,3 +384,62 @@ leitura é que sobrevivem ao reframe, mas vale conferir com o usuário em vez de
 
 **Nada de código escrito.** Só docs. O `writing-plans` continua sendo o terminal deste
 brainstorm — não invocar skill de implementação antes dele.
+
+
+---
+
+## 10. MECANISMO SUPERADO (descoberto em 2026-08-30) — revisar antes de escrever código
+
+Ao inventariar a KB compartilhada do usuário, apareceu um documento **novo, do mesmo dia**,
+que **substitui o mecanismo em que este design foi baseado**:
+
+`C:/Users/User/.claude/shared/delphi-knowledge/fmx-automacao-windows-sem-foco.md`
+— *"[FMX/Windows] Automatizar um app FireMonkey sem roubar foco nem mexer no cursor"*
+
+### 10.1 O que mudou
+
+Este design herdou de `fmx-win32-janela-automacao-externa.md` a técnica de
+**`SetForegroundWindow` + `SetCursorPos` + `mouse_event`** — que rouba o foco e sequestra o
+cursor. O documento novo **desaconselha explicitamente** essa abordagem, com sintoma real
+observado: *a pessoa digitava, o script mandou `cola` no campo do app, e o texto dela vazou
+junto — o campo ficou `tácola`.*
+
+A substituição:
+
+| Ação | Antes (este design) | Agora | Por quê |
+|---|---|---|---|
+| Clique | `SetCursorPos` + `mouse_event` | **`PostMessage`** de `WM_MOUSEMOVE`/`WM_LBUTTONDOWN`/`WM_LBUTTONUP` | vai direto à fila da janela; **não precisa de foco e não toca no cursor** |
+| Texto | `SendKeys` / foco + teclado | **`WM_CHAR`** na mesma fila | não depende de foco e **não sofre com acento morto** de teclado ABNT |
+| Screenshot | recorte da tela pela `RECT` | **`PrintWindow`** com flag **2** (`PW_RENDERFULLCONTENT`) | captura **mesmo com a janela coberta** |
+
+### 10.2 O que isso invalida neste documento
+
+- **§6.4, armadilha 3.2** (`SetForegroundWindow` falha calado, combo completo, abortar na
+  segunda falha) — **obsoleta**: não se pede mais foco.
+- **§6.4, armadilha 3.5** (o primeiro clique após mudança de foco é engolido) — **obsoleta**
+  pelo mesmo motivo.
+- **§6.3, regra 4** (nunca capturar a tela inteira; recortar pela `RECT`) — **superada por algo
+  melhor**: `PrintWindow` captura **só** a janela do app por construção, garantia de privacidade
+  mais forte do que recortar um screenshot de tela cheia.
+- **§6.3, regra 5** (declarar se roubou o foco) — **deixa de ser necessária**; vira "declarar
+  que NÃO rouba foco", que é argumento de venda.
+- **§6.4, armadilha 3.4** (recalcular `GetWindowRect` antes de cada clique) — **provavelmente
+  ainda vale**, mas por outro motivo: com `PostMessage` em coordenadas de cliente, arrastar a
+  janela deixa de importar. **Confirmar contra o documento novo.**
+
+### 10.3 O que isso faz com a decisão 8
+
+A decisão 8 foi **"execução no contexto principal, passo a passo visível (igual Playwright)"** —
+o usuário queria ver o app operando "na cara dele". Com automação sem foco, o app **pode rodar
+ao fundo enquanto ele continua trabalhando**.
+
+Isso não contradiz a decisão — a narração passo a passo continua visível no terminal — mas
+**muda a experiência**, e provavelmente para melhor: roda a bateria sem sequestrar a máquina.
+**Vale reperguntar** se ele quer a janela em primeiro plano (mais demonstrativo, interrompe)
+ou ao fundo (não interrompe, mas ele não "assiste").
+
+### 10.4 Ação ao retomar
+
+**Antes de apresentar a §6.4, ler `fmx-automacao-windows-sem-foco.md` por inteiro** e reescrever
+a §6.4 e a §6.3 sobre o mecanismo novo. O `gui.ps1` da §5.1 muda de implementação — o papel
+dele no design permanece.

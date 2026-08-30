@@ -252,6 +252,45 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
      pode fazer mais sentido como plugin separado do `delphi-dev`. Verificar também colisão de
      gatilho com o `/dashboard` que já existe.
 
+7. **Comando owner-only de sincronização da KB (`/sync-kb`) — NOVO, 2026-08-30.** O mantenedor
+   **não deve usar `/contribute-kb`** para publicar o próprio conhecimento. Quatro motivos
+   concretos, todos verificados no repo:
+   - **Tier errado.** `commands/contribute-kb.md` grava em `knowledge/community/`, que por
+     desenho da governança (`docs/rag-governance.md`) é **subordinado e nunca sobrepõe o
+     canonical**. O conhecimento do Adriano **é** o canonical — publicá-lo como community faz o
+     retrieval suprimi-lo sempre que o core cobrir o tema. É exatamente ao contrário.
+   - **Fonte errada.** O `/contribute-kb` lê `knowledge/local/` (saída dos hooks). Os **hooks
+     estão OFF** desde a v2.2.2 e `knowledge/local/` está **vazio** — o comando não acharia nada.
+     A base do Adriano vive em `~/.claude/shared/delphi-knowledge/`.
+   - **Mecanismo errado.** Sanitização + PR + gate de CI existem para entrada **não confiável**.
+     O dono commita direto, e a governança diz explicitamente que *"mudanças em core/fmx não
+     passam pelo gate"*.
+   - **Falta a transformação.** Os arquivos da KB compartilhada têm formato próprio; `knowledge/`
+     exige frontmatter (`title`, `category`, `tags`, `source`) e decisão `core/` vs `fmx/`.
+   **Portanto: criar comando separado**, só na máquina do mantenedor. Faz diff entre
+   `~/.claude/shared/delphi-knowledge/` e `knowledge/core|fmx/`, converte formato, classifica o
+   destino, commita direto em `master` e deixa a CI `build-rag.yml` rebuildar o `rag.db`.
+   **Exige brainstorming** — nome, dry-run, e como decidir core vs fmx.
+
+8. **Importar o backlog da KB compartilhada — 41 arquivos fora do plugin (2026-08-30).**
+   Inventário: **74** arquivos em `~/.claude/shared/delphi-knowledge/` contra **34** em
+   `knowledge/core` + `knowledge/fmx`. Faltam **41**, sendo **9 de hoje**:
+   `json-null-e-iso8601-delphi`, `fmx-defeitos-que-so-aparecem-rodando`, `rodar-app-mobile-no-desktop`, `fmx-automacao-windows-sem-foco`, `router4delphi-animation-hook-sksvg`, `w1036-recurso-adquirido-dentro-do-try`, `delphi-pastas-especiais-desktop`, `delphi13-horse-webwebconst-shadow`, `horse-conexao-por-requisicao`.
+   Os outros **32**: `acbr-posprinter-escpos`, `android-jdk-keytool-path-obsoleto`, `brcc32-resinator-delphi13-bug`, `comentario-chave-fecha-bloco`, `compilerversion-tabela-condicional`, `dcc32-unit-nome-pontuado-conflito-search-path`, `dfm-fmx-sem-bom`, `dproj-projectguid-valido`, `firedac-persistent-fields-colunas-extras`, `firedac-sqlite-mobile-beforeconnect`, `fmx-android-edge-to-edge-safe-area`, `fmx-camera-lifecycle-scanner`, `fmx-flowlayout-posicao-diverge-versoes`, `fmx-gridpanellayout-controlcollection`, `fmx-progresso-sync-por-registro-anr`, `fmx-propriedade-nao-publicada-streaming`, `fmx-scaledlayout-design-fixo-tablet`, `fmx-skia-fontes-customizadas-svg-icones`, `fmx-stylebook-resourcesbin-versao`, `fmx-svg-pathdata-numeros-colados`, `fmx-win32-janela-automacao-externa`, `for-in-array-constructor-e2001`, `horse-gbswagger-rotas-jwt`, `horse-linux-docker-firebird`, `indy-openssl-android`, `indy-readtimeout-streaming`, `indy-tls-client-passthrough`, `program-name-colide-var-global-e2029`, `router4delphi-has-fmx-define`, `string-literal-255-limite`, `vcl-messagedlg-botoes-em-ingles`, `writeln-sem-console-runtime-error-217`.
+   (Único só no plugin, sem contrapartida na base compartilhada: `delphi-async.md`.)
+   Este é o trabalho que o item 7 automatiza — fazer o 7 antes evita importar 41 arquivos à mão.
+
+9. **IMPACTO NO `/e2e` (ação imediata, não é backlog).** Entre os 9 de hoje está
+   **`fmx-automacao-windows-sem-foco.md`**, que **substitui o mecanismo em que o design do
+   `/e2e` foi baseado**. Sai `SetForegroundWindow` + `SetCursorPos` + `mouse_event` (rouba foco,
+   sequestra cursor — sintoma real: o texto que a pessoa digitava vazou para o campo do app);
+   entra **`PostMessage`** de `WM_LBUTTONDOWN`/`UP` para clique, **`WM_CHAR`** para texto (imune
+   a acento morto de teclado ABNT) e **`PrintWindow` com flag 2** para screenshot (captura até
+   com a janela coberta). **Invalida as armadilhas 3.2 e 3.5 e as regras 4 e 5 da §6.3** do
+   design. Detalhes na **§10** de
+   [`docs/superpowers/specs/2026-08-09-delphi-e2e-design.md`](superpowers/specs/2026-08-09-delphi-e2e-design.md).
+   **Ler esse arquivo por inteiro antes de apresentar a §6.4.**
+
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
 ## Armadilhas / o que não fazer
