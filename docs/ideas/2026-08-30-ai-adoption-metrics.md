@@ -4,6 +4,8 @@
 > Levantada por Adriano em 2026-08-30, no meio do design do `/e2e`. Guardada para
 > uma sprint futura. Ao pegar isto: rodar `superpowers:brainstorming` do zero — as
 > perguntas da §7 nunca foram feitas.
+> **§8 tem o refinamento do usuário** (ativação por comando) e a restrição técnica que
+> vem do postmortem da v2.2.2 — ler antes de desenhar o hook.
 
 ## 1. O pedido, nas palavras do usuário
 
@@ -111,7 +113,79 @@ pedido de graça.
    "plugin que faz o Claude ser expert em Delphi"; métrica de processo de time é outro
    produto. Conflito de escopo real, a resolver antes de escrever código.
 
-## 8. Esboço de v1, se aprovado
+## 8. Refinamento do usuário (2026-08-30) — a ativação é um comando
+
+> "Implementar no `delphi-dev` um comando que starte a regra, tipo `/timecount` ou `/clock`.
+> O dev ativa e pronto, o próprio plugin começa a contabilizar o uso e persistir."
+
+Isto **melhora** o desenho por um motivo que não é técnico: ativação pelo próprio dev é
+**opt-in explícito**, e é exatamente a mitigação do risco 6.1 (vigilância). Coleta silenciosa
+vira coleta consentida.
+
+### 8.1 A realidade técnica: o comando não pode SER o contador
+
+Um slash command no Claude Code é markdown injetado no prompt — roda **dentro** da conversa e
+termina com o turno. Não deixa processo rodando. Quem observa evento a evento é **hook**
+(`Stop`, `PostToolUse`).
+
+Logo, o papel do comando é **armar** o contador: registrar o hook, gravar o consentimento,
+marcar o início. Não contar.
+
+### 8.2 Metade da encanação já existe
+
+`installer/src/hooks.ts` já tem **`registerHooks()` / `removeHooks()`** escrevendo em
+`~/.claude/settings.json`, com 3 testes passando. Foi mantido intacto no hotfix v2.2.2 mesmo
+com os hooks desligados.
+
+### 8.3 Restrição dura, vinda do postmortem da v2.2.2
+
+Por que os hooks morreram (diagnóstico confirmado no código):
+
+1. `installer/src/hooks.ts` aponta os comandos para `${PLUGIN_BASE}/scripts/capture.js`, mas o
+   `tsconfig` compila em `scripts/dist/`. Caminho errado.
+2. `dist/` **não é versionado**, e o installer faz `git clone --depth=1` **sem** `npm install` /
+   `npm run build` → os `.js` simplesmente não existem na máquina do dev.
+3. `scripts/package.json` depende de `better-sqlite3`, `@xenova/transformers` e `sqlite-vec` —
+   **nativas e pesadas**.
+
+**Portanto o hook do relógio precisa ser:** um **único `.js` sem nenhuma dependência,
+commitado no repo** (não compilado, fora de `dist/`), que só faz *append* num JSONL. Sem
+build, sem native deps, funciona em clone limpo. É o que o faz sobreviver ao modo de falha
+que matou os hooks do RAG.
+
+> Isto também explica por que o relógio pode voltar **antes** do MCP local (item 5 do backlog
+> v3.0): ele não precisa de embeddings nem de SQLite nativo no ambiente do dev.
+
+### 8.4 A ativação é marcador, não pré-requisito
+
+Como os transcripts (§2) já registram tudo, `/clock report` consegue responder
+**retroativamente** sobre período anterior à ativação. O `on` registra consentimento e liga a
+captura durável; não é condição para haver número.
+
+### 8.5 Superfície proposta
+
+| Comando | O que faz |
+|---|---|
+| `/clock on` | Registra o hook, grava consentimento e o instante de início. **Declara na hora o que é coletado e o que nunca é** (nunca prompt, nunca código — só contagens). |
+| `/clock off` | Remove o hook. Preserva o ledger já acumulado. |
+| `/clock status` | Ligado desde quando, cobertura, totais correntes. |
+| `/clock report <período>` | O relatório da §3/§4. Backfill por transcript quando o período antecede a ativação. |
+
+### 8.6 Mecanismo de persistência — decidir no brainstorm
+
+- **Ledger append-only JSONL** (`~/.claude/delphi-dev/clock/<AAAA-MM>.jsonl`), escrito pelo
+  hook sem dependência. Durável: sobrevive à expiração do transcript.
+- **Agregado em SQLite** só no momento do `report`, montado pelo `scripts/` (que já tem
+  `better-sqlite3` e roda na máquina do desenvolvedor do plugin, não do usuário final).
+- **Escopo do ledger:** global ou por projeto? Em aberto — ver §7.
+
+### 8.7 Nome — em aberto
+
+Convenção do repo é **inglês** (houve refactor dedicado, commit `e359d92`). Candidatos:
+`/clock`, `/timecount`, `/track`, `/ai-metrics`. `/clock` é curto mas ambíguo com hora do dia;
+`/ai-metrics` é explícito mas longo. **Decidir com o usuário.**
+
+## 9. Esboço de v1, se aprovado
 
 Comando `/ai-report`, analisador post-hoc read-only:
 
