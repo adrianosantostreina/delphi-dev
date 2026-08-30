@@ -3,7 +3,7 @@
 > **STATUS: IDEIA REGISTRADA — não desenhada, não aprovada, sem brainstorm.**
 > Levantada por Adriano em 2026-08-30, no meio do design do `/e2e`. Guardada para
 > uma sprint futura. Ao pegar isto: rodar `superpowers:brainstorming` do zero — as
-> perguntas da §7 nunca foram feitas.
+> perguntas da §7 nunca foram feitas. **Nome já decidido: `/ai-metrics` (§8.7).**
 > **§8 tem o refinamento do usuário** (ativação por comando) e a restrição técnica que
 > vem do postmortem da v2.2.2 — ler antes de desenhar o hook.
 
@@ -69,9 +69,9 @@ entre os dois é sinal de defeito no pipeline, não de mudança de comportamento
 
 O dado nasce na máquina de cada dev. Três arranjos:
 
-**(i) Local + digest commitado — recomendado para o v1.** Cada dev roda `/ai-report --export`,
+**(i) Local + digest commitado — recomendado para o v1.** Cada dev roda `/ai-metrics export`,
 que gera um digest **só com contagens** (por dia, extensão, skill — nunca prompts, nunca
-código) em `docs/metrics/<dev>-<AAAA-MM>.json`. O líder roda `/ai-report --team` e consolida
+código) em `docs/metrics/<dev>-<AAAA-MM>.json`. O líder roda `/ai-metrics report --team` e consolida
 o que estiver no repo. Zero infraestrutura.
 
 **(ii) Central via OpenTelemetry.** O Claude Code expõe telemetria OTel (variável
@@ -158,7 +158,7 @@ que matou os hooks do RAG.
 
 ### 8.4 A ativação é marcador, não pré-requisito
 
-Como os transcripts (§2) já registram tudo, `/clock report` consegue responder
+Como os transcripts (§2) já registram tudo, `/ai-metrics report` consegue responder
 **retroativamente** sobre período anterior à ativação. O `on` registra consentimento e liga a
 captura durável; não é condição para haver número.
 
@@ -166,10 +166,10 @@ captura durável; não é condição para haver número.
 
 | Comando | O que faz |
 |---|---|
-| `/clock on` | Registra o hook, grava consentimento e o instante de início. **Declara na hora o que é coletado e o que nunca é** (nunca prompt, nunca código — só contagens). |
-| `/clock off` | Remove o hook. Preserva o ledger já acumulado. |
-| `/clock status` | Ligado desde quando, cobertura, totais correntes. |
-| `/clock report <período>` | O relatório da §3/§4. Backfill por transcript quando o período antecede a ativação. |
+| `/ai-metrics on` | Registra o hook, grava consentimento e o instante de início. **Declara na hora o que é coletado e o que nunca é** (nunca prompt, nunca código — só contagens). |
+| `/ai-metrics off` | Remove o hook. Preserva o ledger já acumulado. |
+| `/ai-metrics status` | Ligado desde quando, cobertura, totais correntes. |
+| `/ai-metrics report <período>` | O relatório da §3/§4. Backfill por transcript quando o período antecede a ativação. |
 
 ### 8.6 Mecanismo de persistência — decidir no brainstorm
 
@@ -179,18 +179,25 @@ captura durável; não é condição para haver número.
   `better-sqlite3` e roda na máquina do desenvolvedor do plugin, não do usuário final).
 - **Escopo do ledger:** global ou por projeto? Em aberto — ver §7.
 
-### 8.7 Nome — em aberto
+### 8.7 Nome — DECIDIDO: `/ai-metrics`
 
-Convenção do repo é **inglês** (houve refactor dedicado, commit `e359d92`). Candidatos:
-`/clock`, `/timecount`, `/track`, `/ai-metrics`. `/clock` é curto mas ambíguo com hora do dia;
-`/ai-metrics` é explícito mas longo. **Decidir com o usuário.**
+**Escolhido pelo usuário em 2026-08-30.** Em inglês, conforme a convenção do repo (refactor
+dedicado, commit `e359d92`). Descartados: `/clock` (ambíguo com hora do dia), `/track`
+(genérico demais, e a conotação de rastrear pessoa é justamente a leitura que o desenho quer
+evitar), `/timecount` (nomeia só as horas e deixa de fora o % de código).
+
+Skill correspondente, seguindo o padrão do repo: **`delphi-ai-metrics`**.
+
+**Cuidado de gatilho a verificar no desenho:** o repo já tem `/dashboard`. Conferir se as
+`description` das duas não colidem na auto-ativação — mesmo problema que a §6 do design do
+`/e2e` levantou entre `delphi-e2e` e `delphi-tests`.
 
 ## 9. Esboço de v1, se aprovado
 
-Comando `/ai-report`, analisador post-hoc read-only:
+Comando `/ai-metrics report`, analisador post-hoc read-only:
 
 - Entrada: `~/.claude/projects/**/*.jsonl` + `git log` do repo corrente.
-- Argumentos: período (`/ai-report 2026-08-01..2026-08-31`), escopo (repo atual por padrão).
+- Argumentos: período (`/ai-metrics report 2026-08-01..2026-08-31`), escopo (repo atual por padrão).
 - Saída: markdown com tempo ativo, % de linhas de origem IA, quebra por dia / extensão /
   skill, e um bloco explícito de **cobertura e ressalvas**.
 - Persistência: cache incremental em SQLite (`~/.claude/delphi-dev/metrics.db`) — mesmo

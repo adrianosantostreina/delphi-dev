@@ -205,8 +205,21 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
      contagens), retenção (transcript expira — coleta tem que ser incremental).
    - **Verificar ANTES de construir:** se o time está em plano Team/Enterprise da Anthropic, o
      dashboard de analytics pode já entregar metade do pedido.
+   - **Nome já decidido: `/ai-metrics`** (skill `delphi-ai-metrics`). Superfície proposta:
+     `on` / `off` / `status` / `report <período>`.
+   - **O comando NÃO pode ser o contador** — slash command roda dentro do turno e morre com
+     ele. Ele **arma um hook**. `registerHooks`/`removeHooks` já existem e são testados em
+     `installer/src/hooks.ts`.
+   - **Restrição dura (postmortem da v2.2.2):** o hook do relógio tem que ser **um único `.js`
+     sem dependência, commitado** (não compilado, fora de `dist/`), fazendo só append em JSONL.
+     Os hooks do RAG morreram por apontar para `scripts/dist/` (não versionado, installer não
+     roda build) e por exigir `better-sqlite3` + `transformers`. Por isso o `/ai-metrics` pode
+     voltar **antes** do MCP local.
+   - **Ativação é marcador, não pré-requisito:** os transcripts já têm o histórico, então
+     `report` responde retroativamente sobre período anterior ao `on`.
    - **Conflito de escopo em aberto:** isto é métrica de processo, não conhecimento Delphi —
-     pode fazer mais sentido como plugin separado do `delphi-dev`.
+     pode fazer mais sentido como plugin separado do `delphi-dev`. Verificar também colisão de
+     gatilho com o `/dashboard` que já existe.
 
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
