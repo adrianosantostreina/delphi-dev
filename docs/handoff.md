@@ -216,8 +216,23 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
      `/ai-metrics on` **configura OTel** em vez de contar sozinho, apontando para um collector
      no VPS Hostinger que o usuário já opera. **Caminho 3** (hook próprio): só sem
      Team/Enterprise e sem apetite para collector.
-   - **DESTRAVA A ESCOLHA:** em que plano o time está (Team/Enterprise vs Pro/Max individual) e
-     se usa GitHub. Pendente com o usuário.
+   - **✅ ENQUADRAMENTO CORRIGIDO pelo usuário (§11 do doc) — recomendação FINAL.** Eu estava
+     desenhando para o time do Adriano; **o plugin roda para qualquer dev do mundo**. Logo o
+     plano **não é entrada de design, é variável de runtime**: `/ai-metrics on` **detecta o
+     ambiente e degrada com elegância**. Escada: (1) dashboard nativo — só Team/Enterprise +
+     GitHub App + Owner; (2) OTel → collector — exige ter onde mandar; (3) **ledger local via
+     hook — sem requisito nenhum**.
+   - **O nível 3 é o PADRÃO**, não o último recurso: é o único que funciona para todos os
+     usuários do plugin (dev solo não tem org no claude.ai nem collector). O *"nem precisa ser
+     exato"* do usuário é o que torna isso aceitável.
+   - **⚠️ Isso REPROMOVE a restrição do hook a requisito de 1ª ordem:** se ele roda na máquina de
+     todo usuário, é o mesmo público que a v2.2.2 quebrou. **Um único `.js` sem dependência,
+     commitado, fora de `dist/`, só append em JSONL.** Repetir o erro quebra todo mundo de novo.
+   - **Onde o plugin ganha do nativo:** alcance (dev solo), **recorte Delphi** (`.pas`/`.dfm`/
+     `.dpr` + correlação com as skills via `attributionSkill`, que já está no transcript), sem
+     privilégio administrativo, e funciona fora do GitHub.
+   - **Pergunta sobre o plano do time: RETIRADA.** Não há o que descobrir — virou requisito de
+     detecção em runtime.
    - **Decisões do usuário (2026-08-30):** relatório **per-dev**; persistência **global com
      override por projeto**; **parte do `delphi-dev`** (não plugin separado); e *"nem precisa ser
      exato"* — o que reforça o Caminho 2.

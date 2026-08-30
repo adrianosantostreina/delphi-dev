@@ -9,6 +9,8 @@
 > **⚠️ LER A §10 PRIMEIRO.** A validação de 2026-08-30 mudou a recomendação: a Anthropic já
 > entrega nativamente as duas métricas pedidas. Construir do zero seria reimplementar — pior —
 > o que já existe. A §9 (esboço de v1 custom) está **superada** pela §10.
+> **E LER A §11 DEPOIS:** a §10 raciocinava sobre o time do Adriano; o plugin roda para
+> qualquer dev do mundo. A §11 corrige o enquadramento e fixa a recomendação final.
 
 ## 1. O pedido, nas palavras do usuário
 
@@ -314,3 +316,75 @@ Caminho 2. É a única informação que falta para decidir.
 
 Segunda pergunta, menor: **o time usa GitHub?** Se for GitLab/Azure DevOps, o Caminho 1 perde
 as contribution metrics mesmo com Team/Enterprise, e cai no Caminho 2.
+
+
+---
+
+## 11. ✅ CORREÇÃO DE ENQUADRAMENTO (2026-08-30) — recomendação FINAL
+
+> Correção do usuário: *"Não há como saber. Lembre-se, isso é um plugin que pode estar sendo
+> usado por qualquer dev no mundo inteiro."*
+
+**Ele está certo, e isso invalida a pergunta da §10.6.** Eu estava desenhando para o time dele.
+O `delphi-dev` é distribuído publicamente: o usuário típico pode ser um dev solo em Pro, uma
+casa de software de 5 pessoas, ou uma empresa em Enterprise. **Não existe "o plano do time"** —
+existe o plano de *cada instalação*.
+
+### 11.1 A consequência: plano é variável de runtime, não entrada de design
+
+O `/ai-metrics on` tem que **detectar o ambiente e se adaptar**, nunca assumir. O comando
+deixa de ser "um medidor" e vira **um roteador de setup**: descobre o que está disponível
+naquela máquina/conta e liga o melhor caminho possível ali.
+
+### 11.2 A escada de fallback, do melhor dado ao sempre-disponível
+
+| Nível | Mecanismo | Requisito | Quem alcança |
+|---|---|---|---|
+| 1 | **Dashboard nativo** (`claude.ai/analytics/claude-code`) | Team/Enterprise + GitHub App + role Owner | minoria dos usuários do plugin |
+| 2 | **OTel → collector** | qualquer plano, mas exige **ter onde mandar** (collector + infra) | quem já tem observabilidade |
+| 3 | **Ledger local via hook** | nada | **todo mundo** |
+
+**O nível 3 tem que ser o padrão.** Não porque é o melhor dado — não é — mas porque é o
+único que funciona para **todos** os usuários do plugin, com zero infraestrutura e zero
+privilégio administrativo. Um dev Delphi solo não tem org no claude.ai nem collector no VPS;
+para ele, os níveis 1 e 2 simplesmente não existem.
+
+**Isto ressuscita o "Caminho 3" da §10.5 — por um motivo diferente do original.** Não é a
+melhor medição; é a única universal. E o *"nem precisa ser exato"* do usuário é exatamente o
+que a torna aceitável como padrão.
+
+### 11.3 Isto REPROMOVE a §8.3 a restrição crítica
+
+Se o hook local é o caminho **padrão** e não mais o último recurso, ele roda na máquina de
+todo usuário do plugin — o mesmo público que a v2.2.2 quebrou. Então a regra da §8.3 deixa de
+ser precaução e vira requisito de primeira ordem:
+
+> **um único `.js` sem nenhuma dependência, commitado no repo, fora de `dist/`, que só faz
+> append em JSONL.** Sem build, sem native deps, funciona em clone limpo.
+
+Repetir o erro aqui quebra a instalação de todo mundo de novo.
+
+### 11.4 O papel de cada nível no comando
+
+- **`/ai-metrics on`** — detecta o ambiente, explica em uma linha o que consegue medir ali,
+  liga o nível mais alto disponível e **declara qual foi**. Se detectar Team/Enterprise,
+  **aponta para o dashboard nativo em vez de duplicá-lo** — e oferece o nível 3 por cima, pelo
+  recorte Delphi que o nativo não dá.
+- **OTel** vira **upgrade opcional**, para quem tem onde mandar (o caso do VPS do Adriano é uma
+  instância disso, não a especificação).
+- **Dashboard nativo** vira **ponteiro**, nunca reimplementação.
+
+### 11.5 Onde o plugin ganha do nativo (e por que a ideia sobrevive)
+
+1. **Alcance.** Funciona para o dev solo, que é a maioria do público do plugin e não tem acesso
+   a nada do nível 1.
+2. **Recorte Delphi.** Separa `.pas` / `.dfm` / `.dpr` / `.dproj` do resto e correlaciona com as
+   skills do `delphi-dev` (`attributionSkill` já está no transcript). O nativo não sabe o que é
+   Delphi.
+3. **Sem privilégio administrativo.** Não exige role Owner nem GitHub App.
+4. **Funciona fora do GitHub.** GitLab, Azure DevOps, Bitbucket, SVN, repositório privado.
+
+### 11.6 Status da §10.6
+
+**Pergunta retirada.** Não há "o plano do time" a descobrir. O que era pergunta virou
+**requisito**: detectar em runtime e degradar com elegância.
