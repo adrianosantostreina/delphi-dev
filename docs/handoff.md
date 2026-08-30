@@ -324,7 +324,7 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
       *o Claude É o parser*.** O que falta ao plugin não é capacidade de analisar código —
       Claude já lê `.pas` — e sim **o checklist do que procurar**. O catálogo de regras é esse
       checklist.
-    - **Recomendação:** absorver **(1)** como conhecimento — regras viram critérios de auditoria
+    - **✅ RECOMENDAÇÃO ACEITA PELO USUÁRIO (2026-08-30).** Absorver **(1)** como conhecimento — regras viram critérios de auditoria
       em `knowledge/core/` e no `delphi-laudo`, **reescritas na voz canonical do Adriano**, que
       é o que a própria governança (`docs/rag-governance.md`) já exige para material promovido.
       Reescrever também dispensa obrigação de licença (aprender uma taxonomia não é copiar) —
@@ -334,6 +334,31 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
     - **Achado lateral:** existe <https://github.com/GabrielOnDelphi/Awesome-AI-For-Delphi>,
       lista de ferramentas/MCPs para usar Claude Code com Delphi. Candidato a divulgação do
       `delphi-dev`.
+
+11. **Corrigir o `/new-project` — não builda de primeira (NOVO, 2026-08-30).** Reportado pelo
+    usuário após teste real. **Diagnóstico completo em
+    [`docs/ideas/2026-08-30-new-project-gaps.md`](ideas/2026-08-30-new-project-gaps.md).**
+    - **Causa raiz: o `.dproj` nunca é gerado.** A árvore do comando mostra `NomeProjeto.dproj`,
+      mas o Passo 3 só manda gerar `.dpr` + units. `.dpr` ≠ `.dproj` — sem o arquivo MSBuild o
+      msbuild não tem o que construir. Isto sozinho explica o sintoma.
+    - **Segunda causa: sem `DCC_UnitSearchPath`.** O scaffold espalha units por `src/model`,
+      `src/service`, `src/repository`… e o `dcc32` só as acha via search path no `.dproj`.
+      Resultado: `E2003` para cada unit.
+    - **Maior retorno pelo menor esforço: o comando nunca compila o que gerou.** Não há passo de
+      validação, embora existam a **skill `delphi-build`** e o **agent `delphi-build`**. Fechar o
+      comando com "buildar e iterar até `Build OK`" converte defeitos de geração em correção
+      automática — inclusive os que não anteciparmos.
+    - Outras lacunas: forms sem `.dfm`/`.fmx`, sem `.res`, consulta à KB só no ramo FMX (VCL /
+      REST / Library geram às cegas), `tests/` criado vazio, `.claudeignore` não invocado.
+    - **⚠️ DEPENDÊNCIA DE ORDEM — fazer o item 8 ANTES deste.** Quatro dos 41 arquivos ausentes
+      são exatamente sobre por que um projeto novo não builda, e um deles cita o caso ao pé da
+      letra (*"ao criar um `.dproj` à mão — ex.: agente gerando o projeto"*):
+      `dproj-projectguid-valido`, `program-name-colide-var-global-e2029`,
+      `dcc32-unit-nome-pontuado-conflito-search-path`, `brcc32-resinator-delphi13-bug`.
+      **A cura já está escrita na KB do Adriano — só não foi importada para o plugin.**
+    - **Exige brainstorming:** `.dproj` à mão vs templates versionados por versão do Delphi; se o
+      build obrigatório bloqueia a entrega quando falha (o dev pode não ter RAD Studio — o
+      plugin é público); e qual versão do Delphi o scaffold assume.
 
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
