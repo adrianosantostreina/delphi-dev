@@ -19,6 +19,10 @@ do design foram **aprovadas** e as 6.1–6.3 **aceitas**. Ainda não há código
   - **13 — Quatro vereditos:** ✅ PASSOU · ❌ FALHOU (o app está errado) · ⛔ BLOQUEADO (não deu
     para executar) · ⏭️ PULADO (grava dados, não autorizado no gate). O ⛔ existe para não
     acusar bug onde só houve contaminação de estado entre cenários.
+  - **15 — Janela em primeiro plano é PARÂMETRO** (default: primeiro plano; flag para rodar ao
+    fundo). Sai barato porque, com `PostMessage`/`WM_CHAR`, a automação **nunca precisou de
+    foco** — trazer a janela à frente é ato puramente cosmético, um `SetWindowPos` a mais.
+    Um só caminho de código, e nenhum dos dois modos rouba digitação.
   - **14 — Isolamento entre cenários:** navegar de volta pela UI (`Cancelar`/`Voltar`/`Esc`),
     conferindo pelo screenshot; após **2 tentativas** sem sucesso, **matar o processo e reabrir
     o `.exe`**. Reiniciar sempre foi descartado (custo de splash/banco + perde estado de sessão).
@@ -290,6 +294,46 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
    design. Detalhes na **§10** de
    [`docs/superpowers/specs/2026-08-09-delphi-e2e-design.md`](superpowers/specs/2026-08-09-delphi-e2e-design.md).
    **Ler esse arquivo por inteiro antes de apresentar a §6.4.**
+
+10. **Absorver a inteligência do Delphi-RAG-Lint (NOVO, 2026-08-30).** O usuário quer trazer a
+    inteligência de <https://github.com/Alexl-git/Delphi-RAG-Lint> (autor: Alexl-git) para
+    dentro do `delphi-dev`, **sem dependência nem vínculo com o repo dele**.
+    - **Licença: MIT.** Permite copiar, modificar e redistribuir até em obra maior, **desde que
+      preservados o aviso de copyright e o texto da licença**. Absorver é legal — só exige
+      crédito se o material for copiado.
+    - **O que aquele projeto é:** ferramenta **Delphi nativa** (binários Object Pascal +
+      tree-sitter DLLs) que faz parsing AST do fonte, indexa símbolos em SQLite (call graph,
+      hierarquia de tipos), e expõe LSP, plugin do RAD Studio 13 e **um MCP server com 15 tools
+      para Claude/Cursor**. Tem **174 regras de lint em 16 categorias** (119 built-in + 54
+      externas `.scm`; 149 ligadas por padrão, 22 com auto-fix). Exemplos: `god-class`,
+      `with-statement`, `circular-uses`, `unused-public-symbol`, `type-name-prefix`,
+      `string-equality-comparison`, `writeln-in-source`, `goto-statement`, `missing-doc`,
+      `doc-drift`. Catálogo autoritativo via `drag-lint rules`.
+    - **⚠️ São TRÊS inteligências diferentes, com transferibilidade muito diferente:**
+      1. **O catálogo de 174 regras — ALTAMENTE transferível e de alto valor.** Mapeia direto no
+         `/audit`, no `/review` e nas 8 dimensões do `delphi-laudo`, cujo catálogo hoje é menor
+         e em prosa. **É aqui que está o ganho real.**
+      2. **O motor de análise estática (tree-sitter + índice SQLite + call graph) — NÃO
+         transferível.** São binários Object Pascal; o `delphi-dev` não tem runtime que os
+         execute, e reescrever em TypeScript seria projeto de meses duplicando algo que já
+         existe e funciona. **É aqui que "trazer toda a inteligência" quebra.**
+      3. **O MCP server deles** — ironia registrada: **já é exatamente o item 5 deste backlog**
+         (MCP local). Mas usá-lo seria "vinculado ao repositório dele", que é justamente o que o
+         usuário não quer.
+    - **Insight que resolve o impasse: o `delphi-dev` não precisa do parser deles porque
+      *o Claude É o parser*.** O que falta ao plugin não é capacidade de analisar código —
+      Claude já lê `.pas` — e sim **o checklist do que procurar**. O catálogo de regras é esse
+      checklist.
+    - **Recomendação:** absorver **(1)** como conhecimento — regras viram critérios de auditoria
+      em `knowledge/core/` e no `delphi-laudo`, **reescritas na voz canonical do Adriano**, que
+      é o que a própria governança (`docs/rag-governance.md`) já exige para material promovido.
+      Reescrever também dispensa obrigação de licença (aprender uma taxonomia não é copiar) —
+      mas **creditar mesmo assim** é barato e correto. **NÃO** tentar absorver (2).
+    - **Exige brainstorming** — quantas das 174 regras entram, como mapear nas 8 dimensões do
+      laudo, e se vira `knowledge/core/` ou `references/` do `delphi-laudo`.
+    - **Achado lateral:** existe <https://github.com/GabrielOnDelphi/Awesome-AI-For-Delphi>,
+      lista de ferramentas/MCPs para usar Claude Code com Delphi. Candidato a divulgação do
+      `delphi-dev`.
 
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 

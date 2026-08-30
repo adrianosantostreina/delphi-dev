@@ -165,6 +165,7 @@ Três consequências levantadas e aceitas:
 | 11 | Nome final | **`delphi-e2e`** + **`/e2e`** — "E2E" não colide com DUnitX nos gatilhos |
 | 12 | Agente executor | **CORTADO** (2026-08-30). Entrega = **skill + command + entrada no RAG**. A decisão 8 (execução no contexto principal) esvazia o agente; a instrumentação delega ao `delphi-writer`. **Substitui formalmente a decisão 7.** |
 | 13 | Vocabulário de veredito | **Quatro**: ✅ PASSOU · ❌ FALHOU · ⛔ BLOQUEADO · ⏭️ PULADO (2026-08-30) |
+| 15 | Janela em primeiro plano | **Parâmetro, o dev decide** (2026-08-30). **Default: primeiro plano** — o usuário quer ver o app rodando "na cara dele". Flag para deixar ao fundo, sem interromper quem está na máquina. Ver §10.5. |
 | 14 | Isolamento entre cenários | **Navegar de volta pela UI; reiniciar o `.exe` se falhar** — tenta `Cancelar`/`Voltar`/`Esc` e confere pelo screenshot; após 2 tentativas sem sucesso, mata o processo e reabre (2026-08-30) |
 
 ---
@@ -437,6 +438,30 @@ Isso não contradiz a decisão — a narração passo a passo continua visível 
 **muda a experiência**, e provavelmente para melhor: roda a bateria sem sequestrar a máquina.
 **Vale reperguntar** se ele quer a janela em primeiro plano (mais demonstrativo, interrompe)
 ou ao fundo (não interrompe, mas ele não "assiste").
+
+### 10.5 Decisão 15 — primeiro plano é PARÂMETRO, e isso sai barato
+
+Resposta do usuário à pergunta da §10.3: *"Realmente, gostaria de ver o app rodando na minha
+cara, mas podemos ter um parâmetro para configurar se o app sobe para o topo ou fica debaixo de
+outras janelas, o desenvolvedor decide."*
+
+**Default: primeiro plano.** Flag para rodar ao fundo.
+
+**A propriedade que torna isso barato:** como o mecanismo novo (§10.1) usa `PostMessage` +
+`WM_CHAR` + `PrintWindow`, **a automação funciona identicamente nos dois modos** — ela nunca
+precisou de foco. Trazer a janela para a frente vira um ato puramente **cosmético**: um
+`SetWindowPos` a mais no início, para o dev assistir. Não é escolha de mecanismo, é escolha de
+exibição.
+
+Consequências:
+
+- **Um só caminho de código**, sem `if` espalhado pelo harness. O `gui.ps1` clica e digita do
+  mesmo jeito nos dois modos.
+- **Nenhum dos dois modos rouba digitação.** Mesmo em primeiro plano, o texto vai por `WM_CHAR`
+  para a fila da janela alvo — o bug do `tácola` não volta.
+- **O modo ao fundo ganha um caso de uso próprio:** bateria longa rodando enquanto o dev
+  trabalha. Vale mencionar no `SKILL.md`.
+- **A §6.3 regra 5** ("declarar se roubou o foco") vira **"declarar em que modo rodou"**.
 
 ### 10.4 Ação ao retomar
 
