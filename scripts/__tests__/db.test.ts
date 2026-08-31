@@ -111,14 +111,14 @@ describe('selectByTier', () => {
   it('fills slots with relevant canonical first, community only on leftovers', () => {
     const canonical = [res('canonical', 0.2), res('canonical', 0.4)];
     const community = [res('community', 0.1)];
-    const out = selectByTier(canonical, community, 3, RELEVANCE_FLOOR);
+    const out = selectByTier(canonical, community, [], 3, RELEVANCE_FLOOR);
     expect(out.map((r) => r.tier)).toEqual(['canonical', 'canonical', 'community']);
   });
 
   it('drops community entirely when canonical fills every slot', () => {
     const canonical = [res('canonical', 0.1), res('canonical', 0.2), res('canonical', 0.3)];
     const community = [res('community', 0.05)];
-    const out = selectByTier(canonical, community, 3, RELEVANCE_FLOOR);
+    const out = selectByTier(canonical, community, [], 3, RELEVANCE_FLOOR);
     expect(out).toHaveLength(3);
     expect(out.every((r) => r.tier === 'canonical')).toBe(true);
   });
@@ -126,7 +126,7 @@ describe('selectByTier', () => {
   it('lets a strong community beat a weak canonical above the floor', () => {
     const canonical = [res('canonical', 1.8)]; // > floor 1.0 => held back
     const community = [res('community', 0.1)];
-    const out = selectByTier(canonical, community, 1, RELEVANCE_FLOOR);
+    const out = selectByTier(canonical, community, [], 1, RELEVANCE_FLOOR);
     expect(out).toHaveLength(1);
     expect(out[0].tier).toBe('community');
   });
@@ -134,7 +134,7 @@ describe('selectByTier', () => {
   it('falls back to above-floor canonical when nothing else fills the slot', () => {
     const canonical = [res('canonical', 1.8)];
     const community: SearchResult[] = [];
-    const out = selectByTier(canonical, community, 1, RELEVANCE_FLOOR);
+    const out = selectByTier(canonical, community, [], 1, RELEVANCE_FLOOR);
     expect(out).toHaveLength(1);
     expect(out[0].tier).toBe('canonical');
   });

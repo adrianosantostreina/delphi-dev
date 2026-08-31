@@ -7,6 +7,18 @@ import * as sqliteVec from 'sqlite-vec';
 // normalized, so L2 distance ranges 0 (identical) .. ~2 (opposite). Calibrable.
 export const RELEVANCE_FLOOR = 1.0;
 
+// Absolute cutoff: a chunk farther than this is dropped outright, even when it
+// would otherwise fill a slot. Without it the search can never return empty and
+// every prompt gets three chunks, relevant or not. Slightly above
+// RELEVANCE_FLOOR so a marginally-weak canonical can still serve as fallback.
+// NOT yet calibrated against a real-world corpus — override per install.
+export const DEFAULT_MAX_DISTANCE = Number(process.env.DELPHI_RAG_MAX_DISTANCE ?? 1.1);
+
+// Trust tiers, most authoritative first. 'local' is captured from the user's own
+// sessions: it passed no review gate at all, so it must never outrank curated
+// content. Writers MUST pass it explicitly — see embedFile.
+export type Tier = 'canonical' | 'community' | 'local';
+
 export interface KnowledgeChunk {
   path: string;
   chunkIndex: number;
@@ -14,7 +26,7 @@ export interface KnowledgeChunk {
   embedding: Float32Array;
   category: 'bugs' | 'architecture' | 'patterns' | 'failures' | 'general';
   agent: string | null;
-  tier: 'canonical' | 'community';
+  tier: Tier;
 }
 
 export interface SearchResult {
@@ -79,11 +91,13 @@ export function clearDb(db: Database.Database): void {
 }
 
 // Slot-precedence selection: relevant canonical (distance <= floor) claims slots
-// first; community fills only the leftovers; above-floor canonical is the last
-// fallback so we never return fewer results than available.
+// first, then community, then local (unreviewed session capture). Above-floor
+// canonical stays the last fallback. Ordering alone never drops anything —
+// applyDistanceCutoff does that.
 export function selectByTier(
   canonical: SearchResult[],
   community: SearchResult[],
+  local: SearchResult[],
   topK: number,
   relevanceFloor: number
 ): SearchResult[] {
@@ -91,26 +105,49 @@ export function selectByTier(
   const relevantCanonical = canonical.filter((r) => r.distance <= relevanceFloor);
   const weakCanonical = canonical.filter((r) => r.distance > relevanceFloor);
 
-  for (const r of relevantCanonical) {
-    if (out.length >= topK) break;
-    out.push(r);
-  }
-  for (const r of community) {
-    if (out.length >= topK) break;
-    out.push(r);
-  }
-  for (const r of weakCanonical) {
-    if (out.length >= topK) break;
-    out.push(r);
+  for (const group of [relevantCanonical, community, local, weakCanonical]) {
+    for (const r of group) {
+      if (out.length >= topK) break;
+      out.push(r);
+    }
   }
   return out.slice(0, topK);
+}
+
+// Absolute relevance gate. Returning an empty list is a valid, desirable outcome:
+// formatSearchResults yields '' for it and the hook then injects nothing.
+export function applyDistanceCutoff(results: SearchResult[], maxDistance: number): SearchResult[] {
+  return results.filter((r) => r.distance <= maxDistance);
+}
+
+export interface RagHealth {
+  total: number;
+  canonical: number;
+  community: number;
+  local: number;
+  /** No curated content at all — the install never received a built rag.db. */
+  curatedMissing: boolean;
+}
+
+export function ragHealth(db: Database.Database): RagHealth {
+  const canonical = countByTier(db, 'canonical');
+  const community = countByTier(db, 'community');
+  const local = countByTier(db, 'local');
+  return {
+    total: countChunks(db),
+    canonical,
+    community,
+    local,
+    curatedMissing: canonical === 0,
+  };
 }
 
 export function searchSimilar(
   db: Database.Database,
   queryEmbedding: Float32Array,
   topK: number = 3,
-  agentFilter?: string
+  agentFilter?: string,
+  maxDistance: number = DEFAULT_MAX_DISTANCE
 ): SearchResult[] {
   const vecBytes = Buffer.from(queryEmbedding.buffer);
   // Pull a wide candidate pool so tier partitioning has enough to choose from.
@@ -138,7 +175,9 @@ export function searchSimilar(
 
   const canonical = ordered.filter((r) => r.tier === 'canonical');
   const community = ordered.filter((r) => r.tier === 'community');
-  return selectByTier(canonical, community, topK, RELEVANCE_FLOOR).map(
+  const local = ordered.filter((r) => r.tier === 'local');
+  const selected = selectByTier(canonical, community, local, topK, RELEVANCE_FLOOR);
+  return applyDistanceCutoff(selected, maxDistance).map(
     ({ content, category, path, distance, tier }) => ({ content, category, path, distance, tier })
   );
 }

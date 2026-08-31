@@ -48,6 +48,54 @@ async function classifyChunk(content: string): Promise<Category> {
   }
 }
 
+// The Stop / SubagentStop hooks deliver a JSON *event envelope* on stdin, not the
+// conversation. The envelope carries `transcript_path`, pointing at the session
+// .jsonl. Indexing the envelope itself poisons the corpus with session_id /
+// transcript_path noise — that was the v3.0.0 bug.
+export function readHookTranscript(raw: string): string {
+  let payload: { transcript_path?: string } | null = null;
+  try {
+    payload = JSON.parse(raw) as { transcript_path?: string };
+  } catch {
+    return raw; // not JSON — plain text, use as-is
+  }
+  if (!payload || typeof payload.transcript_path !== 'string') return raw;
+  if (!fs.existsSync(payload.transcript_path)) return '';
+  try {
+    return extractTranscriptText(fs.readFileSync(payload.transcript_path, 'utf-8'));
+  } catch {
+    return '';
+  }
+}
+
+// Keep only what a human actually said or was told. Indexing the whole .jsonl
+// would trade envelope noise for tool_use / tool_result / metadata noise.
+export function extractTranscriptText(jsonl: string): string {
+  const parts: string[] = [];
+  for (const line of jsonl.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let event: { type?: string; message?: { content?: unknown } };
+    try {
+      event = JSON.parse(line) as { type?: string; message?: { content?: unknown } };
+    } catch {
+      continue; // malformed line, skip
+    }
+    if (event.type !== 'user' && event.type !== 'assistant') continue;
+    const content = event.message?.content;
+    if (typeof content === 'string') {
+      parts.push(content);
+    } else if (Array.isArray(content)) {
+      for (const block of content) {
+        if (block && typeof block === 'object' && (block as { type?: string }).type === 'text') {
+          const text = (block as { text?: string }).text;
+          if (text) parts.push(text);
+        }
+      }
+    }
+  }
+  return parts.join('\n\n');
+}
+
 export async function captureFromTranscript(
   transcriptText: string,
   mode: 'agent' | 'session',
@@ -91,19 +139,24 @@ async function main(): Promise<void> {
     | 'session';
   const agentName = process.env.CLAUDE_AGENT_NAME ?? null;
 
-  let transcriptText = '';
+  let raw = '';
   process.stdin.setEncoding('utf-8');
   for await (const chunk of process.stdin) {
-    transcriptText += chunk;
+    raw += chunk;
   }
+  if (!raw.trim()) return;
 
+  const transcriptText = readHookTranscript(raw);
   if (!transcriptText.trim()) return;
 
   const chunks = await captureFromTranscript(transcriptText, mode, agentName);
   if (chunks.length > 0) {
     // Dynamic import avoids load-time coupling with the embedding model.
     const { embedFile } = await import('./embed');
-    await embedFile(chunks[0].sourcePath);
+    const { RAG_DB_PATH } = await import('./paths');
+    // 'local' — captured from this machine's own sessions, reviewed by nobody.
+    // It must never outrank curated knowledge. See db.ts Tier.
+    await embedFile(chunks[0].sourcePath, RAG_DB_PATH, 'local');
   }
 }
 

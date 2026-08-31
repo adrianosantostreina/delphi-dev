@@ -1,11 +1,10 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { openDb, searchSimilar, type SearchResult } from './db';
+import { openDb, searchSimilar, DEFAULT_MAX_DISTANCE, type SearchResult } from './db';
+import { RAG_DB_PATH } from './paths';
 import { embedTexts } from './embed';
 
-const RAG_DB_PATH =
-  process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 const PRECEDENCE_DIRECTIVE =
   'Canonical é autoritativo; community é complementar e nunca sobrepõe o canonical.';
@@ -44,7 +43,7 @@ async function main(): Promise<void> {
   try {
     const db = openDb(RAG_DB_PATH);
     const [queryEmbedding] = await embedTexts([queryText]);
-    const results = searchSimilar(db, queryEmbedding, 3, agentName);
+    const results = searchSimilar(db, queryEmbedding, 3, agentName, DEFAULT_MAX_DISTANCE);
     db.close();
     const output = formatSearchResults(results);
     if (output) process.stdout.write(output);

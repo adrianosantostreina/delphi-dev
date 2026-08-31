@@ -79,7 +79,7 @@ program
     summary([
       { label: 'Claude Code CLI', ok: result.claudeOk },
       { label: 'delphi-dev plugin active', ok: result.pluginOk },
-      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'coming in v2.1 — run "npx delphi-dev sync-kb" when available' : undefined },
+      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'missing — run "npx delphi-dev sync-kb"' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'not detected' : undefined },
     ]);
 

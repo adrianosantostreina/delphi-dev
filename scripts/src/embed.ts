@@ -1,11 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { openDb, insertChunk } from './db';
+import { openDb, insertChunk, type Tier } from './db';
+import { RAG_DB_PATH } from './paths';
 import { chunkText, normalizeChunks, type Category } from './capture';
 
-const RAG_DB_PATH =
-  process.env.RAG_DB_PATH ?? path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 interface FeatureTensor {
   data: Float32Array;
@@ -44,10 +43,13 @@ function parseCategoryFromContent(content: string): Category {
   return 'general';
 }
 
+// `tier` is REQUIRED on purpose. It used to default to 'canonical', which meant
+// capture.ts silently stamped every captured session chunk as absolute truth and
+// defeated the whole tier-governance model. Never give it a default again.
 export async function embedFile(
   mdPath: string,
-  dbPath: string = RAG_DB_PATH,
-  tier: 'canonical' | 'community' = 'canonical'
+  dbPath: string,
+  tier: Tier
 ): Promise<number> {
   const content = fs.readFileSync(mdPath, 'utf-8');
   const db = openDb(dbPath);
@@ -82,10 +84,11 @@ export async function embedFile(
 async function main(): Promise<void> {
   const filePath = process.argv[2];
   if (!filePath) {
-    console.error('Usage: embed.js <path-to-md>');
+    console.error('Usage: embed.js <path-to-md> [canonical|community|local]');
     process.exit(1);
   }
-  const count = await embedFile(path.resolve(filePath));
+  const tier = (process.argv[3] as Tier) ?? 'canonical';
+  const count = await embedFile(path.resolve(filePath), RAG_DB_PATH, tier);
   console.log(`Embedded ${count} chunks from ${filePath}`);
 }
 

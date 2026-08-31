@@ -22,7 +22,7 @@
 | **`/new-project`** | Scaffolds a new project with standardized layered folder structure |
 | **`/spec`** | Analyzes the current project source code and auto-generates a complete `SPEC.md` |
 | **`/tdd`** | Generates a complete DUnitX unit test suite for the project |
-| **`/contribute-kb`** | Packages local learnings captured by the hooks and opens a PR to the community knowledge base |
+| **`/contribute-kb`** | Packages local learnings captured by the hooks and opens a PR to the community knowledge base *(needs hooks, currently disabled — see Installation)* |
 | **`/dashboard`** | Displays GitHub repository metrics — stars, forks, issues, PRs, commits, releases, contributors |
 | **`/about`** | Displays plugin info, version, and available commands |
 
@@ -38,9 +38,21 @@ This single command:
 - Installs the Claude Code plugin
 - Downloads the RAG knowledge base
 - Installs the VS Code extension (if VS Code is detected)
-- Registers automation hooks
+- Removes any stale automation hooks left by older versions
 
 **Requirements:** Node.js 18+, Claude Code CLI, git
+
+> **Automation hooks are disabled since v2.2.2.** They depended on native modules
+> that broke clean installs on Windows. The knowledge base still ships and the
+> skills, commands and agents all work — what is currently off is the automatic
+> per-prompt knowledge injection and session capture. They return with the local
+> MCP server. **Do not register them by hand:** on v3.0.0 and earlier the capture
+> path writes session noise into the index tagged as authoritative.
+
+> **Installing from the marketplace?** `/plugin marketplace add` clones the repo,
+> and `rag/rag.db` is **not** versioned — so that path arrives **without a
+> knowledge base**. Run `npx delphi-dev sync-kb` to download it from the latest
+> release. Without it the RAG has no curated content to return.
 
 ### Update
 

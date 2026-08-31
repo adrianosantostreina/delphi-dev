@@ -22,7 +22,7 @@
 | **`/new-project`** | Scaffold de novo projeto com estrutura de pastas em camadas padronizada |
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
-| **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária |
+| **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária *(depende dos hooks, hoje desligados — ver Instalação)* |
 | **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
 
@@ -38,9 +38,22 @@ Este único comando:
 - Instala o plugin no Claude Code
 - Baixa a base de conhecimento RAG
 - Instala a extensão VS Code (se detectado)
-- Registra hooks de automação
+- Remove hooks de automação obsoletos deixados por versões antigas
 
 **Requisitos:** Node.js 18+, Claude Code CLI, git
+
+> **Os hooks de automação estão desligados desde a v2.2.2.** Eles dependiam de
+> módulos nativos que quebravam a instalação limpa no Windows. A base de
+> conhecimento continua sendo distribuída e as skills, comandos e agentes
+> funcionam normalmente — o que está desligado é a injeção automática de
+> conhecimento a cada prompt e a captura de sessão. Voltam com o servidor MCP
+> local. **Não registre os hooks à mão:** na v3.0.0 e anteriores o caminho de
+> captura grava ruído de sessão no índice carimbado como autoritativo.
+
+> **Instalando pelo marketplace?** O `/plugin marketplace add` faz um clone do
+> repositório, e o `rag/rag.db` **não** é versionado — ou seja, esse caminho chega
+> **sem base de conhecimento**. Rode `npx delphi-dev sync-kb` para baixá-la do
+> último release. Sem isso o RAG não tem conteúdo curado para devolver.
 
 ### Atualizar
 
