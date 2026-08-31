@@ -49,6 +49,27 @@ function Initialize-DelphiGui {
   [DelphiGui]::SetProcessDPIAware() | Out-Null
 }
 
+# Default: primeiro plano (decisao 15). O modo ao fundo e OPT-IN e custa uma chamada
+# extra por interacao — o FMX ATIVA o form ao processar o clique, mesmo vindo de
+# PostMessage, entao sem isto a janela sobe sozinha.
+$script:DelphiKeepBottom = $false
+
+function Set-DelphiWindowBottom {
+  # Reposiciona a janela para o fim da ordem-Z SEM ativa-la (SWP_NOACTIVATE) — e o
+  # que evita trocar "janela sobe ao clicar" por "clique rouba foco".
+  param([Parameter(Mandatory)][int]$ProcessId)
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  $flags = $script:SWP_NOMOVE -bor $script:SWP_NOSIZE -bor $script:SWP_NOACTIVATE
+  [DelphiGui]::SetWindowPos($w.Handle, $script:HWND_BOTTOM, 0, 0, 0, 0, $flags) | Out-Null
+}
+
+function Set-DelphiBackgroundMode {
+  # Liga/desliga o reposicionamento automatico apos cada clique/texto (ver
+  # Invoke-DelphiClick e Send-DelphiText).
+  param([Parameter(Mandatory)][bool]$Enabled)
+  $script:DelphiKeepBottom = $Enabled
+}
+
 function Get-DelphiWindow {
   <#
     Devolve a janela REAL do form FMX.
@@ -349,6 +370,7 @@ function Invoke-DelphiClick {
   [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONDOWN, [IntPtr]1,      $lParam) | Out-Null
   [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONUP,   [IntPtr]::Zero, $lParam) | Out-Null
   Start-Sleep -Milliseconds $SettleMs
+  if ($script:DelphiKeepBottom) { Set-DelphiWindowBottom -ProcessId $ProcessId }
 }
 
 function Send-DelphiText {
@@ -366,6 +388,7 @@ function Send-DelphiText {
     [DelphiGui]::PostMessage($w.Handle, $script:WM_CHAR, [IntPtr][int]$ch, [IntPtr]::Zero) | Out-Null
     Start-Sleep -Milliseconds $PerCharMs
   }
+  if ($script:DelphiKeepBottom) { Set-DelphiWindowBottom -ProcessId $ProcessId }
 }
 
 function Send-DelphiKey {
