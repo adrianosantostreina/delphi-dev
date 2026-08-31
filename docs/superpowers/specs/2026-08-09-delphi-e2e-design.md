@@ -1,15 +1,15 @@
-# Design — `delphi-e2e`: execução de cenários E2E em app Delphi desktop
+# Spec — `delphi-e2e`: execução de cenários E2E em app Delphi desktop
 
-> **STATUS: DESIGN EM ANDAMENTO — §5 APROVADA, §6 EM APROVAÇÃO.**
-> Atualizado em **2026-08-30**.
-> §5.1–5.3 **aprovadas** (decisões 12, 13, 14 na §4). §6.1–6.3 apresentadas e aceitas
-> ("Certo"); §6.4–6.8 ainda **não apresentadas**.
-> Ao retomar: apresentar §6.4–6.7 (mecânicas) e decidir §6.8 (persistência de cenários),
-> depois converter em spec aprovada e invocar `writing-plans`.
-> **Não refazer as perguntas já respondidas** — 14 decisões travadas na §4.
-> **LER A §10 ANTES DE CONTINUAR.** Em 2026-08-30 apareceu na KB compartilhada uma técnica
-> NOVA de automação (`fmx-automacao-windows-sem-foco.md`) que substitui o mecanismo em que
-> este design inteiro foi baseado. Invalida parte da §6.3 e da §6.4.
+> **STATUS: SPEC APROVADA** — 2026-08-31.
+> **16 decisões travadas** (§4). Design completo: §5 (artefatos, modelo de cenário, ciclo de
+> execução) e §6 (log, instrumentação, segurança, armadilhas, relatório, guarda, versionamento).
+> **Próximo passo: `writing-plans`.** Não invocar nenhuma outra skill de implementação antes.
+>
+> As §§1–3 e 8–11 são **histórico** — validam de onde vieram as decisões e registram duas
+> correcões de rota. Não são requisito; ler só se precisar do porquê.
+>
+> **O mecanismo válido é `PostMessage` / `WM_CHAR` / `PrintWindow`** (§10), já incorporado nas
+> §§6.2–6.4. O mecanismo antigo (`SetForegroundWindow` + `mouse_event`) está **descartado**.
 
 ## 0. Origem
 
@@ -165,19 +165,20 @@ Três consequências levantadas e aceitas:
 | 11 | Nome final | **`delphi-e2e`** + **`/e2e`** — "E2E" não colide com DUnitX nos gatilhos |
 | 12 | Agente executor | **CORTADO** (2026-08-30). Entrega = **skill + command + entrada no RAG**. A decisão 8 (execução no contexto principal) esvazia o agente; a instrumentação delega ao `delphi-writer`. **Substitui formalmente a decisão 7.** |
 | 13 | Vocabulário de veredito | **Quatro**: ✅ PASSOU · ❌ FALHOU · ⛔ BLOQUEADO · ⏭️ PULADO (2026-08-30) |
+| 16 | Persistência de cenários | **FORA DO v1** (2026-08-31). Cada `/e2e` descreve os cenários na hora e devolve o veredito; nada fica salvo. Re-rodar como suíte de regressão entra numa iteração futura, quando houver uso real para definir o formato. |
 | 15 | Janela em primeiro plano | **Parâmetro, o dev decide** (2026-08-30). **Default: primeiro plano** — o usuário quer ver o app rodando "na cara dele". Flag para deixar ao fundo, sem interromper quem está na máquina. Ver §10.5. |
 | 14 | Isolamento entre cenários | **Navegar de volta pela UI; reiniciar o `.exe` se falhar** — tenta `Cancelar`/`Voltar`/`Esc` e confere pelo screenshot; após 2 tentativas sem sucesso, mata o processo e reabre (2026-08-30) |
 
 ---
 
-## 5. Design APROVADO (§5.1–5.3, em 2026-08-30)
+## 5. Arquitetura — aprovada em 2026-08-30
 
 ### 5.1 Artefatos
 
 | Artefato | Papel |
 |---|---|
 | `skills/delphi-e2e/SKILL.md` | Protocolo, modelo de cenários, armadilhas, regras de segurança |
-| `skills/delphi-e2e/references/gui.ps1` | Harness PowerShell (seção 4 do documento, **sem** o default `"PDV"`) |
+| `skills/delphi-e2e/references/gui.ps1` | Harness PowerShell — `PostMessage` (clique), `WM_CHAR` (texto), `PrintWindow` flag 2 (captura). **Sem** o default `"PDV"`: nome do processo obrigatório ou derivado do `.dproj`. Ver §6.4 |
 | `skills/delphi-e2e/references/logging-unit.md` | Template da unit de logging mínima (caminho de instrumentação) |
 | `commands/e2e.md` | Porta explícita, aceita cenários como argumento |
 | `knowledge/fmx/fmx-win32-janela-automacao-externa.md` | Conhecimento no RAG, tier canonical |
@@ -244,7 +245,10 @@ pressupõem (ex.: "já logado, agora finalizar venda").
 
 ---
 
-## 6. Seções 6.1–6.3 aceitas (2026-08-30); **6.2–6.4 reescritas em 2026-08-31**; 6.5–6.8 a apresentar
+## 6. Requisitos detalhados — COMPLETOS e aprovados
+
+> §6.1 e 6.5–6.7 aceitas em 2026-08-30. **§6.2–6.4 reescritas em 2026-08-31** sobre o
+> mecanismo sem foco. §6.8 resolvida em 2026-08-31 (decisão 16).
 
 ### 6.1 Descoberta e leitura do log
 
@@ -366,30 +370,33 @@ Atualizar os dois READMEs: tabela de features (linha do `/e2e`), tabela de skill
 de versionamento do `CLAUDE.md` mandava atualizar um texto inexistente e **já foi corrigido**
 (commit `8b80370`).
 
-### 6.8 Questão de escopo em aberto (não perguntada)
+### 6.8 Persistência de cenários — RESOLVIDA: fora do v1
 
-**Persistência de cenários** — um `docs/e2e/*.md` com a bateria, para re-rodar depois como
-suíte de regressão. É quase de graça (o agente já lê/escreve markdown) e "quero rodar de novo"
-é o pedido natural seguinte. Proposta: fora do v1, decidir com o usuário.
+Perguntado em 2026-08-31 — **decisão 16: fora do v1**. Cada `/e2e` descreve os cenários em
+linguagem natural, executa e devolve o veredito. **Nada é persistido.**
 
----
+Motivo: manter o v1 no que foi pedido — *"builda, abre, testa, me diz se funciona"*. Persistir
+acrescentaria formato de arquivo, versionamento dos cenários e o caso de "a tela mudou e o
+cenário salvo não vale mais", tudo **antes** de a capacidade ter provado que funciona. É quase
+de graça depois — e aí com uso real para definir o formato.
 
-## 7. Próximo passo ao retomar (atualizado 2026-08-30)
+> Registro de honestidade: a ideia era **minha**, nunca foi pedida pelo usuário.
 
-1. ~~Reapresentar §5.1–5.3~~ **FEITO** — aprovadas, decisões 12/13/14.
-2. ~~Apresentar §6.1–6.3~~ **FEITO** — aceitas.
-3. ~~Apresentar §6.4–6.7~~ — **§6.2–6.4 reescritas em 2026-08-31** sobre o mecanismo sem foco,
-   após leitura completa de `fmx-automacao-windows-sem-foco.md`. §6.5–6.7 seguem mecânicas.
-4. **Decidir §6.8** — persistência de cenários em `docs/e2e/*.md` como suíte de regressão.
-   É a única pergunta de escopo que resta. Proposta original: fora do v1.
-5. Promover este arquivo a spec aprovada (remover o cabeçalho de STATUS), rodar a
-   auto-revisão do spec, submeter à revisão do usuário.
-6. Invocar `writing-plans` para o plano de implementação.
+## 7. Próximo passo
 
-**Processo:** este design saiu da skill `superpowers:brainstorming`. O terminal dela é
-`writing-plans` — não invocar nenhuma outra skill de implementação antes disso.
+**Spec aprovada em 2026-08-31.** O terminal do `superpowers:brainstorming` é o
+**`writing-plans`** — invocar essa skill para produzir o plano de implementação, e **nenhuma
+outra skill de implementação antes dela**.
 
----
+O plano precisa cobrir, nesta ordem de dependência:
+
+1. `skills/delphi-e2e/references/gui.ps1` — o harness (§6.4 é a especificação dele).
+2. `skills/delphi-e2e/SKILL.md` — protocolo, modelo de cenário, vereditos, segurança.
+3. `skills/delphi-e2e/references/logging-unit.md` e o template do modo `--selftest` (§6.2).
+4. `commands/e2e.md` — a porta explícita.
+5. `knowledge/fmx/fmx-win32-janela-automacao-externa.md` + o doc do mecanismo sem foco —
+   entrada no RAG, tier canonical.
+6. Versionamento **3.1.0 → 3.2.0** e os dois READMEs (§6.7).
 
 ## 8. Cronologia da sessão — e por que a ordem importa
 
@@ -451,7 +458,7 @@ brainstorm — não invocar skill de implementação antes dele.
 
 ---
 
-## 10. MECANISMO SUPERADO (descoberto em 2026-08-30) — revisar antes de escrever código
+## 10. MECANISMO SUPERADO (2026-08-30) — ✅ JÁ ABSORVIDO nas §§6.2–6.4 em 2026-08-31
 
 Ao inventariar a KB compartilhada do usuário, apareceu um documento **novo, do mesmo dia**,
 que **substitui o mecanismo em que este design foi baseado**:
@@ -535,8 +542,8 @@ Consequências:
   trabalha. Vale mencionar no `SKILL.md`.
 - **A §6.3 regra 5** ("declarar se roubou o foco") vira **"declarar em que modo rodou"**.
 
-### 10.4 Ação ao retomar
+### 10.4 Ação ao retomar — ✅ FEITA em 2026-08-31
 
-**Antes de apresentar a §6.4, ler `fmx-automacao-windows-sem-foco.md` por inteiro** e reescrever
-a §6.4 e a §6.3 sobre o mecanismo novo. O `gui.ps1` da §5.1 muda de implementação — o papel
-dele no design permanece.
+`fmx-automacao-windows-sem-foco.md` foi lido por inteiro e as §§6.2, 6.3 e 6.4 foram **reescritas**
+sobre o mecanismo novo. O `gui.ps1` da §5.1 mudou de implementação; o papel dele permanece.
+Esta seção fica como registro do **porquê** — os requisitos válidos estão na §6.

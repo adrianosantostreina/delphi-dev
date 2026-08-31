@@ -1,9 +1,33 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-08-30**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-08-31**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-08-30) — BRAINSTORM `delphi-e2e`: §5 APROVADA, §6 EM CURSO ⏸️
+## Ponto de retomada (2026-08-31) — SPEC DO `/e2e` APROVADA + v3.1.0 PUBLICADA ✅
+
+**GitHub sincronizado.** `master` == `origin/master`, 21 commits publicados. **Release `v3.1.0`
+é o Latest**, não-draft, com `rag.db` de 1.847.296 bytes. O **v3.0.0 ficou intacto** (asset com
+`updatedAt` de 1º de julho) — o bump antes do push evitou que a CI sobrescrevesse a base de uma
+versão já publicada.
+
+**O `/e2e` tem SPEC APROVADA** — `docs/superpowers/specs/2026-08-09-delphi-e2e-design.md`,
+**16 decisões travadas**, auto-revisão feita. **PRÓXIMO PASSO: invocar `writing-plans`** para o
+plano de implementação. É o terminal do `superpowers:brainstorming` — **nenhuma outra skill de
+implementação antes dela**. Falta a revisão da spec pelo usuário.
+
+- **Decisão 16 (nova):** persistência de cenários **fora do v1**. Nada é salvo; cada `/e2e`
+  descreve, executa e devolve o veredito.
+- **§§6.2–6.4 reescritas** sobre `PostMessage`/`WM_CHAR`/`PrintWindow`. Duas armadilhas antigas
+  morreram, três novas entraram (órfãs `FMT*` invisíveis → captura preta; restaurar **antes** de
+  escolher a janela; recortar na área de cliente para as coordenadas baterem 1:1).
+- **§6.2 virou duas ofertas:** unit de logging **ou** modo `--selftest` headless. UI serve para
+  layout; lógica sai mais barata sem abrir tela.
+- **Correção registrada:** eu havia dito que o modo em primeiro plano custaria um `SetWindowPos`
+  extra. É o contrário — o FMX **ativa o form ao processar o clique mesmo via `PostMessage`**,
+  então o custo está no modo **ao fundo**. O default (primeiro plano) é o gratuito.
+- **Versionamento:** o `/e2e` sai como **3.2.0** (a 3.1.0 já foi usada).
+
+## Ponto anterior (2026-08-30) — brainstorm `delphi-e2e`: §5 aprovada, §6 em curso
 
 **Continuação direta do ponto de 2026-08-09.** O brainstorm do `/e2e` avançou: as seções 5.1–5.3
 do design foram **aprovadas** e as 6.1–6.3 **aceitas**. Ainda não há código — só docs.
