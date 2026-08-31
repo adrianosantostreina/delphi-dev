@@ -203,7 +203,19 @@ Depois do `Build OK`:
 1. **Arquivos de runtime ao lado do `.exe`.** `config.ini`, `.db`, `.dll` etc. precisam estar no
    diretório de saída (`DCC_ExeOutput`), não só na raiz do projeto — código que resolve caminho
    via `ExtractFilePath(ParamStr(0))` não enxerga a raiz. Copiar, ou configurar o pós-build.
-2. **Semear `tests/`** invocando o agente `delphi-tester` para a suíte inicial DUnitX.
-3. **Rodar a skill `delphi-claudeignore`** para criar o `.claudeignore`.
-4. Informar ao usuário: caminho do `.exe`, como rodar, e o que ainda precisa ser configurado
+   ⚠️ **Cuidado com defaults que mascaram a ausência:** `TIniFile` sobre arquivo inexistente
+   devolve os defaults **sem erro**. Se os defaults do código forem iguais aos do `.ini`, a app
+   sobe normalmente sem o arquivo — e só quebra depois, no primeiro acesso ao recurso cuja
+   configuração ficou vazia. **Não repetir o segredo/senha como default literal no `.pas`**: além
+   de mascarar, torna inócuo apagar o `.ini`.
+2. **Nunca anunciar URL que não é rota.** Banner de startup deve imprimir o caminho real
+   (ex.: `/swagger/doc/html`, não `/swagger`) e esse caminho tem que estar no `SkipRoutes` do
+   middleware de autenticação. Fechar com `Flush(Output)` — sem ele nada aparece em saída
+   redirecionada (`knowledge/core/console-writeln-sem-flush-nao-loga.md`).
+3. **Não vazar detalhe de erro interno no corpo HTTP.** Um 500 default do Horse devolve
+   fornecedor, versão e caminhos de DLL — reconhecimento gratuito. Gerar middleware de erro que
+   loga o detalhe e devolve mensagem genérica.
+4. **Semear `tests/`** invocando o agente `delphi-tester` para a suíte inicial DUnitX.
+5. **Rodar a skill `delphi-claudeignore`** para criar o `.claudeignore`.
+6. Informar ao usuário: caminho do `.exe`, como rodar, e o que ainda precisa ser configurado
    (banco de dados, credenciais).

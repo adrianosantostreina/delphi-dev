@@ -97,3 +97,18 @@ uses
 O `boss install` deixa o **fonte** de toda dependência em `modules/`. Antes de escrever código
 contra Horse, gbswagger, horse-jwt ou qualquer lib vendorizada, **ler a interface real ali** —
 a versão instalada é a única verdade, e a superfície muda entre versões.
+
+### Banner de startup costuma anunciar a URL errada
+
+Padrão comum no `.dpr`:
+
+```pascal
+Writeln('Swagger UI: http://localhost:' + LPorta.ToString + '/swagger');   // ERRADO
+```
+
+`/swagger` **não é rota**. Com o JWT global, essa URL devolve **401** — e é justamente a que o
+usuário vê no console e cola no navegador. A UI real é `/swagger/doc/html`. Anunciar a rota certa,
+e conferir que ela está no `SkipRoutes`.
+
+(E `Writeln` em app console com stdout redirecionado não aparece sem `Flush(Output)` — ver
+[`console-writeln-sem-flush-nao-loga.md`](console-writeln-sem-flush-nao-loga.md).)

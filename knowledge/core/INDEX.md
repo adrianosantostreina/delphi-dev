@@ -21,6 +21,7 @@ Base de conhecimento central do plugin delphi-dev. Reutilizável em todos os pro
 - [dproj-dcc-debuginformation-nao-booleano.md](dproj-dcc-debuginformation-nao-booleano.md) — `DCC_DebugInformation` é enum numérico, não booleano → `F1026 File not found: 'true.dpr'`
 
 ## Servidor REST / Horse
+- [console-writeln-sem-flush-nao-loga.md](console-writeln-sem-flush-nao-loga.md) — `Writeln` com stdout redirecionado não aparece sem `Flush(Output)`; app console sem log próprio não deixa rastro
 - [horse-gbswagger-rotas-jwt.md](horse-gbswagger-rotas-jwt.md) — rotas gbswagger, cadeado JWT, superfície real da API (`Swagger.Info.Title`, `HorseSwagger`, `/swagger/doc/html`) e `GBSwagger.Path.Attributes` obrigatória no `uses`
 
 ## Banco de Dados
