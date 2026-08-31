@@ -21,8 +21,16 @@ script mandou `cola` no campo do app e o texto dela vazou junto — o campo fico
 
 ## Manter a janela no fundo (o ponto principal)
 
-**O FMX ATIVA o form ao processar o clique — mesmo vindo de `PostMessage`.** Só
-usar `PostMessage` não basta: a janela sobe sozinha na frente do usuário.
+**Em app com navegação entre telas, o form FMX subiu na ordem-Z ao processar um
+clique vindo de `PostMessage`** — só usar `PostMessage` não bastou: a janela subiu
+sozinha na frente do usuário.
+
+**Escopo dessa observação.** Ela não se reproduziu num app FMX **mínimo** (um form,
+um botão) no Delphi 13/Win32: ordem-Z e `GetForegroundWindow` ficaram inalterados
+depois do clique por `PostMessage`. Ou seja, a ativação vem do que o *handler* faz —
+abrir ou focar outro form, por exemplo —, não do `PostMessage` em si. O
+reposicionamento abaixo continua valendo a pena: é barato e cobre o caso em que a
+subida acontece.
 
 1. **Subir o app já no fundo**: após o `Start-Process`, chamar em todas as janelas
    visíveis do processo
@@ -99,8 +107,3 @@ denunciou exatamente isso.
 Só uma coisa: **deixar a janela aberta, mesmo atrás das outras — não minimizar.**
 Minimizado o Windows para de renderizar; dá para restaurar sozinho com
 `SW_SHOWNOACTIVATE`, mas custa alguns segundos por ciclo.
-
-## Ver também
-
-- [rodar-app-mobile-no-desktop.md](rodar-app-mobile-no-desktop.md) — o que
-  costuma impedir um app FMX mobile de abrir no Windows.

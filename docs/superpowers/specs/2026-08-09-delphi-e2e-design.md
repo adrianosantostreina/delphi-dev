@@ -263,6 +263,16 @@ escrita (`TFileStream`/`TStreamWriter` com `fmShareDenyWrite`). `Get-Content` fa
 `[System.IO.FileStream]::new(path, Open, Read, ReadWrite)` — `FileShare.ReadWrite` — senão a
 leitura do log quebra em silêncio no meio da bateria.
 
+> **Nota de correção (2026-08-31).** O parágrafo acima está errado num ponto: sob
+> `fmShareDenyWrite` o `Get-Content` **lê normalmente** — "deny write" por definição já
+> permite leitores. O lock que barra leitura é o **exclusivo** (`fmShareExclusive`), e é
+> contra ele que o `FileShare.ReadWrite` defende. O motivo real de `Get-DelphiLogDelta`
+> existir é outro e continua válido: o **delta por byte offset**. Reler o log inteiro a cada
+> cenário e comparar por substring é inviável numa bateria com dezenas de cenários (custo
+> quadrático) e polui a correlação com eventos antigos. A implementação em
+> `skills/delphi-e2e/references/gui.ps1` e a seção correspondente do `SKILL.md` já seguem
+> esta versão corrigida.
+
 ### 6.2 Quando não há log — DUAS ofertas, não uma (revisado 2026-08-31)
 
 Se o app não tem log, o plugin **oferece** (nunca impõe — mexe no código do usuário) um de dois
