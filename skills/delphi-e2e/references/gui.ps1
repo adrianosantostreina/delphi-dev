@@ -1,0 +1,653 @@
+# gui.ps1 — harness de automacao de app Delphi FMX no Windows.
+# NUNCA pede foco: clique por PostMessage, texto por WM_CHAR, captura por PrintWindow.
+# Materializado em %TEMP% pela skill delphi-e2e e carregado com dot-source.
+#
+# NAO PONHA `Set-StrictMode` NEM `$ErrorActionPreference` EM ESCOPO DE ARQUIVO.
+# Este arquivo e DOT-SOURCED: tudo que ele define em escopo de arquivo vaza para a
+# sessao inteira de quem o carrega. Com StrictMode global, `$LASTEXITCODE` (ainda nao
+# definida numa sessao nova) vira erro e a chamada PowerShell sai com exit code 1
+# MESMO TENDO FUNCIONADO — sinal falso de falha num protocolo cujo proposito e separar
+# ❌ FALHOU de ⛔ BLOQUEADO. Cada funcao liga os dois LOCALMENTE (preambulo de duas
+# linhas); ao sair da funcao o valor volta sozinho e o chamador fica como estava.
+
+if ($env:OS -ne 'Windows_NT') {
+  throw 'gui.ps1 requer Windows: user32.dll nao existe nesta plataforma.'
+}
+
+if (-not ('DelphiGui' -as [type])) {
+Add-Type -ErrorAction Stop -Namespace '' -Name 'DelphiGui' -MemberDefinition @'
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("user32.dll", CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder name, int max);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hWnd, out RECT r);
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hWnd, ref POINT p);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+  public struct POINT { public int X; public int Y; }
+'@ -UsingNamespace System.Text
+}
+
+# Constantes Win32 usadas pelo harness.
+$script:SW_SHOWNOACTIVATE = 4
+$script:HWND_BOTTOM       = [IntPtr]1
+$script:SWP_NOSIZE        = 0x0001
+$script:SWP_NOMOVE        = 0x0002
+$script:SWP_NOACTIVATE    = 0x0010
+$script:PW_RENDERFULLCONTENT = 2
+$script:WM_MOUSEMOVE   = 0x0200
+$script:WM_LBUTTONDOWN = 0x0201
+$script:WM_LBUTTONUP   = 0x0202
+$script:WM_CHAR        = 0x0102
+$script:WM_KEYDOWN     = 0x0100
+$script:WM_KEYUP       = 0x0101
+
+function Initialize-DelphiGui {
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  # Sem isto, em tela com escala != 100% todas as coordenadas saem erradas.
+  [DelphiGui]::SetProcessDPIAware() | Out-Null
+}
+
+# Default: primeiro plano (decisao 15). O modo ao fundo e OPT-IN e custa uma chamada
+# extra por interacao.
+# ESCOPO DA OBSERVACAO QUE MOTIVOU ISTO: em app com navegacao entre telas, observou-se
+# o form FMX subir na ordem-Z ao processar um clique vindo de PostMessage. Em app FMX
+# MINIMO (um form, um botao) no Delphi 13/Win32 isso NAO se reproduziu: ordem-Z e
+# GetForegroundWindow ficaram inalterados. Ou seja, a ativacao depende do que o
+# handler faz (abrir/focar outro form, por exemplo), nao do PostMessage em si.
+# O reposicionamento continua valendo a pena: e barato e cobre o caso em que ocorre.
+#
+# ATENCAO — esta variavel vive na sessao PowerShell, e cada invocacao de ferramenta
+# abre uma sessao NOVA. Ela volta a $false a cada chamada: quem quer modo ao fundo
+# precisa rechamar Set-DelphiBackgroundMode -Enabled $true junto de cada dot-source.
+$script:DelphiKeepBottom = $false
+
+function Set-DelphiWindowBottom {
+  # Reposiciona a janela para o fim da ordem-Z SEM ativa-la (SWP_NOACTIVATE) — e o
+  # que evita trocar "janela sobe ao clicar" por "clique rouba foco".
+  param([Parameter(Mandatory)][int]$ProcessId)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  $flags = $script:SWP_NOMOVE -bor $script:SWP_NOSIZE -bor $script:SWP_NOACTIVATE
+  [DelphiGui]::SetWindowPos($w.Handle, $script:HWND_BOTTOM, 0, 0, 0, 0, $flags) | Out-Null
+}
+
+function Set-DelphiBackgroundMode {
+  # Liga/desliga o reposicionamento automatico apos cada clique/texto (ver
+  # Invoke-DelphiClick e Send-DelphiText).
+  param([Parameter(Mandatory)][bool]$Enabled)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $script:DelphiKeepBottom = $Enabled
+}
+
+function Get-DelphiWindow {
+  <#
+    Devolve a janela REAL do form FMX.
+    Armadilha 1: Process.MainWindowHandle devolve a fantasma TFMAppClass (as vezes altura 0).
+    Armadilha 2: ha varias FMT* — inclusive orfas INVISIVEIS do mesmo tamanho da real.
+                 Escolher a VISIVEL de maior area; so "maior area" traz a orfa e o
+                 PrintWindow sai preto.
+    Armadilha 3: restaurar ANTES de escolher — com o app minimizado nenhuma FMT* esta
+                 visivel e a selecao cai numa orfa.
+  #>
+  param([Parameter(Mandatory)][int]$ProcessId)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+
+  Restore-DelphiProcess -ProcessId $ProcessId
+
+  $script:__found = @()
+  $callback = [DelphiGui+EnumWindowsProc]{
+    param([IntPtr]$h, [IntPtr]$l)
+    $owner = [uint32]0
+    [DelphiGui]::GetWindowThreadProcessId($h, [ref]$owner) | Out-Null
+    if ($owner -eq $script:__targetPid) {
+      $sb = New-Object System.Text.StringBuilder 256
+      [DelphiGui]::GetClassName($h, $sb, $sb.Capacity) | Out-Null
+      $cls = $sb.ToString()
+      if ($cls -like 'FMT*') {
+        $r = New-Object DelphiGui+RECT
+        if (-not [DelphiGui]::GetWindowRect($h, [ref]$r)) {
+          throw "GetWindowRect falhou para a janela $h (classe $cls) do processo $ProcessId."
+        }
+        $script:__found += [pscustomobject]@{
+          Handle  = $h
+          Class   = $cls
+          Visible = [DelphiGui]::IsWindowVisible($h)
+          Area    = [Math]::Max(0, ($r.Right - $r.Left)) * [Math]::Max(0, ($r.Bottom - $r.Top))
+        }
+      }
+    }
+    return $true
+  }
+  $script:__targetPid = [uint32]$ProcessId
+  [DelphiGui]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+  $win = $script:__found | Where-Object { $_.Visible -and $_.Area -gt 0 } |
+         Sort-Object Area -Descending | Select-Object -First 1
+  if (-not $win) {
+    throw "Nenhuma janela FMT* visivel no processo $ProcessId. Janelas vistas: $($script:__found.Count)."
+  }
+
+  $cr = New-Object DelphiGui+RECT
+  if (-not [DelphiGui]::GetClientRect($win.Handle, [ref]$cr)) {
+    throw "GetClientRect falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
+  $origin = New-Object DelphiGui+POINT
+  if (-not [DelphiGui]::ClientToScreen($win.Handle, [ref]$origin)) {
+    throw "ClientToScreen falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
+
+  [pscustomobject]@{
+    Handle        = $win.Handle
+    Class         = $win.Class
+    Visible       = $win.Visible
+    Area          = $win.Area
+    ClientWidth   = $cr.Right
+    ClientHeight  = $cr.Bottom
+    ClientOriginX = $origin.X
+    ClientOriginY = $origin.Y
+  }
+}
+
+function Wait-DelphiWindow {
+  <#
+    Get-DelphiWindow com poll: e a funcao a usar na PRIMEIRA busca depois de subir o
+    .exe. A visibilidade da janela FMX pode levar MAIS DE 3 SEGUNDOS para estabilizar
+    apos o Start-Process, e Get-DelphiWindow LANCA quando ainda nao ha FMT* visivel —
+    sem poll, "o app ainda esta abrindo" vira "falha de descoberta de janela".
+    Devolve o MESMO objeto que Get-DelphiWindow. Esgotado o tempo, LANCA, citando o
+    ultimo erro real — nunca devolve $null (nao ha janela = nao ha como seguir).
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [int]$TimeoutMs = 10000,
+    [int]$PollMs = 500
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $limite = [datetime]::UtcNow.AddMilliseconds($TimeoutMs)
+  $ultimoErro = 'nenhuma tentativa concluida'
+  while ($true) {
+    try {
+      return Get-DelphiWindow -ProcessId $ProcessId
+    } catch {
+      $ultimoErro = $_.Exception.Message
+    }
+    if ([datetime]::UtcNow -ge $limite) { break }
+    Start-Sleep -Milliseconds $PollMs
+  }
+  throw "Nenhuma janela FMT* utilizavel no processo $ProcessId apos ${TimeoutMs}ms de espera. Ultimo erro: $ultimoErro"
+}
+
+function Find-DelphiTopWindow {
+  <#
+    Helper PRIVADO: enumera as janelas top-level do processo cuja classe bate com
+    -ClassPattern (comparacao -like), escolhe a VISIVEL de maior area e devolve o
+    mesmo formato de objeto que Get-DelphiWindow (Handle/Class/Visible/Area/
+    ClientWidth/ClientHeight/ClientOriginX/ClientOriginY).
+    Devolve $null quando nao acha nenhuma janela batendo com o padrao — "nao
+    encontrada" e resposta legitima aqui, quem decide se e erro e o chamador.
+    Get-DelphiWindow NAO usa este helper (mantem sua propria copia de proposito:
+    ela LANCA quando nao acha, comportamento do qual as Tasks 1/2/4 dependem).
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][string]$ClassPattern
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+
+  $script:__foundTop = @()
+  $callback = [DelphiGui+EnumWindowsProc]{
+    param([IntPtr]$h, [IntPtr]$l)
+    $owner = [uint32]0
+    [DelphiGui]::GetWindowThreadProcessId($h, [ref]$owner) | Out-Null
+    if ($owner -eq $script:__targetPid) {
+      $sb = New-Object System.Text.StringBuilder 256
+      [DelphiGui]::GetClassName($h, $sb, $sb.Capacity) | Out-Null
+      $cls = $sb.ToString()
+      if ($cls -like $script:__targetClassPattern) {
+        $r = New-Object DelphiGui+RECT
+        if (-not [DelphiGui]::GetWindowRect($h, [ref]$r)) {
+          throw "GetWindowRect falhou para a janela $h (classe $cls) do processo $ProcessId."
+        }
+        $script:__foundTop += [pscustomobject]@{
+          Handle  = $h
+          Class   = $cls
+          Visible = [DelphiGui]::IsWindowVisible($h)
+          Area    = [Math]::Max(0, ($r.Right - $r.Left)) * [Math]::Max(0, ($r.Bottom - $r.Top))
+        }
+      }
+    }
+    return $true
+  }
+  $script:__targetPid          = [uint32]$ProcessId
+  $script:__targetClassPattern = $ClassPattern
+  [DelphiGui]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+  $win = $script:__foundTop | Where-Object { $_.Visible -and $_.Area -gt 0 } |
+         Sort-Object Area -Descending | Select-Object -First 1
+  if (-not $win) { return $null }
+
+  $cr = New-Object DelphiGui+RECT
+  if (-not [DelphiGui]::GetClientRect($win.Handle, [ref]$cr)) {
+    throw "GetClientRect falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
+  $origin = New-Object DelphiGui+POINT
+  if (-not [DelphiGui]::ClientToScreen($win.Handle, [ref]$origin)) {
+    throw "ClientToScreen falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
+
+  [pscustomobject]@{
+    Handle        = $win.Handle
+    Class         = $win.Class
+    Visible       = $win.Visible
+    Area          = $win.Area
+    ClientWidth   = $cr.Right
+    ClientHeight  = $cr.Bottom
+    ClientOriginX = $origin.X
+    ClientOriginY = $origin.Y
+  }
+}
+
+function Get-DelphiDialog {
+  <#
+    Acha o dialogo nativo (MessageBox do ShowMessage) do processo, se houver algum
+    aberto. Classe #32770 e uma janela TOP-LEVEL separada do form FMX (nao comeca
+    com FMT*), entao Get-DelphiWindow nunca a enxerga - e por isso o protocolo
+    precisa desta busca dedicada para responder "apareceu mensagem?".
+    Devolve $null quando nao ha dialogo aberto: essa e uma resposta legitima e
+    frequente, NAO uma falha - por isso nao lanca excecao nesse caso.
+    Wrapper fino sobre Find-DelphiTopWindow — mesmo formato de retorno que
+    Get-DelphiWindow, para poder ser passado direto a Get-DelphiShot -WindowHandle.
+  #>
+  param([Parameter(Mandatory)][int]$ProcessId)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  Find-DelphiTopWindow -ProcessId $ProcessId -ClassPattern "#32770"
+}
+
+function Restore-DelphiProcess {
+  <#
+    Armadilha 4: quem fica iconic e a TFMAppClass; os forms so viram IsWindowVisible=False.
+    Restaurar o form nao adianta — tem que ser ShowWindow(SW_SHOWNOACTIVATE) na iconic.
+    SW_SHOWNOACTIVATE e o que evita roubar foco ao restaurar.
+  #>
+  param([Parameter(Mandatory)][int]$ProcessId)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $script:__targetPid = [uint32]$ProcessId
+  $cb = [DelphiGui+EnumWindowsProc]{
+    param([IntPtr]$h, [IntPtr]$l)
+    $owner = [uint32]0
+    [DelphiGui]::GetWindowThreadProcessId($h, [ref]$owner) | Out-Null
+    if ($owner -eq $script:__targetPid -and [DelphiGui]::IsIconic($h)) {
+      [DelphiGui]::ShowWindow($h, $script:SW_SHOWNOACTIVATE) | Out-Null
+    }
+    return $true
+  }
+  [DelphiGui]::EnumWindows($cb, [IntPtr]::Zero) | Out-Null
+  Start-Sleep -Milliseconds 300
+}
+
+function Get-DelphiFormWindowCount {
+  # Bonus da spec: o FMX cria uma janela nativa por form, entao contar FMT* detecta
+  # vazamento de form. Reportar quando a contagem crescer ao longo da bateria.
+  #
+  # Conta TODAS as FMT* do processo — visiveis E invisiveis. Filtrar por
+  # IsWindowVisible aqui excluiria justamente a classe de janela que denuncia o
+  # vazamento: um TForm fechado mas nao liberado fica com IsWindowVisible = False
+  # (e a "orfa invisivel" da armadilha 2 de Get-DelphiWindow). Nao reaproveitar
+  # Get-DelphiWindow para isto: ela LANCA quando nao ha nenhuma FMT* VISIVEL, o que
+  # devolveria 0 num processo cheio de orfas — exatamente o caso a detectar.
+  # Detector, nao caminho critico: nao usa GetWindowRect nem restaura o processo,
+  # so le a classe de cada janela top-level.
+  param([Parameter(Mandatory)][int]$ProcessId)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $script:__formCount = 0
+  $script:__targetPid = [uint32]$ProcessId
+  $cb = [DelphiGui+EnumWindowsProc]{
+    param([IntPtr]$h, [IntPtr]$l)
+    $owner = [uint32]0
+    [DelphiGui]::GetWindowThreadProcessId($h, [ref]$owner) | Out-Null
+    if ($owner -eq $script:__targetPid) {
+      $sb = New-Object System.Text.StringBuilder 256
+      [DelphiGui]::GetClassName($h, $sb, $sb.Capacity) | Out-Null
+      if ($sb.ToString() -like 'FMT*') { $script:__formCount++ }
+    }
+    return $true
+  }
+  [DelphiGui]::EnumWindows($cb, [IntPtr]::Zero) | Out-Null
+  $script:__formCount
+}
+
+function Get-DelphiShot {
+  <#
+    PrintWindow com PW_RENDERFULLCONTENT captura mesmo com a janela coberta e sem
+    tocar no foco. Captura a janela INTEIRA (com barra de titulo); recortamos a area
+    de cliente para as coordenadas da imagem baterem 1:1 com as do clique.
+    -WindowHandle: captura essa janela diretamente em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para capturar um dialogo nativo achado
+    por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][string]$Path,
+    [IntPtr]$WindowHandle
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  Add-Type -AssemblyName System.Drawing
+
+  # NAO "simplificar" esta condicao. Ela cobre DOIS estados diferentes de um
+  # parametro [IntPtr] opcional: nao vinculado, o PowerShell o deixa $null (NAO
+  # [IntPtr]::Zero, ao contrario do que o tipo sugere); vinculado com um handle
+  # nulo, ele e [IntPtr]::Zero. `-and` sozinho deixa passar o segundo caso; comparar
+  # so com ::Zero explode no primeiro. Precisa dos dois testes, nesta ordem.
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle        = $WindowHandle
+    $cr = New-Object DelphiGui+RECT
+    if (-not [DelphiGui]::GetClientRect($handle, [ref]$cr)) {
+      throw "GetClientRect falhou para a janela $handle."
+    }
+    $origin = New-Object DelphiGui+POINT
+    if (-not [DelphiGui]::ClientToScreen($handle, [ref]$origin)) {
+      throw "ClientToScreen falhou para a janela $handle."
+    }
+    $clientWidth   = $cr.Right
+    $clientHeight  = $cr.Bottom
+    $clientOriginX = $origin.X
+    $clientOriginY = $origin.Y
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle        = $w.Handle
+    $clientWidth   = $w.ClientWidth
+    $clientHeight  = $w.ClientHeight
+    $clientOriginX = $w.ClientOriginX
+    $clientOriginY = $w.ClientOriginY
+  }
+
+  $r = New-Object DelphiGui+RECT
+  [DelphiGui]::GetWindowRect($handle, [ref]$r) | Out-Null
+  $fullW = $r.Right - $r.Left
+  $fullH = $r.Bottom - $r.Top
+  if ($fullW -le 0 -or $fullH -le 0) { throw "Janela com dimensao invalida: ${fullW}x${fullH}." }
+
+  $bmp = New-Object System.Drawing.Bitmap $fullW, $fullH
+  try {
+    $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+    $hdc = $gfx.GetHdc()
+    $ok  = [DelphiGui]::PrintWindow($handle, $hdc, $script:PW_RENDERFULLCONTENT)
+    $gfx.ReleaseHdc($hdc)
+    $gfx.Dispose()
+    if (-not $ok) { throw 'PrintWindow falhou.' }
+
+    # Recorte para a area de cliente: a origem do cliente em coordenadas de tela menos
+    # a origem da janela da o deslocamento da borda/titulo.
+    $offX = $clientOriginX - $r.Left
+    $offY = $clientOriginY - $r.Top
+    $rect = New-Object System.Drawing.Rectangle $offX, $offY, $clientWidth, $clientHeight
+    $client = $bmp.Clone($rect, $bmp.PixelFormat)
+    try {
+      $dir = Split-Path -Parent $Path
+      if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+      $client.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+      $client.Dispose()
+    }
+  } finally {
+    $bmp.Dispose()
+  }
+  $Path
+}
+
+function Test-DelphiShotIsBlank {
+  # Captura preta = escolhemos uma janela orfa (armadilha 2/3). Detectar em vez de
+  # devolver evidencia inutil ao relatorio.
+  param([Parameter(Mandatory)][string]$Path)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  Add-Type -AssemblyName System.Drawing
+  $bmp = [System.Drawing.Bitmap]::FromFile($Path)
+  try {
+    # Passo por eixo, nunca um passo unico derivado so da largura: numa janela larga e
+    # baixa (ex.: 640x20) o passo da largura (32) e MAIOR que a altura, e a contagem
+    # `[int](20/32) - 1` da -1. Em PowerShell, `0..-1` conta PARA TRAS (0, -1), o que
+    # levaria a GetPixel(x, -32) e excecao. Laco `for` com limite exclusivo nao tem
+    # como gerar indice negativo nem estourar a borda.
+    $stepX = [Math]::Max(1, [int]($bmp.Width / 20))
+    $stepY = [Math]::Max(1, [int]($bmp.Height / 20))
+    for ($x = 0; $x -lt $bmp.Width; $x += $stepX) {
+      for ($y = 0; $y -lt $bmp.Height; $y += $stepY) {
+        $c = $bmp.GetPixel($x, $y)
+        if ($c.R -ne 0 -or $c.G -ne 0 -or $c.B -ne 0) { return $false }
+      }
+    }
+    return $true
+  } finally { $bmp.Dispose() }
+}
+
+function Invoke-DelphiClick {
+  <#
+    PostMessage entrega direto na fila da janela: nao precisa de foco e nao move o cursor.
+    Coordenadas sao de CLIENTE — as mesmas da imagem recortada por Get-DelphiShot.
+    -WindowHandle: manda o clique para essa janela em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para interagir com um dialogo nativo
+    achado por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Os limites de clique tambem passam a ser os da area de cliente DAQUELA janela
+    (senao o botao OK de um dialogo pequeno seria rejeitado ou caeria no lugar errado).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][int]$X,
+    [Parameter(Mandatory)][int]$Y,
+    [int]$SettleMs = 250,
+    [IntPtr]$WindowHandle
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  # Dois estados distintos: $null (parametro nao vinculado) e ::Zero (handle nulo).
+  # Ver o comentario longo na primeira ocorrencia, em Get-DelphiShot.
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle = $WindowHandle
+    $cr = New-Object DelphiGui+RECT
+    if (-not [DelphiGui]::GetClientRect($handle, [ref]$cr)) {
+      throw "GetClientRect falhou para a janela $handle."
+    }
+    $clientWidth  = $cr.Right
+    $clientHeight = $cr.Bottom
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle       = $w.Handle
+    $clientWidth  = $w.ClientWidth
+    $clientHeight = $w.ClientHeight
+  }
+  if ($X -lt 0 -or $Y -lt 0 -or $X -ge $clientWidth -or $Y -ge $clientHeight) {
+    throw "Coordenada ($X,$Y) fora da area de cliente (${clientWidth}x${clientHeight})."
+  }
+  $lParam = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
+  [DelphiGui]::PostMessage($handle, $script:WM_MOUSEMOVE,   [IntPtr]::Zero, $lParam) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_LBUTTONDOWN, [IntPtr]1,      $lParam) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_LBUTTONUP,   [IntPtr]::Zero, $lParam) | Out-Null
+  Start-Sleep -Milliseconds $SettleMs
+  if ($script:DelphiKeepBottom) { Set-DelphiWindowBottom -ProcessId $ProcessId }
+}
+
+function Send-DelphiText {
+  <#
+    WM_CHAR nao depende de foco de teclado e NAO sofre com acento morto de teclado ABNT
+    (problema classico do SendKeys).
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][AllowEmptyString()][string]$Text,
+    [int]$PerCharMs = 20
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  foreach ($ch in $Text.ToCharArray()) {
+    [DelphiGui]::PostMessage($w.Handle, $script:WM_CHAR, [IntPtr][int]$ch, [IntPtr]::Zero) | Out-Null
+    Start-Sleep -Milliseconds $PerCharMs
+  }
+  if ($script:DelphiKeepBottom) { Set-DelphiWindowBottom -ProcessId $ProcessId }
+}
+
+function Send-DelphiKey {
+  <#
+    Teclas sem caractere: Esc = 27, Enter = 13, Tab = 9, Backspace = 8.
+    -WindowHandle: manda a tecla para essa janela em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para interagir com um dialogo nativo
+    achado por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][int]$VirtualKey,
+    [int]$SettleMs = 200,
+    [IntPtr]$WindowHandle
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  # Dois estados distintos: $null (parametro nao vinculado) e ::Zero (handle nulo).
+  # Ver o comentario longo na primeira ocorrencia, em Get-DelphiShot.
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle = $WindowHandle
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle = $w.Handle
+  }
+  [DelphiGui]::PostMessage($handle, $script:WM_KEYDOWN, [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_KEYUP,   [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  Start-Sleep -Milliseconds $SettleMs
+}
+
+# --- Leitura de log sob lock de escrita + delta por byte offset (§6.1) ---
+
+function Get-DelphiLogOffset {
+  param([Parameter(Mandatory)][string]$Path)
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  if (-not (Test-Path $Path)) { return [long]0 }
+  [long](Get-Item $Path).Length
+}
+
+function Get-DelphiLogDelta {
+  <#
+    POR QUE ESTA FUNCAO EXISTE: delta por byte offset. Le so o que foi acrescentado ao
+    log desde a marca feita por Get-DelphiLogOffset no inicio do cenario. Reler o
+    arquivo inteiro a cada cenario e comparar por substring seria inviavel numa bateria
+    com dezenas de cenarios (custo quadratico) e ainda poluiria a correlacao com
+    eventos antigos.
+    NAO e para contornar falha de leitura do Get-Content: sob fmShareDenyWrite — o modo
+    mais comum de log aberto para escrita — o Get-Content le normalmente, porque
+    "deny write" por definicao ja permite LEITORES.
+    O FileShare.ReadWrite na abertura e defesa contra locks MAIS RESTRITIVOS que o app
+    possa aplicar (ex.: fmShareExclusive), nao contra o fmShareDenyWrite.
+  #>
+  param(
+    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory)][long]$FromOffset
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  if (-not (Test-Path $Path)) {
+    return [pscustomobject]@{ Text = ''; NewOffset = [long]0 }
+  }
+  $fs = [System.IO.FileStream]::new(
+          $Path,
+          [System.IO.FileMode]::Open,
+          [System.IO.FileAccess]::Read,
+          [System.IO.FileShare]::ReadWrite)
+  try {
+    if ($FromOffset -gt $fs.Length) { $FromOffset = 0 }   # log rotacionado/truncado
+    $fs.Seek($FromOffset, [System.IO.SeekOrigin]::Begin) | Out-Null
+    $reader = New-Object System.IO.StreamReader($fs)
+    $text = $reader.ReadToEnd()
+    # NewOffset = $fs.Position, NUNCA $fs.Length: Length e reconsultado DEPOIS da
+    # leitura, e o app pode ter gravado nesse intervalo. Marcar esses bytes como
+    # consumidos sem devolve-los perderia linhas em silencio — na unica funcao cujo
+    # trabalho e nao perder linha. Position e exatamente ate onde o StreamReader leu.
+    [pscustomobject]@{ Text = $text; NewOffset = [long]$fs.Position }
+  } finally { $fs.Dispose() }
+}
+
+function Find-DelphiLogFile {
+  <#
+    Ordem da spec 6.1: (a) usuario informa — tratado pela skill; (b) config.ini do
+    diretorio do .exe; (c) *.log/*.txt no diretorio do .exe modificados apos o start;
+    (d) nada -> a skill degrada para veredito visual E DECLARA isso.
+  #>
+  param(
+    [Parameter(Mandatory)][string]$ExeDir,
+    [Parameter(Mandatory)][datetime]$StartedAfter
+  )
+  # Preambulo local (ver cabecalho): estas preferencias NAO podem ficar em escopo
+  # de arquivo, senao o dot-source as despeja na sessao do chamador.
+  Set-StrictMode -Version Latest
+  $ErrorActionPreference = 'Stop'
+  $ini = Join-Path $ExeDir 'config.ini'
+  if (Test-Path $ini) {
+    foreach ($line in Get-Content $ini) {
+      if ($line -match '^\s*(Log|LogFile|LogPath)\s*=\s*(.+?)\s*$') {
+        $candidate = $Matches[2]
+        if (-not [System.IO.Path]::IsPathRooted($candidate)) {
+          $candidate = Join-Path $ExeDir $candidate
+        }
+        if (Test-Path $candidate) { return $candidate }
+      }
+    }
+  }
+  # -Include so filtra de fato quando -Path termina em \* (gotcha do PowerShell:
+  # sem o \*, -Include e silenciosamente ignorado e nada e devolvido).
+  Get-ChildItem -Path (Join-Path $ExeDir '*') -Include *.log, *.txt -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -ge $StartedAfter } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
+}

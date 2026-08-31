@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffold de novo projeto com estrutura de pastas em camadas padronizada |
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
+| **`/e2e`** | Executa cenários end-to-end num app Delphi desktop em execução — builda, abre o `.exe`, opera as telas e devolve um veredito por cenário |
 | **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária *(depende dos hooks, hoje desligados — ver Instalação)* |
 | **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
@@ -194,6 +195,7 @@ O que **não** muda com o idioma:
 | `delphi-build` | Ativada automaticamente para build/compilação via linha de comando e erros de build |
 | `delphi-spring4d` | Ativada automaticamente para DI container e collections do Spring4D |
 | `delphi-legacy` | Ativada automaticamente para modernização/migração de código legado |
+| `delphi-e2e` | Ativada pelo comando `/e2e` — somente Windows |
 
 ---
 

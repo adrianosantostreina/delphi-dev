@@ -22,6 +22,7 @@
 | **`/new-project`** | Scaffolds a new project with standardized layered folder structure |
 | **`/spec`** | Analyzes the current project source code and auto-generates a complete `SPEC.md` |
 | **`/tdd`** | Generates a complete DUnitX unit test suite for the project |
+| **`/e2e`** | Runs end-to-end scenarios against a running Delphi desktop app — builds it, opens the `.exe`, drives the screens and reports a verdict per scenario |
 | **`/contribute-kb`** | Packages local learnings captured by the hooks and opens a PR to the community knowledge base *(needs hooks, currently disabled — see Installation)* |
 | **`/dashboard`** | Displays GitHub repository metrics — stars, forks, issues, PRs, commits, releases, contributors |
 | **`/about`** | Displays plugin info, version, and available commands |
@@ -193,6 +194,7 @@ What does **not** change with language:
 | `delphi-build` | Auto-activated for command-line build/compilation and build errors |
 | `delphi-spring4d` | Auto-activated for Spring4D DI container and collections |
 | `delphi-legacy` | Auto-activated for legacy code modernization/migration |
+| `delphi-e2e` | Activated by the `/e2e` command — Windows only |
 
 ---
 
