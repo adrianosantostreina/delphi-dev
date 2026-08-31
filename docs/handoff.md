@@ -335,7 +335,32 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
       lista de ferramentas/MCPs para usar Claude Code com Delphi. Candidato a divulgação do
       `delphi-dev`.
 
-11. **Corrigir o `/new-project` — não builda de primeira (NOVO, 2026-08-30).** Reportado pelo
+11. **~~Corrigir o `/new-project`~~ — ✅ FEITO em 2026-08-31 (commits `40faa44` + `994c522`).**
+    O projeto real foi **corrigido, compilado (`Build OK`) e executado**: a API sobe em ~2s,
+    `/health` 200, Swagger 200 em `/swagger/doc/html`, e o JWT devolve 401 (não 500) para token
+    ausente, inválido e expirado. **5 aprendizados foram para a KB e para o plugin.**
+    - **`commands/new-project.md`:** REGRA ZERO ("só entrega se compilar") + Passo 4 de build
+      obrigatório via `delphi-build`, iterando até `Build OK`; se não puder buildar, **declarar**
+      em vez de fingir sucesso (bloco bilíngue). Mais: seção de armadilhas conhecidas, princípio
+      de **ler a API real em `modules/` após `boss install`**, consulta à KB estendida a todos os
+      tipos de projeto, e fechamento (runtime ao lado do `.exe`, banner correto, sem vazar erro
+      interno).
+    - **`knowledge/core/` +5:** `dproj-dcc-debuginformation-nao-booleano.md` (NOVO),
+      `class-var-vaza-para-campos-de-instancia.md` (NOVO),
+      `console-writeln-sem-flush-nao-loga.md` (NOVO), `horse-gbswagger-rotas-jwt.md` (importado
+      e ampliado com a superfície real da API) e `dproj-projectguid-valido.md` (importado).
+      **Reduz o item 8 de 41 para 37 pendentes.**
+    - **PENDÊNCIA:** bump de versão do plugin (3.0.0 → 3.1.0?) é decisão sua — não bumpei.
+    - **IMPACTO NO `/e2e`:** o aprendizado do `Flush(Output)` mostra que **app console Delphi sem
+      arquivo de log próprio não deixa rastro nenhum**. A §6.1 do design do `/e2e` (descoberta e
+      leitura de log) precisa contar com isso, e o achado reforça a §6.2 (oferecer instrumentação).
+    - Achados que **não** corrigi, por serem de ambiente ou decisão sua: `fbclient.dll` **x86**
+      ausente bloqueia toda rota de dados (o build é Win32); o segredo JWT default é idêntico no
+      `.ini` e como fallback literal no `.pas`; respostas 401 saem em `text/html` e não JSON; a
+      app faz bind em `0.0.0.0`, expondo-se na rede local.
+    - Backups `.bak` dos 4 arquivos alterados ficaram na pasta do projeto.
+
+11b. **Diagnóstico original (histórico) — `/new-project` não buildava (2026-08-30).** Reportado pelo
     usuário após teste real. **Diagnóstico completo em
     [`docs/ideas/2026-08-30-new-project-gaps.md`](ideas/2026-08-30-new-project-gaps.md).**
     - **✅ DIAGNOSTICADO EMPIRICAMENTE em 2026-08-30 — compilei um scaffold real** (`ApiGT004`,
