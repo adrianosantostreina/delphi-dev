@@ -20,8 +20,13 @@ comando e uma porta explicita para a skill, nao um protocolo paralelo.
 
 **Flags:**
 - `--background` — roda com a janela ao fundo, sem interromper quem esta na maquina.
-  Mapeia direto para `Set-DelphiBackgroundMode -Enabled $true`, chamada uma unica vez
-  logo apos `Initialize-DelphiGui` (ver `references/gui.ps1` na skill).
+  Mapeia direto para `Set-DelphiBackgroundMode -Enabled $true` (ver `references/gui.ps1`
+  na skill). **Essa chamada se repete em TODA invocacao PowerShell**, logo depois do
+  dot-source do harness: cada invocacao de ferramenta e um processo novo, entao
+  `$script:DelphiKeepBottom` volta a `$false` e a flag fica inerte em tudo que vier
+  depois da primeira chamada (ver "Carregar o harness" no `SKILL.md`). Em modo ao fundo
+  a janela tambem vai para o fundo **ao subir o app** (`Set-DelphiWindowBottom` logo
+  apos o `Start-Process`), nao so depois do primeiro clique.
   **Default (flag ausente): primeiro plano** — nao chamar `Set-DelphiBackgroundMode`,
   ou chama-la com `-Enabled $false` (decisao 15). Sem `--background`, a flag e
   puramente decorativa se nada mapear para a chamada — por isso este comando fixa
@@ -34,8 +39,9 @@ comando e uma porta explicita para a skill, nao um protocolo paralelo.
 2. Localizar o `.exe` (`DCC_ExeOutput` no `.dproj`) e conferir os pre-requisitos ao
    lado dele (`sk4d.dll`, `.ttf`, `.db`, `config.ini`, `fbclient.dll`).
 3. Descobrir o log (ordem da skill: usuario informa / `config.ini` / `*.log` mais
-   recente / nada). Sem log, **oferecer** instrumentacao — `logging-unit.md` ou
-   `selftest-mode.md`, nunca aplicar sem aceite explicito.
+   recente / nada) — os dois passos automaticos sao a funcao `Find-DelphiLogFile`,
+   nao uma busca escrita a mao. Sem log, **oferecer** instrumentacao —
+   `logging-unit.md` ou `selftest-mode.md`, nunca aplicar sem aceite explicito.
 4. **Gate de seguranca** — listar os cenarios, quais gravam dados, o modo de janela
    (primeiro plano ou `--background`). **Parar e esperar confirmacao** antes do
    primeiro clique.
@@ -51,8 +57,9 @@ Tabela: cenario | expectativa | resultado | evidencia. Mais, fora da tabela:
   por nao conseguir reconduzir ao estado base, etc.);
 - o **estado final** do app (aberto/fechado, dados alterados/intactos);
 - o **modo de janela** usado (primeiro plano ou `--background`);
-- se a contagem de janelas `FMT*` (`Get-DelphiFormWindowCount`) **cresceu** ao longo
-  da bateria, o alerta de possivel vazamento de form.
+- se a contagem de janelas `FMT*` (`Get-DelphiFormWindowCount`, medida no inicio e no
+  fim de cada cenario pelo ciclo do `SKILL.md`) **cresceu** ao longo da bateria, o
+  alerta de possivel vazamento de form.
 
 Vereditos:
 

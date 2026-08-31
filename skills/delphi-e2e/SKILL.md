@@ -40,19 +40,57 @@ Regras invioláveis:
 5. Declarar no relatorio: modo usado e estado final (app aberto/fechado, dados alterados/intactos).
 
 **Modo ao fundo.** A flag `--background` do comando `/e2e` mapeia diretamente para
-`Set-DelphiBackgroundMode -Enabled $true`, chamada uma vez logo apos `Initialize-DelphiGui`.
+`Set-DelphiBackgroundMode -Enabled $true`. **Nao e uma chamada de setup unica: repetir em
+TODA invocacao PowerShell**, junto do dot-source (ver "Carregar o harness") — cada
+invocacao e um processo novo e o estado do modo morre com o anterior.
 Default (flag ausente): **primeiro plano** — nao chamar `Set-DelphiBackgroundMode`, ou
 chama-la com `-Enabled $false`. Declarar no gate qual dos dois modos vai rodar.
 
+**Subir o app ja no fundo.** Em modo ao fundo, mandar a janela para o fundo **ao subir o
+app**, nao so depois de cada clique:
+
+```powershell
+$p = Start-Process -FilePath $exe -PassThru
+$w = Wait-DelphiWindow -ProcessId $p.Id -TimeoutMs 10000
+Set-DelphiWindowBottom -ProcessId $p.Id   # SO em modo ao fundo
+```
+
+Sem essa chamada a janela pula para a frente no `Start-Process` e **fica la ate o primeiro
+clique** — exatamente a interrupcao que a flag `--background` existe para evitar.
+`Set-DelphiWindowBottom` usa `SWP_NOACTIVATE`: manda ao fundo sem roubar foco.
+
 ## Ciclo por cenario
 
-1. Marcar o offset atual do log (`Get-DelphiLogOffset`).
+Todo passo abaixo roda numa invocacao PowerShell que **comeca pelo dot-source** (ver
+"Carregar o harness") — sem ele, nenhuma dessas funcoes existe naquela invocacao.
+
+1. Marcar o offset atual do log (`Get-DelphiLogOffset`) **e** a contagem de janelas
+   (`Get-DelphiFormWindowCount`).
 2. **Reconduzir ao ponto de partida** do cenario.
 3. Executar os passos (`Invoke-DelphiClick` / `Send-DelphiText` / `Send-DelphiKey`).
-4. Capturar (`Get-DelphiShot`) e **ler a tela**.
-5. Ler o **delta** do log (`Get-DelphiLogDelta`).
-6. Emitir veredito.
-7. Voltar ao estado base.
+4. Capturar (`Get-DelphiShot`) e **conferir a captura antes de ler**:
+   `Test-DelphiShotIsBlank -Path $png`. Se der `$true`, nao ler — ver abaixo.
+5. **Ler a tela** a partir do PNG.
+6. Ler o **delta** do log (`Get-DelphiLogDelta`).
+7. Reconferir `Get-DelphiFormWindowCount` e anotar se cresceu em relacao ao passo 1.
+8. Emitir veredito.
+9. Voltar ao estado base.
+
+**Captura preta nao e evidencia.** `Get-DelphiShot` grava um PNG inteiramente preto quando
+a janela escolhida foi uma **orfa invisivel** — as armadilhas 2 e 3 documentadas em
+`Get-DelphiWindow` se manifestam exatamente assim, e o arquivo e gravado do mesmo jeito.
+Por isso **toda captura passa por `Test-DelphiShotIsBlank` antes de ser lida**. Ler um PNG
+preto leva a um dos dois piores desfechos possiveis: inventar o que estaria na tela, ou
+reportar ❌ FALHOU. A verdade e **⛔ BLOQUEADO — peguei a janela errada, nao sei se o app
+esta errado**. Tratamento, nesta ordem: refazer a descoberta com `Wait-DelphiWindow` (o app
+pode estar minimizado ou ainda abrindo) e recapturar; persistindo, matar o processo e
+reabrir o `.exe`; persistindo ainda, ⛔ BLOQUEADO com a causa declarada.
+
+**Contagem de janelas `FMT*`.** `Get-DelphiFormWindowCount -ProcessId $ProcessId` conta
+todas as janelas `FMT*` do processo — **inclusive as invisiveis**, que sao justamente as que
+denunciam form fechado e nao liberado. Medir no inicio e no fim de cada cenario; se a
+contagem sobe e nao volta ao longo da bateria, o relatorio traz o alerta de possivel
+vazamento de form. Isso **nao** altera o veredito do cenario: e um achado a parte.
 
 **Isolamento.** Tentar reconduzir pela UI (Cancelar/Voltar/Esc), conferindo pelo
 screenshot. Apos **2 tentativas** sem chegar, **matar o processo e reabrir o .exe**.
@@ -65,9 +103,19 @@ aconteceu" vira ❌ FALHOU quando deveria ser ⛔ BLOQUEADO.
 
 **Ritmo.** Dar tempo ao app recem-iniciado; clique cedo demais na primeira tela nao pega.
 A visibilidade da janela FMX pode levar **mais de 3 segundos** para estabilizar apos o start
-do processo. Na primeira chamada a `Get-DelphiWindow`, nao assumir um `sleep` fixo curto:
-tentar, e se ainda nao vier visivel/com area valida, **esperar e reconferir** (poll com
-retentativas, ex.: ate ~10s no total) antes de tratar como falha real de descoberta de janela.
+do processo. Por isso a **primeira** busca de janela depois do `Start-Process` usa
+`Wait-DelphiWindow`, nunca `Get-DelphiWindow` direto:
+
+```powershell
+$w = Wait-DelphiWindow -ProcessId $ProcessId -TimeoutMs 10000
+```
+
+`Wait-DelphiWindow` faz o poll internamente e devolve o **mesmo objeto** de
+`Get-DelphiWindow`; esgotado o `-TimeoutMs`, lanca citando o ultimo erro real.
+`Get-DelphiWindow` **lanca na primeira tentativa** quando ainda nao ha `FMT*` visivel — e
+nao aceita timeout —, entao chama-la logo apos o start transforma "o app ainda esta
+abrindo" em falha de descoberta de janela. Depois que a janela apareceu, `Get-DelphiWindow`
+serve para o resto da bateria.
 
 **Fechar uma mensagem (MessageBox).**
 `Send-DelphiKey -ProcessId $ProcessId -WindowHandle $dlg.Handle -VirtualKey 13`
@@ -108,6 +156,19 @@ esquecido.
 Ordem: (a) usuario informa; (b) `config.ini` do diretorio do .exe (`Log`/`LogFile`/`LogPath`);
 (c) `*.log`/`*.txt` no diretorio do .exe modificados apos o start; (d) nada.
 
+**Os passos (b) e (c) ja estao implementados em `Find-DelphiLogFile` — usar a funcao, nao
+reescrever a busca:**
+
+```powershell
+$log = Find-DelphiLogFile -ExeDir $dirDoExe -StartedAfter $inicioDoProcesso
+```
+
+Devolve o caminho do log ou nada (caso *d*). Refazer a busca a mao com `Get-ChildItem` cai
+direto numa pegadinha ja corrigida dentro da funcao: `-Include` so filtra de fato quando
+`-Path` termina em `\*`; sem isso ele e **silenciosamente ignorado** e a busca nao devolve
+nada. Cabe a skill apenas o passo (a): se o usuario informou o caminho, usar o dele e nem
+chamar a funcao.
+
 No caso (d): **oferecer instrumentacao** — os dois caminhos disponiveis estao documentados em
 **`references/logging-unit.md`** (unit de log minima para o app gravar eventos) e
 **`references/selftest-mode.md`** (modo self-test do proprio app). Se a oferta for recusada,
@@ -129,14 +190,31 @@ PowerShell 5.1.
 
 O diretorio do plugin e cache sobrescrito a cada atualizacao, e rodar `.ps1` de la esbarra em
 ExecutionPolicy. Portanto: **ler** `references/gui.ps1` e **escrever** em `%TEMP%`, carregando
-de la.
+de la. Materializar o arquivo uma vez, no inicio:
 
 ```powershell
 $dst = Join-Path $env:TEMP 'delphi-e2e-gui.ps1'
 Set-Content -Path $dst -Value $conteudoDoReferences -Encoding UTF8
-. $dst
-Initialize-DelphiGui
 ```
 
-Depois de `Initialize-DelphiGui`, se o gate confirmou modo ao fundo, chamar
-`Set-DelphiBackgroundMode -Enabled $true` antes do primeiro clique.
+### TODA invocacao PowerShell recomeca do dot-source
+
+**Cada invocacao da ferramenta PowerShell e um processo novo, com uma sessao nova.** Nada
+sobrevive de uma para a seguinte: as funcoes dot-sourcidas somem, e — pior, porque falha em
+silencio — `$script:DelphiKeepBottom` volta a `$false`, o que torna o modo ao fundo
+**inerte** em toda interacao depois da chamada que o ligou. Nao existe "chamada de setup"
+que valha para as seguintes.
+
+Portanto **toda** invocacao PowerShell do `/e2e` comeca assim:
+
+```powershell
+. "$env:TEMP\delphi-e2e-gui.ps1"
+Initialize-DelphiGui
+Set-DelphiBackgroundMode -Enabled $true   # SO em modo ao fundo — repetir aqui, toda vez
+# ... e so entao os comandos do passo (Invoke-DelphiClick, Get-DelphiShot, ...)
+```
+
+Nao "otimizar" removendo o dot-source das chamadas seguintes por parecer repeticao inutil:
+sem ele, a invocacao seguinte nao conhece funcao nenhuma do harness. E omitir o
+`Set-DelphiBackgroundMode` num passo faz **aquele passo** rodar em primeiro plano — a
+janela sobe na frente do usuario no meio da bateria, sem nenhum aviso.
