@@ -152,3 +152,63 @@ function Get-DelphiFormWindowCount {
   }
   ($script:__found | Where-Object { $_.Visible }).Count
 }
+
+function Get-DelphiShot {
+  <#
+    PrintWindow com PW_RENDERFULLCONTENT captura mesmo com a janela coberta e sem
+    tocar no foco. Captura a janela INTEIRA (com barra de titulo); recortamos a area
+    de cliente para as coordenadas da imagem baterem 1:1 com as do clique.
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][string]$Path
+  )
+  Add-Type -AssemblyName System.Drawing
+
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  $r = New-Object DelphiGui+RECT
+  [DelphiGui]::GetWindowRect($w.Handle, [ref]$r) | Out-Null
+  $fullW = $r.Right - $r.Left
+  $fullH = $r.Bottom - $r.Top
+  if ($fullW -le 0 -or $fullH -le 0) { throw "Janela com dimensao invalida: ${fullW}x${fullH}." }
+
+  $bmp = New-Object System.Drawing.Bitmap $fullW, $fullH
+  $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+  $hdc = $gfx.GetHdc()
+  $ok  = [DelphiGui]::PrintWindow($w.Handle, $hdc, $script:PW_RENDERFULLCONTENT)
+  $gfx.ReleaseHdc($hdc)
+  $gfx.Dispose()
+  if (-not $ok) { $bmp.Dispose(); throw 'PrintWindow falhou.' }
+
+  # Recorte para a area de cliente: a origem do cliente em coordenadas de tela menos
+  # a origem da janela da o deslocamento da borda/titulo.
+  $offX = $w.ClientOriginX - $r.Left
+  $offY = $w.ClientOriginY - $r.Top
+  $rect = New-Object System.Drawing.Rectangle $offX, $offY, $w.ClientWidth, $w.ClientHeight
+  $client = $bmp.Clone($rect, $bmp.PixelFormat)
+  $bmp.Dispose()
+
+  $dir = Split-Path -Parent $Path
+  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+  $client.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+  $client.Dispose()
+  $Path
+}
+
+function Test-DelphiShotIsBlank {
+  # Captura preta = escolhemos uma janela orfa (armadilha 2/3). Detectar em vez de
+  # devolver evidencia inutil ao relatorio.
+  param([Parameter(Mandatory)][string]$Path)
+  Add-Type -AssemblyName System.Drawing
+  $bmp = [System.Drawing.Bitmap]::FromFile($Path)
+  try {
+    $step = [Math]::Max(1, [int]($bmp.Width / 20))
+    foreach ($x in 0..([int]($bmp.Width / $step) - 1)) {
+      foreach ($y in 0..([int]($bmp.Height / $step) - 1)) {
+        $c = $bmp.GetPixel($x * $step, $y * $step)
+        if ($c.R -ne 0 -or $c.G -ne 0 -or $c.B -ne 0) { return $false }
+      }
+    }
+    return $true
+  } finally { $bmp.Dispose() }
+}
