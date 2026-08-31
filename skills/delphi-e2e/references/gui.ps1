@@ -354,21 +354,41 @@ function Invoke-DelphiClick {
   <#
     PostMessage entrega direto na fila da janela: nao precisa de foco e nao move o cursor.
     Coordenadas sao de CLIENTE — as mesmas da imagem recortada por Get-DelphiShot.
+    -WindowHandle: manda o clique para essa janela em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para interagir com um dialogo nativo
+    achado por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Os limites de clique tambem passam a ser os da area de cliente DAQUELA janela
+    (senao o botao OK de um dialogo pequeno seria rejeitado ou caeria no lugar errado).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
   #>
   param(
     [Parameter(Mandatory)][int]$ProcessId,
     [Parameter(Mandatory)][int]$X,
     [Parameter(Mandatory)][int]$Y,
-    [int]$SettleMs = 250
+    [int]$SettleMs = 250,
+    [IntPtr]$WindowHandle
   )
-  $w = Get-DelphiWindow -ProcessId $ProcessId
-  if ($X -lt 0 -or $Y -lt 0 -or $X -ge $w.ClientWidth -or $Y -ge $w.ClientHeight) {
-    throw "Coordenada ($X,$Y) fora da area de cliente ($($w.ClientWidth)x$($w.ClientHeight))."
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle = $WindowHandle
+    $cr = New-Object DelphiGui+RECT
+    if (-not [DelphiGui]::GetClientRect($handle, [ref]$cr)) {
+      throw "GetClientRect falhou para a janela $handle."
+    }
+    $clientWidth  = $cr.Right
+    $clientHeight = $cr.Bottom
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle       = $w.Handle
+    $clientWidth  = $w.ClientWidth
+    $clientHeight = $w.ClientHeight
+  }
+  if ($X -lt 0 -or $Y -lt 0 -or $X -ge $clientWidth -or $Y -ge $clientHeight) {
+    throw "Coordenada ($X,$Y) fora da area de cliente (${clientWidth}x${clientHeight})."
   }
   $lParam = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
-  [DelphiGui]::PostMessage($w.Handle, $script:WM_MOUSEMOVE,   [IntPtr]::Zero, $lParam) | Out-Null
-  [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONDOWN, [IntPtr]1,      $lParam) | Out-Null
-  [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONUP,   [IntPtr]::Zero, $lParam) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_MOUSEMOVE,   [IntPtr]::Zero, $lParam) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_LBUTTONDOWN, [IntPtr]1,      $lParam) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_LBUTTONUP,   [IntPtr]::Zero, $lParam) | Out-Null
   Start-Sleep -Milliseconds $SettleMs
   if ($script:DelphiKeepBottom) { Set-DelphiWindowBottom -ProcessId $ProcessId }
 }
@@ -392,14 +412,26 @@ function Send-DelphiText {
 }
 
 function Send-DelphiKey {
-  # Teclas sem caractere: Esc = 27, Enter = 13, Tab = 9, Backspace = 8.
+  <#
+    Teclas sem caractere: Esc = 27, Enter = 13, Tab = 9, Backspace = 8.
+    -WindowHandle: manda a tecla para essa janela em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para interagir com um dialogo nativo
+    achado por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
+  #>
   param(
     [Parameter(Mandatory)][int]$ProcessId,
     [Parameter(Mandatory)][int]$VirtualKey,
-    [int]$SettleMs = 200
+    [int]$SettleMs = 200,
+    [IntPtr]$WindowHandle
   )
-  $w = Get-DelphiWindow -ProcessId $ProcessId
-  [DelphiGui]::PostMessage($w.Handle, $script:WM_KEYDOWN, [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
-  [DelphiGui]::PostMessage($w.Handle, $script:WM_KEYUP,   [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle = $WindowHandle
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle = $w.Handle
+  }
+  [DelphiGui]::PostMessage($handle, $script:WM_KEYDOWN, [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  [DelphiGui]::PostMessage($handle, $script:WM_KEYUP,   [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
   Start-Sleep -Milliseconds $SettleMs
 }
