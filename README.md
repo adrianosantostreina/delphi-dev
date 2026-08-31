@@ -29,6 +29,63 @@
 
 ---
 
+## End-to-end testing with `/e2e` <sub>new in 3.2.0</sub>
+
+Think of it as **Playwright for Delphi desktop apps**. You describe test scenarios in plain
+language; the plugin builds the project, opens the `.exe`, drives the real screens, and returns
+a **verdict per scenario** — correlated with your app's log.
+
+```
+/e2e login: blank password, wrong password, correct password
+```
+
+Without arguments, `/e2e` derives an "opens without error" scenario for each screen of the
+main menu.
+
+### Four verdicts, not two
+
+The distinction is what separates a useful report from noise:
+
+| Verdict | Meaning |
+|---|---|
+| ✅ PASS | Ran and matched the expectation |
+| ❌ FAIL | Ran and diverged — **the app is wrong** |
+| ⛔ BLOCKED | Couldn't run — **I don't know whether the app is wrong** |
+| ⏭️ SKIPPED | Writes data and wasn't authorized at the gate |
+
+A report that blames a bug where there was only state contamination is worse than no report.
+So when a scenario can't be returned to its starting point, it comes back **⛔ BLOCKED, never
+❌ FAIL**.
+
+### It never steals focus
+
+Clicks go through `PostMessage`, text through `WM_CHAR`, screenshots through `PrintWindow` —
+so the plugin **never grabs your keyboard and never moves your cursor**. Screenshots work even
+with the window fully covered, and `WM_CHAR` is immune to the dead-key problem of ABNT
+keyboards that breaks `SendKeys`.
+
+By default the app runs in the foreground so you can watch. Pass `--background` and it runs
+behind your other windows without interrupting you.
+
+### It stops and asks before touching your data
+
+Before the first click, `/e2e` presents the scenarios it intends to run, **which ones write
+data and what they write**, and waits. It never writes on its own initiative — it explores,
+captures, and leaves through Cancel/Back.
+
+### It reads your app's log
+
+Delivery is not effect: a message can reach the window and still do nothing if the control
+isn't in the expected state. That's why `/e2e` reads your log in parallel — it's the difference
+between ⛔ BLOCKED and ❌ FAIL. If your app has no log, the plugin **offers** (never imposes)
+either a minimal logging unit or a headless `--selftest` mode, and generates it following the
+plugin's own coding standards.
+
+> **Requirements:** Windows, and RAD Studio for the build step. FireMonkey is validated;
+> VCL is a declared fallback. Android is out of scope by design.
+
+---
+
 ## Installation
 
 ```bash

@@ -29,6 +29,62 @@
 
 ---
 
+## Testes end-to-end com `/e2e` <sub>novo na 3.2.0</sub>
+
+Pense nele como um **Playwright para aplicações Delphi desktop**. Você descreve os cenários em
+linguagem natural; o plugin builda o projeto, abre o `.exe`, opera as telas de verdade e
+devolve um **veredito por cenário** — correlacionado com o log do seu app.
+
+```
+/e2e login: senha em branco, senha errada, senha correta
+```
+
+Sem argumento, o `/e2e` deriva um cenário "abre sem erro" para cada tela do menu principal.
+
+### Quatro vereditos, não dois
+
+A distinção é o que separa um relatório útil de ruído:
+
+| Veredito | Significa |
+|---|---|
+| ✅ PASSOU | Executou e bateu com a expectativa |
+| ❌ FALHOU | Executou e divergiu — **o app está errado** |
+| ⛔ BLOQUEADO | Não deu para executar — **não sei se o app está errado** |
+| ⏭️ PULADO | Grava dados e não foi autorizado no gate |
+
+Relatório que acusa bug onde só houve contaminação de estado é pior que relatório nenhum. Por
+isso, quando um cenário não consegue voltar ao ponto de partida, ele sai **⛔ BLOQUEADO, nunca
+❌ FALHOU**.
+
+### Ele nunca rouba o foco
+
+Os cliques vão por `PostMessage`, o texto por `WM_CHAR` e as capturas por `PrintWindow` — então
+o plugin **nunca toma o seu teclado e nunca mexe no seu cursor**. As capturas funcionam mesmo
+com a janela totalmente coberta, e o `WM_CHAR` é imune ao problema de acento morto de teclado
+ABNT, que quebra o `SendKeys`.
+
+Por padrão o app roda em primeiro plano, para você acompanhar. Com `--background`, ele roda
+atrás das suas outras janelas, sem te interromper.
+
+### Ele para e pergunta antes de tocar nos seus dados
+
+Antes do primeiro clique, o `/e2e` apresenta os cenários que pretende executar, **quais deles
+gravam dados e o que gravam**, e espera. Ele nunca grava por iniciativa própria — explora,
+captura e sai pelo Cancelar/Voltar.
+
+### Ele lê o log do seu app
+
+Entrega não é efeito: uma mensagem pode chegar à janela e ainda assim não surtir efeito, se o
+controle não estiver no estado esperado. Por isso o `/e2e` lê o seu log em paralelo — é a
+diferença entre ⛔ BLOQUEADO e ❌ FALHOU. Se o seu app não tem log, o plugin **oferece** (nunca
+impõe) uma unit de logging mínima ou um modo `--selftest` headless, e a gera seguindo os
+próprios padrões de código do plugin.
+
+> **Requisitos:** Windows, e RAD Studio para a etapa de build. FireMonkey é validado; VCL é
+> fallback declarado. Android está fora de escopo por decisão de projeto.
+
+---
+
 ## Instalação
 
 ```bash
