@@ -117,6 +117,72 @@ function Get-DelphiWindow {
   }
 }
 
+function Get-DelphiDialog {
+  <#
+    Acha o dialogo nativo (MessageBox do ShowMessage) do processo, se houver algum
+    aberto. Classe #32770 e uma janela TOP-LEVEL separada do form FMX (nao comeca
+    com FMT*), entao Get-DelphiWindow nunca a enxerga - e por isso o protocolo
+    precisa desta busca dedicada para responder "apareceu mensagem?".
+    Devolve $null quando nao ha dialogo aberto: essa e uma resposta legitima e
+    frequente, NAO uma falha - por isso nao lanca excecao nesse caso.
+    Mesmo formato de retorno que Get-DelphiWindow (Handle/Class/Visible/Area/
+    ClientWidth/ClientHeight/ClientOriginX/ClientOriginY), para poder ser passado
+    direto a Get-DelphiShot -WindowHandle.
+  #>
+  param([Parameter(Mandatory)][int]$ProcessId)
+
+  $script:__foundDialog = @()
+  $callback = [DelphiGui+EnumWindowsProc]{
+    param([IntPtr]$h, [IntPtr]$l)
+    $owner = [uint32]0
+    [DelphiGui]::GetWindowThreadProcessId($h, [ref]$owner) | Out-Null
+    if ($owner -eq $script:__targetPid) {
+      $sb = New-Object System.Text.StringBuilder 256
+      [DelphiGui]::GetClassName($h, $sb, $sb.Capacity) | Out-Null
+      $cls = $sb.ToString()
+      if ($cls -eq "#32770") {
+        $r = New-Object DelphiGui+RECT
+        if (-not [DelphiGui]::GetWindowRect($h, [ref]$r)) {
+          throw "GetWindowRect falhou para a janela $h (classe $cls) do processo $ProcessId."
+        }
+        $script:__foundDialog += [pscustomobject]@{
+          Handle  = $h
+          Class   = $cls
+          Visible = [DelphiGui]::IsWindowVisible($h)
+          Area    = [Math]::Max(0, ($r.Right - $r.Left)) * [Math]::Max(0, ($r.Bottom - $r.Top))
+        }
+      }
+    }
+    return $true
+  }
+  $script:__targetPid = [uint32]$ProcessId
+  [DelphiGui]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
+
+  $dlg = $script:__foundDialog | Where-Object { $_.Visible -and $_.Area -gt 0 } |
+         Sort-Object Area -Descending | Select-Object -First 1
+  if (-not $dlg) { return $null }
+
+  $cr = New-Object DelphiGui+RECT
+  if (-not [DelphiGui]::GetClientRect($dlg.Handle, [ref]$cr)) {
+    throw "GetClientRect falhou para a janela $($dlg.Handle) (classe $($dlg.Class)) do processo $ProcessId."
+  }
+  $origin = New-Object DelphiGui+POINT
+  if (-not [DelphiGui]::ClientToScreen($dlg.Handle, [ref]$origin)) {
+    throw "ClientToScreen falhou para a janela $($dlg.Handle) (classe $($dlg.Class)) do processo $ProcessId."
+  }
+
+  [pscustomobject]@{
+    Handle        = $dlg.Handle
+    Class         = $dlg.Class
+    Visible       = $dlg.Visible
+    Area          = $dlg.Area
+    ClientWidth   = $cr.Right
+    ClientHeight  = $cr.Bottom
+    ClientOriginX = $origin.X
+    ClientOriginY = $origin.Y
+  }
+}
+
 function Restore-DelphiProcess {
   <#
     Armadilha 4: quem fica iconic e a TFMAppClass; os forms so viram IsWindowVisible=False.
@@ -158,16 +224,43 @@ function Get-DelphiShot {
     PrintWindow com PW_RENDERFULLCONTENT captura mesmo com a janela coberta e sem
     tocar no foco. Captura a janela INTEIRA (com barra de titulo); recortamos a area
     de cliente para as coordenadas da imagem baterem 1:1 com as do clique.
+    -WindowHandle: captura essa janela diretamente em vez de resolver o form FMX
+    principal via Get-DelphiWindow - usado para capturar um dialogo nativo achado
+    por Get-DelphiDialog (classe #32770, fora do alcance de Get-DelphiWindow).
+    Omitido, o comportamento e identico ao de antes desta opcao existir.
   #>
   param(
     [Parameter(Mandatory)][int]$ProcessId,
-    [Parameter(Mandatory)][string]$Path
+    [Parameter(Mandatory)][string]$Path,
+    [IntPtr]$WindowHandle
   )
   Add-Type -AssemblyName System.Drawing
 
-  $w = Get-DelphiWindow -ProcessId $ProcessId
+  if ($WindowHandle -and $WindowHandle -ne [IntPtr]::Zero) {
+    $handle        = $WindowHandle
+    $cr = New-Object DelphiGui+RECT
+    if (-not [DelphiGui]::GetClientRect($handle, [ref]$cr)) {
+      throw "GetClientRect falhou para a janela $handle."
+    }
+    $origin = New-Object DelphiGui+POINT
+    if (-not [DelphiGui]::ClientToScreen($handle, [ref]$origin)) {
+      throw "ClientToScreen falhou para a janela $handle."
+    }
+    $clientWidth   = $cr.Right
+    $clientHeight  = $cr.Bottom
+    $clientOriginX = $origin.X
+    $clientOriginY = $origin.Y
+  } else {
+    $w = Get-DelphiWindow -ProcessId $ProcessId
+    $handle        = $w.Handle
+    $clientWidth   = $w.ClientWidth
+    $clientHeight  = $w.ClientHeight
+    $clientOriginX = $w.ClientOriginX
+    $clientOriginY = $w.ClientOriginY
+  }
+
   $r = New-Object DelphiGui+RECT
-  [DelphiGui]::GetWindowRect($w.Handle, [ref]$r) | Out-Null
+  [DelphiGui]::GetWindowRect($handle, [ref]$r) | Out-Null
   $fullW = $r.Right - $r.Left
   $fullH = $r.Bottom - $r.Top
   if ($fullW -le 0 -or $fullH -le 0) { throw "Janela com dimensao invalida: ${fullW}x${fullH}." }
@@ -176,16 +269,16 @@ function Get-DelphiShot {
   try {
     $gfx = [System.Drawing.Graphics]::FromImage($bmp)
     $hdc = $gfx.GetHdc()
-    $ok  = [DelphiGui]::PrintWindow($w.Handle, $hdc, $script:PW_RENDERFULLCONTENT)
+    $ok  = [DelphiGui]::PrintWindow($handle, $hdc, $script:PW_RENDERFULLCONTENT)
     $gfx.ReleaseHdc($hdc)
     $gfx.Dispose()
     if (-not $ok) { throw 'PrintWindow falhou.' }
 
     # Recorte para a area de cliente: a origem do cliente em coordenadas de tela menos
     # a origem da janela da o deslocamento da borda/titulo.
-    $offX = $w.ClientOriginX - $r.Left
-    $offY = $w.ClientOriginY - $r.Top
-    $rect = New-Object System.Drawing.Rectangle $offX, $offY, $w.ClientWidth, $w.ClientHeight
+    $offX = $clientOriginX - $r.Left
+    $offY = $clientOriginY - $r.Top
+    $rect = New-Object System.Drawing.Rectangle $offX, $offY, $clientWidth, $clientHeight
     $client = $bmp.Clone($rect, $bmp.PixelFormat)
     try {
       $dir = Split-Path -Parent $Path
