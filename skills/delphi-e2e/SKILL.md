@@ -69,13 +69,18 @@ do processo. Na primeira chamada a `Get-DelphiWindow`, nao assumir um `sleep` fi
 tentar, e se ainda nao vier visivel/com area valida, **esperar e reconferir** (poll com
 retentativas, ex.: ate ~10s no total) antes de tratar como falha real de descoberta de janela.
 
-**Fechar uma mensagem (MessageBox).** `Send-DelphiKey -WindowHandle $dlg.Handle -VirtualKey 13`
-(Enter) fecha o dialogo nativo `#32770`. E assim que se volta ao estado base depois de uma
-mensagem aparecer — sem isso, todo cenario seguinte comeca contaminado e sai ⛔ BLOQUEADO.
+**Fechar uma mensagem (MessageBox).**
+`Send-DelphiKey -ProcessId $ProcessId -WindowHandle $dlg.Handle -VirtualKey 13`
+(Enter) fecha o dialogo nativo `#32770`. `-ProcessId` e obrigatorio nesta funcao mesmo
+quando `-WindowHandle` ja aponta para o dialogo — nao omitir. E assim que se volta ao
+estado base depois de uma mensagem aparecer — sem isso, todo cenario seguinte comeca
+contaminado e sai ⛔ BLOQUEADO.
 
-**Verificar "apareceu mensagem?".** Usar `Get-DelphiDialog -ProcessId` — se devolver
-**nao-`$null`**, ha um dialogo aberto; ler o texto capturando com
-`Get-DelphiShot -ProcessId -Path -WindowHandle $dlg.Handle`. **Nao** usar heuristica indireta
+**Verificar "apareceu mensagem?".** Usar `Get-DelphiDialog -ProcessId $ProcessId` — se
+devolver **nao-`$null`** (guardado, por exemplo, em `$dlg`), ha um dialogo aberto; ler o
+texto capturando com
+`Get-DelphiShot -ProcessId $ProcessId -Path $caminhoDoPng -WindowHandle $dlg.Handle`.
+**Nao** usar heuristica indireta
 (ex.: "a janela principal ficou inerte, entao deve ter aberto uma mensagem") — `Get-DelphiDialog`
 e a fonte de verdade.
 
