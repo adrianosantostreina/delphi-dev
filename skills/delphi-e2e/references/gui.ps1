@@ -22,7 +22,7 @@ Add-Type -Namespace '' -Name 'DelphiGui' -MemberDefinition @'
   [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hWnd, ref POINT p);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
-  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
@@ -74,7 +74,9 @@ function Get-DelphiWindow {
       $cls = $sb.ToString()
       if ($cls -like 'FMT*') {
         $r = New-Object DelphiGui+RECT
-        [DelphiGui]::GetWindowRect($h, [ref]$r) | Out-Null
+        if (-not [DelphiGui]::GetWindowRect($h, [ref]$r)) {
+          throw "GetWindowRect falhou para a janela $h (classe $cls) do processo $ProcessId."
+        }
         $script:__found += [pscustomobject]@{
           Handle  = $h
           Class   = $cls
@@ -95,9 +97,13 @@ function Get-DelphiWindow {
   }
 
   $cr = New-Object DelphiGui+RECT
-  [DelphiGui]::GetClientRect($win.Handle, [ref]$cr) | Out-Null
+  if (-not [DelphiGui]::GetClientRect($win.Handle, [ref]$cr)) {
+    throw "GetClientRect falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
   $origin = New-Object DelphiGui+POINT
-  [DelphiGui]::ClientToScreen($win.Handle, [ref]$origin) | Out-Null
+  if (-not [DelphiGui]::ClientToScreen($win.Handle, [ref]$origin)) {
+    throw "ClientToScreen falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
+  }
 
   [pscustomobject]@{
     Handle        = $win.Handle
@@ -135,8 +141,14 @@ function Restore-DelphiProcess {
 function Get-DelphiFormWindowCount {
   # Bonus da spec: o FMX cria uma janela nativa por form, entao contar FMT* detecta
   # vazamento de form. Reportar quando a contagem crescer ao longo da bateria.
+  # Detector, nao caminho critico: se nao houver nenhuma FMT* visivel num instante
+  # transitorio (janela fechando/reabrindo), devolve 0 em vez de propagar a excecao.
   param([Parameter(Mandatory)][int]$ProcessId)
   $script:__found = @()
-  Get-DelphiWindow -ProcessId $ProcessId | Out-Null
+  try {
+    Get-DelphiWindow -ProcessId $ProcessId | Out-Null
+  } catch {
+    return 0
+  }
   ($script:__found | Where-Object { $_.Visible }).Count
 }
