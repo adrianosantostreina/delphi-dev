@@ -51,8 +51,8 @@ app**, nao so depois de cada clique:
 
 ```powershell
 $p = Start-Process -FilePath $exe -PassThru
-$w = Wait-DelphiWindow -ProcessId $p.Id -TimeoutMs 10000
-Set-DelphiWindowBottom -ProcessId $p.Id   # SO em modo ao fundo
+$w = Wait-DelphiWindow -ProcessId $p.Id -TimeoutMs 10000  # espera a janela existir
+Set-DelphiWindowBottom -ProcessId $p.Id                   # SO em modo ao fundo
 ```
 
 Sem essa chamada a janela pula para a frente no `Start-Process` e **fica la ate o primeiro
