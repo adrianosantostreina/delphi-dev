@@ -117,21 +117,23 @@ function Get-DelphiWindow {
   }
 }
 
-function Get-DelphiDialog {
+function Find-DelphiTopWindow {
   <#
-    Acha o dialogo nativo (MessageBox do ShowMessage) do processo, se houver algum
-    aberto. Classe #32770 e uma janela TOP-LEVEL separada do form FMX (nao comeca
-    com FMT*), entao Get-DelphiWindow nunca a enxerga - e por isso o protocolo
-    precisa desta busca dedicada para responder "apareceu mensagem?".
-    Devolve $null quando nao ha dialogo aberto: essa e uma resposta legitima e
-    frequente, NAO uma falha - por isso nao lanca excecao nesse caso.
-    Mesmo formato de retorno que Get-DelphiWindow (Handle/Class/Visible/Area/
-    ClientWidth/ClientHeight/ClientOriginX/ClientOriginY), para poder ser passado
-    direto a Get-DelphiShot -WindowHandle.
+    Helper PRIVADO: enumera as janelas top-level do processo cuja classe bate com
+    -ClassPattern (comparacao -like), escolhe a VISIVEL de maior area e devolve o
+    mesmo formato de objeto que Get-DelphiWindow (Handle/Class/Visible/Area/
+    ClientWidth/ClientHeight/ClientOriginX/ClientOriginY).
+    Devolve $null quando nao acha nenhuma janela batendo com o padrao — "nao
+    encontrada" e resposta legitima aqui, quem decide se e erro e o chamador.
+    Get-DelphiWindow NAO usa este helper (mantem sua propria copia de proposito:
+    ela LANCA quando nao acha, comportamento do qual as Tasks 1/2/4 dependem).
   #>
-  param([Parameter(Mandatory)][int]$ProcessId)
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][string]$ClassPattern
+  )
 
-  $script:__foundDialog = @()
+  $script:__foundTop = @()
   $callback = [DelphiGui+EnumWindowsProc]{
     param([IntPtr]$h, [IntPtr]$l)
     $owner = [uint32]0
@@ -140,12 +142,12 @@ function Get-DelphiDialog {
       $sb = New-Object System.Text.StringBuilder 256
       [DelphiGui]::GetClassName($h, $sb, $sb.Capacity) | Out-Null
       $cls = $sb.ToString()
-      if ($cls -eq "#32770") {
+      if ($cls -like $script:__targetClassPattern) {
         $r = New-Object DelphiGui+RECT
         if (-not [DelphiGui]::GetWindowRect($h, [ref]$r)) {
           throw "GetWindowRect falhou para a janela $h (classe $cls) do processo $ProcessId."
         }
-        $script:__foundDialog += [pscustomobject]@{
+        $script:__foundTop += [pscustomobject]@{
           Handle  = $h
           Class   = $cls
           Visible = [DelphiGui]::IsWindowVisible($h)
@@ -155,32 +157,48 @@ function Get-DelphiDialog {
     }
     return $true
   }
-  $script:__targetPid = [uint32]$ProcessId
+  $script:__targetPid          = [uint32]$ProcessId
+  $script:__targetClassPattern = $ClassPattern
   [DelphiGui]::EnumWindows($callback, [IntPtr]::Zero) | Out-Null
 
-  $dlg = $script:__foundDialog | Where-Object { $_.Visible -and $_.Area -gt 0 } |
+  $win = $script:__foundTop | Where-Object { $_.Visible -and $_.Area -gt 0 } |
          Sort-Object Area -Descending | Select-Object -First 1
-  if (-not $dlg) { return $null }
+  if (-not $win) { return $null }
 
   $cr = New-Object DelphiGui+RECT
-  if (-not [DelphiGui]::GetClientRect($dlg.Handle, [ref]$cr)) {
-    throw "GetClientRect falhou para a janela $($dlg.Handle) (classe $($dlg.Class)) do processo $ProcessId."
+  if (-not [DelphiGui]::GetClientRect($win.Handle, [ref]$cr)) {
+    throw "GetClientRect falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
   }
   $origin = New-Object DelphiGui+POINT
-  if (-not [DelphiGui]::ClientToScreen($dlg.Handle, [ref]$origin)) {
-    throw "ClientToScreen falhou para a janela $($dlg.Handle) (classe $($dlg.Class)) do processo $ProcessId."
+  if (-not [DelphiGui]::ClientToScreen($win.Handle, [ref]$origin)) {
+    throw "ClientToScreen falhou para a janela $($win.Handle) (classe $($win.Class)) do processo $ProcessId."
   }
 
   [pscustomobject]@{
-    Handle        = $dlg.Handle
-    Class         = $dlg.Class
-    Visible       = $dlg.Visible
-    Area          = $dlg.Area
+    Handle        = $win.Handle
+    Class         = $win.Class
+    Visible       = $win.Visible
+    Area          = $win.Area
     ClientWidth   = $cr.Right
     ClientHeight  = $cr.Bottom
     ClientOriginX = $origin.X
     ClientOriginY = $origin.Y
   }
+}
+
+function Get-DelphiDialog {
+  <#
+    Acha o dialogo nativo (MessageBox do ShowMessage) do processo, se houver algum
+    aberto. Classe #32770 e uma janela TOP-LEVEL separada do form FMX (nao comeca
+    com FMT*), entao Get-DelphiWindow nunca a enxerga - e por isso o protocolo
+    precisa desta busca dedicada para responder "apareceu mensagem?".
+    Devolve $null quando nao ha dialogo aberto: essa e uma resposta legitima e
+    frequente, NAO uma falha - por isso nao lanca excecao nesse caso.
+    Wrapper fino sobre Find-DelphiTopWindow — mesmo formato de retorno que
+    Get-DelphiWindow, para poder ser passado direto a Get-DelphiShot -WindowHandle.
+  #>
+  param([Parameter(Mandatory)][int]$ProcessId)
+  Find-DelphiTopWindow -ProcessId $ProcessId -ClassPattern "#32770"
 }
 
 function Restore-DelphiProcess {
