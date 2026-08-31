@@ -214,3 +214,34 @@ O relatório é bom: reprodutível, com medição, e aponta a assimetria `captur
 prova do defeito 1. Errou na causa do problema 2 e citou código pré-v3.0 no problema 3 —
 provavelmente leu a cópia do marketplace, que é a mesma armadilha registrada na §1 do design do
 `/e2e`. Não é motivo para descartar nada: os três sintomas são reais e verificáveis.
+
+---
+
+## 9. STATUS — CORRIGIDO em 2026-08-31 (commit `ec835c7`)
+
+Os cinco pontos foram implementados na ordem recomendada na §6. **47 testes verdes** (30
+anteriores + 17 novos em `scripts/__tests__/rag-fixes.test.ts`), build limpo em `scripts/` e
+`installer/`.
+
+| # | O que mudou |
+|---|---|
+| 4 | Tier **`local`** criado, subordinado a `canonical` e `community`. `capture.ts` passa `'local'` explicitamente. O parâmetro `tier` de `embedFile` virou **obrigatório** — o default silencioso era a causa. |
+| 1 | `readHookTranscript()` abre o `transcript_path` do envelope; `extractTranscriptText()` extrai só o texto das mensagens `user`/`assistant`, descartando `tool_use`, `tool_result` e metadados. |
+| 3 | `applyDistanceCutoff()` aplica corte absoluto **depois** do `selectByTier`. Lista vazia é resultado válido. `DELPHI_RAG_MAX_DISTANCE`, default `1.1`. |
+| 2 | Documentado nos dois READMEs: instalação por marketplace chega sem `rag.db`; saída é `npx delphi-dev sync-kb`. `ragHealth()` reporta composição por tier e sinaliza `curatedMissing`. Nota obsoleta do `verify` corrigida. |
+| 5 | READMEs deixam de anunciar registro de hooks; passam a declarar que estão desligados desde a v2.2.2, com aviso explícito para **não** registrar à mão. |
+
+Extra: `RAG_DB_PATH` estava duplicado em `embed.ts` e `search.ts`; agora vive em `paths.ts`.
+
+### Pendências que sobraram
+
+1. **Calibrar `DEFAULT_MAX_DISTANCE` e `RELEVANCE_FLOOR` contra corpus real.** O `1.1` é ponto
+   de partida conservador (embeddings normalizados: distância 1.0 ≈ cosseno 0.5), **não é valor
+   medido**. É exatamente aqui que a base do cliente ajuda.
+2. **Bancos já contaminados não se curam sozinhos.** Quem rodou v3.0.0 com hooks tem chunks
+   `local` gravados como `canonical` — o tier está no banco, não no caminho do arquivo. Falta
+   decidir: migração (`UPDATE knowledge SET tier='local' WHERE path LIKE '%knowledge/local%'`),
+   ou orientar `npx delphi-dev sync-kb` para substituir o banco.
+3. **Health check em runtime** só existe como função; não há comando de usuário que a exponha.
+   Candidato natural: `/dashboard`.
+4. **Bump de versão** não feito — decisão do mantenedor.

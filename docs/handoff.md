@@ -408,7 +408,15 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
       build obrigatório bloqueia a entrega quando falha (o dev pode não ter RAD Studio — o
       plugin é público); e qual versão do Delphi o scaffold assume.
 
-12. **DEFEITOS NO RAG — relatório de cliente verificado (NOVO, 2026-08-31). PRIORIDADE ALTA.**
+12. **~~DEFEITOS NO RAG~~ — ✅ CORRIGIDOS em 2026-08-31 (commit `ec835c7`).** 47 testes verdes
+    (30 + 17 novos), build limpo em `scripts/` e `installer/`. Os 5 pontos foram implementados na
+    ordem recomendada. **Pendem:** calibrar `DEFAULT_MAX_DISTANCE`/`RELEVANCE_FLOOR` contra corpus
+    real (o `1.1` é chute conservador, não medido); **migrar bancos já contaminados** (quem rodou
+    v3.0.0 com hooks tem chunks `local` gravados como `canonical` — o tier está no banco, não no
+    caminho); expor `ragHealth()` num comando (candidato: `/dashboard`); e o bump de versão.
+    Detalhe do diagnóstico original abaixo.
+
+12b. **Diagnóstico original (histórico) — relatório de cliente verificado.**
     Cliente rodando v3.0.0 **com hooks registrados** reportou 3 problemas; verifiquei todos contra
     o código e **achei um 4º, pior**. Análise completa em
     [`docs/ideas/2026-08-31-rag-defeitos-relatorio-cliente.md`](ideas/2026-08-31-rag-defeitos-relatorio-cliente.md).
