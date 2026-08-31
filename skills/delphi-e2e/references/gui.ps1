@@ -435,3 +435,68 @@ function Send-DelphiKey {
   [DelphiGui]::PostMessage($handle, $script:WM_KEYUP,   [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
   Start-Sleep -Milliseconds $SettleMs
 }
+
+# --- Leitura de log sob lock de escrita + delta por byte offset (§6.1) ---
+
+function Get-DelphiLogOffset {
+  param([Parameter(Mandatory)][string]$Path)
+  if (-not (Test-Path $Path)) { return [long]0 }
+  [long](Get-Item $Path).Length
+}
+
+function Get-DelphiLogDelta {
+  <#
+    O app Delphi costuma manter o log ABERTO com lock de escrita (TFileStream /
+    TStreamWriter com fmShareDenyWrite). Get-Content falha nesse caso e a leitura do log
+    quebra em SILENCIO no meio da bateria. FileShare.ReadWrite e o que permite ler.
+  #>
+  param(
+    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory)][long]$FromOffset
+  )
+  if (-not (Test-Path $Path)) {
+    return [pscustomobject]@{ Text = ''; NewOffset = [long]0 }
+  }
+  $fs = [System.IO.FileStream]::new(
+          $Path,
+          [System.IO.FileMode]::Open,
+          [System.IO.FileAccess]::Read,
+          [System.IO.FileShare]::ReadWrite)
+  try {
+    if ($FromOffset -gt $fs.Length) { $FromOffset = 0 }   # log rotacionado/truncado
+    $fs.Seek($FromOffset, [System.IO.SeekOrigin]::Begin) | Out-Null
+    $reader = New-Object System.IO.StreamReader($fs)
+    $text = $reader.ReadToEnd()
+    [pscustomobject]@{ Text = $text; NewOffset = [long]$fs.Length }
+  } finally { $fs.Dispose() }
+}
+
+function Find-DelphiLogFile {
+  <#
+    Ordem da spec 6.1: (a) usuario informa — tratado pela skill; (b) config.ini do
+    diretorio do .exe; (c) *.log/*.txt no diretorio do .exe modificados apos o start;
+    (d) nada -> a skill degrada para veredito visual E DECLARA isso.
+  #>
+  param(
+    [Parameter(Mandatory)][string]$ExeDir,
+    [Parameter(Mandatory)][datetime]$StartedAfter
+  )
+  $ini = Join-Path $ExeDir 'config.ini'
+  if (Test-Path $ini) {
+    foreach ($line in Get-Content $ini) {
+      if ($line -match '^\s*(Log|LogFile|LogPath)\s*=\s*(.+?)\s*$') {
+        $candidate = $Matches[2]
+        if (-not [System.IO.Path]::IsPathRooted($candidate)) {
+          $candidate = Join-Path $ExeDir $candidate
+        }
+        if (Test-Path $candidate) { return $candidate }
+      }
+    }
+  }
+  # -Include so filtra de fato quando -Path termina em \* (gotcha do PowerShell:
+  # sem o \*, -Include e silenciosamente ignorado e nada e devolvido).
+  Get-ChildItem -Path (Join-Path $ExeDir '*') -Include *.log, *.txt -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -ge $StartedAfter } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
+}
