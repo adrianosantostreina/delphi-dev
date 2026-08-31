@@ -408,6 +408,41 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
       build obrigatório bloqueia a entrega quando falha (o dev pode não ter RAD Studio — o
       plugin é público); e qual versão do Delphi o scaffold assume.
 
+12. **DEFEITOS NO RAG — relatório de cliente verificado (NOVO, 2026-08-31). PRIORIDADE ALTA.**
+    Cliente rodando v3.0.0 **com hooks registrados** reportou 3 problemas; verifiquei todos contra
+    o código e **achei um 4º, pior**. Análise completa em
+    [`docs/ideas/2026-08-31-rag-defeitos-relatorio-cliente.md`](ideas/2026-08-31-rag-defeitos-relatorio-cliente.md).
+    - **(4) NÃO RELATADO, o mais grave:** `capture.ts:106` chama `embedFile(path)` **sem tier**, e
+      o default de `embed.ts:50` é **`'canonical'`**. Todo chunk capturado de sessão entra como
+      **verdade absoluta**, disputando slot de igual para igual com o acervo do Adriano.
+      **A governança da v3.0 foi implementada só na leitura** — o caminho de escrita a ignora.
+      Correção: passar tier explícito (`community`, ou um `local` novo subordinado aos dois) e
+      **remover o default** do parâmetro, que foi a causa silenciosa.
+    - **(1) CONFIRMADO:** `capture.ts:99-106` indexa o **payload JSON do hook**, não a conversa —
+      nunca abre o `transcript_path`. Prova da assimetria: `search.ts:33-38` faz o parse certo do
+      próprio payload. Cliente mediu 251/646 chunks (39%) com `session_id`+`transcript_path`.
+    - **(2) SINTOMA REAL, CAUSA ERRADA.** Não é que "nada roda o `build-rag`" — a CI roda e anexa
+      o `rag.db` ao release, e o `npx` baixa. A causa real: **`rag/rag.db` é gitignored**, então
+      quem instala pelo **marketplace** (git clone) recebe **sem banco**; o `capture` cria um
+      vazio (`CREATE TABLE IF NOT EXISTS`) e só enche de ruído. Correção diferente da proposta:
+      fazer o caminho marketplace baixar o asset do release, **e** avisar quando
+      `COUNT(*) WHERE tier='canonical'` = 0 em vez de degradar calado.
+    - **(3) CONCLUSÃO CERTA, citação de código pré-v3.0.** O `RELEVANCE_FLOOR=1.0` da v3.0
+      **prioriza, não filtra** — `weakCanonical` é explicitamente *"last fallback so we never
+      return fewer results"*. Não existe corte absoluto: sempre injeta `topK`. Correção:
+      `maxDistance` real **depois** do `selectByTier`, exposto como `DELPHI_RAG_MAX_DISTANCE`.
+    - **(5) COLATERAL:** os **dois READMEs (linha 41) ainda anunciam que a instalação "registra
+      hooks de automação"**, mas desde a v2.2.2 o `plugin.json` não tem bloco `hooks` e o
+      installer chama `removeHooks()`. A doc conduz o usuário à configuração que expõe os 4
+      defeitos. Para quem instala sem mexer, o RAG está **inerte** — o que mascara tudo isso e
+      explica por que só este cliente reportou.
+    - **Ordem recomendada:** 4 → 1 → 2 → 3 → 5. O 4 vem antes do 1 porque corrigir a captura sem
+      corrigir o tier apenas troca ruído de envelope por ruído de conversa, ainda carimbado como
+      verdade absoluta.
+    - **Aceitar a oferta do cliente** de testar patch e mandar estatísticas: a base dele é um caso
+      adverso melhor que qualquer fixture, e serve para calibrar o `maxDistance` (o 0.6 sugerido é
+      chute, e o `RELEVANCE_FLOOR=1.0` também nunca foi calibrado contra base real).
+
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
 ## Armadilhas / o que não fazer
