@@ -1,0 +1,163 @@
+# Modo `--selftest`
+
+A segunda oferta de instrumentação (a primeira é `references/logging-unit.md`).
+**Nunca aplicar sem aceite explícito do usuário** — mexe no `.dpr` do projeto dele.
+
+## Quando oferecer isto em vez de navegação de UI
+
+Automação de UI (o resto desta skill) confere **layout**: o formulário abriu, o
+clique chegou, a tela mudou. Para **lógica** — chamada de rede, sessão, cache,
+parsing de resposta, concorrência — automação de UI é o caminho mais caro e mais
+frágil possível: builda, abre janela, espera render, clica, tira print, só para
+verificar algo que nunca dependeu de pixel nenhum.
+
+Sempre que o cenário pedido for de lógica e não de tela — "confere se o login com
+token expirado renova sozinho", "confere se duas requisições simultâneas não
+corrompem a sessão" — **oferecer o `--selftest` antes de propor navegação**. Se o
+usuário recusar ou o cenário for mesmo sobre layout/fluxo visual, seguir com o
+protocolo normal do `SKILL.md`.
+
+## O gate no `.dpr`
+
+```pascal
+// No .dpr, ANTES de criar qualquer form:
+// FindCmdLineSwitch REMOVE UM caractere de switch: '--selftest' chega como
+// '-selftest' e NAO casa com o switch 'selftest'. Aceitar as duas formas.
+if FindCmdLineSwitch('selftest', True) or FindCmdLineSwitch('-selftest', True) then
+begin
+  Halt(ExecutarAutoteste);   // exit code = numero de falhas
+end;
+```
+
+A pegadinha não é opcional de tratar: `FindCmdLineSwitch` reconhece o prefixo `-`
+**ou** `--` mas devolve o switch **sem** o(s) caractere(s) de prefixo removidos da
+comparação — na prática, quando a linha de comando traz `--selftest`, o primeiro `-`
+é consumido como marcador de switch e o que sobra para comparar é `-selftest`, que
+não bate com o literal `'selftest'`. Testar só a forma sem hífen faz o gate nunca
+disparar quando alguém (ou o próprio `/e2e`) chama com `--selftest`. As duas
+chamadas em `or` cobrem `-selftest` e `--selftest`.
+
+O `Halt` precisa vir **antes** de qualquer `Application.CreateForm` — senão o
+selftest abre a janela principal do FMX por cima, o que tanto atrasa quanto polui o
+resultado com efeitos colaterais de UI que o modo existe para evitar.
+
+## `ExecutarAutoteste` — contrato
+
+- Roda a bateria **contra a API/serviço real** (mesmo backend que o app usaria em
+  uso normal — nada de mock substituindo a camada que se quer testar).
+- Grava `selftest.log` ao lado do executável, **a cada linha** (mesmo motivo do
+  `logging-unit.md`: se travar, a última linha gravada diz onde parou).
+- Devolve a **contagem de falhas** como `Integer` — é isso que vira exit code via
+  `Halt`. Zero falhas = exit code `0`.
+
+Esqueleto:
+
+```pascal
+function ExecutarAutoteste: Integer;
+var
+  LArquivo: string;
+  LFalhas: Integer;
+begin
+  LArquivo := TPath.Combine(ExtractFilePath(ParamStr(0)), 'selftest.log');
+  LFalhas := 0;
+
+  ExecutarCaso(LArquivo, 'Login_CredenciaisValidas', TestarLoginValido, LFalhas);
+  ExecutarCaso(LArquivo, 'Login_SenhaErrada', TestarLoginSenhaErrada, LFalhas);
+  ExecutarCaso(LArquivo, 'Catalogo_NRequisicoesParalelas', TestarConcorrencia, LFalhas);
+
+  Result := LFalhas;
+end;
+
+procedure ExecutarCaso(const AArquivo, ANome: string; const ATeste: TFunc<Boolean>;
+  var AFalhas: Integer);
+var
+  LOk: Boolean;
+  LErro: string;
+begin
+  LErro := '';
+  try
+    LOk := ATeste();
+  except
+    on E: Exception do
+    begin
+      LOk := False;
+      LErro := E.Message;
+    end;
+  end;
+  if not LOk then
+    Inc(AFalhas);
+  GravarLinha(AArquivo, Format('%s  %s  %s  %s', [
+    FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now),
+    IfThen(LOk, 'PASSOU', 'FALHOU'), ANome, LErro]));
+end;
+```
+
+`GravarLinha` segue o mesmo padrão de `logging-unit.md`: `TFile.AppendAllText` por
+chamada, sob `TCriticalSection` — pode inclusive reaproveitar a unit `App.Log` se o
+projeto já tiver aceitado aquela oferta, gravando `selftest.log` como arquivo
+separado do `app.log` para não misturar as duas bateladas.
+
+## Caso obrigatório: concorrência
+
+Um teste sequencial (um `curl`, um clique de cada vez) **nunca** expõe bug de
+conexão/estado compartilhado entre requisições — a corrida só acontece quando duas
+ou mais chegam ao mesmo tempo. É exatamente o cenário que um app real produz (ex.:
+uma tela de catálogo que baixa várias miniaturas ao mesmo tempo) e que um teste
+manual, um por um, não reproduz nunca.
+
+Por isso `ExecutarAutoteste` **precisa** incluir um caso que dispare N requisições em
+paralelo e confira duas coisas: (1) nenhuma delas falhou, e (2) o serviço **continua
+respondendo depois** — um recurso compartilhado corrompido pela corrida costuma
+sobreviver à rajada e só quebrar a próxima chamada sequencial, o que faria um
+teste que só olha a rajada em si (sem esse segundo cheque) passar por engano:
+
+```pascal
+function TestarConcorrencia: Boolean;
+const
+  C_N_PARALELAS = 10;
+var
+  LErros: TArray<Boolean>;
+  LI: Integer;
+begin
+  SetLength(LErros, C_N_PARALELAS);
+  TParallel.For(0, C_N_PARALELAS - 1,
+    procedure(AIndex: Integer)
+    var
+      LCliente: IHTTPClient;
+      LResposta: IHTTPResponse;
+    begin
+      try
+        LCliente := THTTPClient.Create;
+        LResposta := LCliente.Get('http://localhost:8080/api/produtos');
+        LErros[AIndex] := LResposta.StatusCode <> 200;
+      except
+        LErros[AIndex] := True;
+      end;
+    end);
+
+  Result := True;
+  for LI := 0 to High(LErros) do
+    if LErros[LI] then
+      Exit(False);
+
+  // Segundo cheque: depois da rajada, o servico continua respondendo?
+  // Conexao/estado compartilhado corrompido pela corrida sobrevive ate a
+  // proxima chamada sequencial — e so quebra ali.
+  Result := TestarLoginValido;
+end;
+```
+
+Esse é o padrão de bug que este caso pega: um serviço com conexão de dados guardada
+em variável **compartilhada** (`class var` ou singleton) em vez de uma conexão nova
+por chamada — sob paralelismo real, threads diferentes mexendo na mesma conexão
+corrompem estruturas internas e o sintoma que aparece depois ("erro estranho",
+"servidor caiu") não tem relação óbvia com a causa (a corrida).
+
+## Exit code e leitura pelo `/e2e`
+
+`Halt(ExecutarAutoteste)` faz o processo terminar com o exit code igual ao número de
+falhas — `0` é sucesso total, qualquer valor `> 0` é a contagem exata. O `/e2e`
+roda `.\App.exe --selftest`, lê o exit code do processo e o conteúdo de
+`selftest.log` (cada linha já traz veredito + nome do caso + erro, se houver) para
+montar o relatório — sem precisar abrir janela nenhuma nem tirar screenshot para
+esses cenários.
