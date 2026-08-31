@@ -173,25 +173,30 @@ function Get-DelphiShot {
   if ($fullW -le 0 -or $fullH -le 0) { throw "Janela com dimensao invalida: ${fullW}x${fullH}." }
 
   $bmp = New-Object System.Drawing.Bitmap $fullW, $fullH
-  $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-  $hdc = $gfx.GetHdc()
-  $ok  = [DelphiGui]::PrintWindow($w.Handle, $hdc, $script:PW_RENDERFULLCONTENT)
-  $gfx.ReleaseHdc($hdc)
-  $gfx.Dispose()
-  if (-not $ok) { $bmp.Dispose(); throw 'PrintWindow falhou.' }
+  try {
+    $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+    $hdc = $gfx.GetHdc()
+    $ok  = [DelphiGui]::PrintWindow($w.Handle, $hdc, $script:PW_RENDERFULLCONTENT)
+    $gfx.ReleaseHdc($hdc)
+    $gfx.Dispose()
+    if (-not $ok) { throw 'PrintWindow falhou.' }
 
-  # Recorte para a area de cliente: a origem do cliente em coordenadas de tela menos
-  # a origem da janela da o deslocamento da borda/titulo.
-  $offX = $w.ClientOriginX - $r.Left
-  $offY = $w.ClientOriginY - $r.Top
-  $rect = New-Object System.Drawing.Rectangle $offX, $offY, $w.ClientWidth, $w.ClientHeight
-  $client = $bmp.Clone($rect, $bmp.PixelFormat)
-  $bmp.Dispose()
-
-  $dir = Split-Path -Parent $Path
-  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
-  $client.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
-  $client.Dispose()
+    # Recorte para a area de cliente: a origem do cliente em coordenadas de tela menos
+    # a origem da janela da o deslocamento da borda/titulo.
+    $offX = $w.ClientOriginX - $r.Left
+    $offY = $w.ClientOriginY - $r.Top
+    $rect = New-Object System.Drawing.Rectangle $offX, $offY, $w.ClientWidth, $w.ClientHeight
+    $client = $bmp.Clone($rect, $bmp.PixelFormat)
+    try {
+      $dir = Split-Path -Parent $Path
+      if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+      $client.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+      $client.Dispose()
+    }
+  } finally {
+    $bmp.Dispose()
+  }
   $Path
 }
 
