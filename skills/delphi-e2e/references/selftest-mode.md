@@ -20,7 +20,8 @@ protocolo normal do `SKILL.md`.
 ## O gate no `.dpr`
 
 ```pascal
-// No .dpr, ANTES de criar qualquer form:
+// No .dpr, com App.Selftest (o esqueleto abaixo) no uses do projeto.
+// ANTES de criar qualquer form:
 // FindCmdLineSwitch REMOVE UM caractere de switch: '--selftest' chega como
 // '-selftest' e NAO casa com o switch 'selftest'. Aceitar as duas formas.
 if FindCmdLineSwitch('selftest', True) or FindCmdLineSwitch('-selftest', True) then
@@ -50,24 +51,37 @@ resultado com efeitos colaterais de UI que o modo existe para evitar.
 - Devolve a **contagem de falhas** como `Integer` — é isso que vira exit code via
   `Halt`. Zero falhas = exit code `0`.
 
-Esqueleto:
+Esqueleto — unit inteira, na ordem em que compila:
 
 ```pascal
+unit App.Selftest;
+
+interface
+
 function ExecutarAutoteste: Integer;
-var
-  LArquivo: string;
-  LFalhas: Integer;
-begin
-  LArquivo := TPath.Combine(ExtractFilePath(ParamStr(0)), 'selftest.log');
-  LFalhas := 0;
 
-  ExecutarCaso(LArquivo, 'Login_CredenciaisValidas', TestarLoginValido, LFalhas);
-  ExecutarCaso(LArquivo, 'Login_SenhaErrada', TestarLoginSenhaErrada, LFalhas);
-  ExecutarCaso(LArquivo, 'Catalogo_NRequisicoesParalelas', TestarConcorrencia, LFalhas);
+implementation
 
-  Result := LFalhas;
-end;
+uses
+  System.SysUtils,        // Format, FormatDateTime, Now, Exception, TFunc<T>
+  System.IOUtils,         // TPath
+  System.StrUtils,        // IfThen(Boolean; string; string)
+  System.Net.HttpClient,  // THTTPClient, IHTTPResponse (secao "concorrência")
+  System.Threading;       // TParallel (secao "concorrência")
 
+// Object Pascal exige DECLARAÇÃO PRÉVIA: um identificador só pode ser chamado depois
+// de declarado. ExecutarAutoteste chama os três casos, e TestarConcorrencia só aparece
+// mais abaixo neste documento — daí os `forward` aqui em cima. Sem eles:
+// E2003 Undeclared identifier.
+function TestarLoginValido: Boolean; forward;
+function TestarLoginSenhaErrada: Boolean; forward;
+function TestarConcorrencia: Boolean; forward;
+
+// GravarLinha: append imediato por linha (ver adiante). Corpo por sua conta.
+procedure GravarLinha(const AArquivo, ALinha: string); forward;
+
+// ExecutarCaso vem ANTES de ExecutarAutoteste, que a chama. Invertido, o compilador
+// para em `E2003 Undeclared identifier: 'ExecutarCaso'`.
 procedure ExecutarCaso(const AArquivo, ANome: string; const ATeste: TFunc<Boolean>;
   var AFalhas: Integer);
 var
@@ -90,12 +104,36 @@ begin
     FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now),
     IfThen(LOk, 'PASSOU', 'FALHOU'), ANome, LErro]));
 end;
+
+function ExecutarAutoteste: Integer;
+var
+  LArquivo: string;
+  LFalhas: Integer;
+begin
+  LArquivo := TPath.Combine(ExtractFilePath(ParamStr(0)), 'selftest.log');
+  LFalhas := 0;
+
+  ExecutarCaso(LArquivo, 'Login_CredenciaisValidas', TestarLoginValido, LFalhas);
+  ExecutarCaso(LArquivo, 'Login_SenhaErrada', TestarLoginSenhaErrada, LFalhas);
+  ExecutarCaso(LArquivo, 'Catalogo_NRequisicoesParalelas', TestarConcorrencia, LFalhas);
+
+  Result := LFalhas;
+end;
 ```
+
+**`IfThen` de string é do `System.StrUtils`, não do `System.Math`.** As duas units
+exportam `IfThen`, e a do `System.Math` só tem sobrecargas numéricas
+(`Integer`/`Int64`/`Double`) — com apenas `System.Math` no escopo, o
+`IfThen(LOk, 'PASSOU', 'FALHOU')` acima não compila. Se a unit já usar `System.Math`
+para outra coisa, deixar `System.StrUtils` **depois** dela no `uses` (vence a última
+declarada) ou qualificar: `System.StrUtils.IfThen(...)`.
 
 `GravarLinha` segue o mesmo padrão de `logging-unit.md`: `TFile.AppendAllText` por
 chamada, sob `TCriticalSection` — pode inclusive reaproveitar a unit `App.Log` se o
 projeto já tiver aceitado aquela oferta, gravando `selftest.log` como arquivo
-separado do `app.log` para não misturar as duas bateladas.
+separado do `app.log` para não misturar as duas bateladas. `TestarLoginValido` e
+`TestarLoginSenhaErrada` são do seu app; escreva as duas em qualquer ponto da
+`implementation` — o `forward` só exige que o corpo exista **na mesma unit**.
 
 ## Caso obrigatório: concorrência
 
@@ -114,7 +152,9 @@ teste que só olha a rajada em si (sem esse segundo cheque) passar por engano.
 `THTTPClient` (unit `System.Net.HttpClient`) é a classe correta para a chamada —
 não há `IHTTPClient` na RTL, só `THTTPClient` como classe concreta; `IHTTPResponse`
 (o retorno de `.Get`) sim é interface, também de `System.Net.HttpClient`. `TParallel.For`
-vem de `System.Threading`.
+vem de `System.Threading`. As duas units já estão no `uses` do esqueleto acima; o bloco a
+seguir entra na mesma unit `App.Selftest` e é o que satisfaz o `forward` de
+`TestarConcorrencia`.
 
 ```pascal
 function TestarConcorrencia: Boolean;
