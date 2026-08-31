@@ -244,7 +244,7 @@ pressupõem (ex.: "já logado, agora finalizar venda").
 
 ---
 
-## 6. Seções 6.1–6.3 APRESENTADAS E ACEITAS (2026-08-30); 6.4–6.8 NÃO apresentadas
+## 6. Seções 6.1–6.3 aceitas (2026-08-30); **6.2–6.4 reescritas em 2026-08-31**; 6.5–6.8 a apresentar
 
 ### 6.1 Descoberta e leitura do log
 
@@ -259,31 +259,89 @@ escrita (`TFileStream`/`TStreamWriter` com `fmShareDenyWrite`). `Get-Content` fa
 `[System.IO.FileStream]::new(path, Open, Read, ReadWrite)` — `FileShare.ReadWrite` — senão a
 leitura do log quebra em silêncio no meio da bateria.
 
-### 6.2 Instrumentação quando não há log (decisão 10)
+### 6.2 Quando não há log — DUAS ofertas, não uma (revisado 2026-08-31)
 
-Se o app não tem log, o plugin **oferece** (nunca impõe — mexe no código do usuário) uma unit
-de logging mínima, gerada pelo `delphi-writer` seguindo os padrões do plugin: append
-thread-safe, timestamp, chamada simples. Template em
-`skills/delphi-e2e/references/logging-unit.md`. Só executa mediante aceite explícito.
+Se o app não tem log, o plugin **oferece** (nunca impõe — mexe no código do usuário) um de dois
+caminhos. Só executa mediante aceite explícito, e a escolha depende do que o cenário testa.
 
-### 6.3 Regras de segurança (reescritas para o caso de uso)
+**A escolha importa porque automação de UI serve bem para uma coisa e mal para outra:**
+`PostMessage` confere **layout e navegação**. Para lógica — rede, sessão, cache, parsing,
+concorrência — dirigir a tela é caro, lento e frágil.
+
+| Oferta | Para quê | O que gera |
+|---|---|---|
+| **Unit de logging** | dar rastro ao que já existe, para correlacionar com a tela | append thread-safe, timestamp, chamada simples (`references/logging-unit.md`) |
+| **Modo `--selftest`** | testar **lógica** sem abrir interface | bateria headless contra a API real, grava `selftest.log` ao lado do `.exe` e **sai com o número de falhas como exit code** |
+
+O `--selftest` é frequentemente a resposta melhor, e é o que o documento-fonte recomenda: mais
+barato e mais confiável que clicar. Quando o cenário do usuário for de lógica, **oferecer o
+selftest antes** de propor a navegação.
+
+**Três detalhes de implementação que já custaram caro:**
+
+1. **Gravar o log a cada linha, não no fim.** Se travar, a última linha diz onde. E — crítico —
+   `Writeln` em app console com stdout redirecionado **não aparece sem `Flush(Output)`**, e um
+   `Stop-Process -Force` descarta o buffer inteiro
+   (`knowledge/core/console-writeln-sem-flush-nao-loga.md`). Log de verdade vai para **arquivo
+   próprio**, nunca para stdout.
+2. **`FindCmdLineSwitch` remove UM caractere de switch:** `--selftest` chega como `-selftest` e
+   **não casa** com o switch `'selftest'`. Aceitar as duas formas:
+   `FindCmdLineSwitch('selftest', True) or FindCmdLineSwitch('-selftest', True)`.
+3. **Incluir um caso de concorrência** (N requisições em paralelo). Expõe bug de conexão
+   compartilhada que teste sequencial nunca pega — exatamente o que
+   `knowledge/core/horse-conexao-por-requisicao.md` documenta.
+
+**Consequência para a §6.1:** a descoberta de log pode terminar em "não há log **e** o usuário
+recusou instrumentar". Nesse caso o veredito degrada para **visual** e isso é **declarado no
+relatório** — nunca silenciosamente.
+
+### 6.3 Regras de segurança (reescritas sobre o mecanismo sem foco)
 
 1. Nunca gravar **por iniciativa própria** — explora, captura, sai pelo `Cancelar`/`Voltar`.
 2. Cenário que grava só roda se o usuário pediu **e** confirmou no gate.
-3. O gate lista: cenários pretendidos, quais gravam, e o que gravam. Para e espera.
-4. Nunca capturar a tela inteira — recortar pela `RECT` da janela.
-5. Declarar no relatório se roubou o foco de outra aplicação.
+3. O gate lista: cenários pretendidos, quais gravam, e o que gravam. **Para e espera.**
+4. **Capturar só a janela do app, nunca a tela.** Com `PrintWindow` isso é garantia estrutural,
+   não disciplina: a API captura a janela alvo por construção, mesmo coberta por outras. É uma
+   proteção de privacidade mais forte que recortar um screenshot de tela cheia.
+5. **Declarar em que modo rodou** — primeiro plano (default) ou ao fundo. Substitui a antiga
+   regra "declarar se roubou o foco": com `PostMessage`/`WM_CHAR` o agente **não rouba foco nem
+   move o cursor** em nenhum dos modos, e isso é argumento de venda, não ressalva.
 6. Credenciais do banco local do projeto; **nunca** ecoar senha em texto claro.
-7. Declarar o estado final (app aberto/fechado, dados alterados/intactos).
+7. Declarar o estado final: app aberto/fechado, dados alterados/intactos.
+8. **Pedir uma única coisa ao usuário:** deixar a janela **aberta, mesmo atrás das outras — não
+   minimizar**. Minimizado o Windows para de renderizar; dá para restaurar sozinho, mas custa
+   segundos por ciclo (ver armadilha 4).
 
-### 6.4 Armadilhas herdadas do documento (as 5, manter todas)
+### 6.4 Armadilhas técnicas — reescritas para `PostMessage` / `PrintWindow`
 
-3.1 `MainWindowHandle` devolve `TFMAppClass` (rect 0×0) → enumerar por PID, pegar a visível
-de classe `FMT*` de maior área. · 3.2 `SetForegroundWindow` falha calado → combo completo +
-conferir retorno, abortar na segunda falha. · 3.3 `SetProcessDPIAware()` antes de qualquer
-coordenada. · 3.4 recalcular `GetWindowRect` antes de **cada** clique (o usuário pode arrastar
-a janela; o app pode se reposicionar). · 3.5 o primeiro clique após mudança de foco é engolido
-— não assumir N cliques = N caracteres.
+As cinco armadilhas do documento original foram **substituídas**, não ajustadas: duas sumiram
+com a troca de mecanismo e três novas apareceram. Fonte:
+`fmx-automacao-windows-sem-foco.md`.
+
+**Obsoletas** (não reintroduzir): `SetForegroundWindow` falhando calado, e o primeiro clique
+engolido após mudança de foco. Nenhum dos dois existe quando não se pede foco. A regra de
+recalcular a `RECT` antes de cada clique também cai: `PostMessage` usa **coordenadas de
+cliente**, então arrastar a janela deixa de importar para o clique.
+
+| # | Armadilha | Regra |
+|---|---|---|
+| 1 | `Process.MainWindowHandle` é inútil | Devolve a janela-fantasma `TFMAppClass`, muitas vezes com altura 0. A janela real do form tem classe **`FMT<NomeDoForm>`** (ex.: `FMTViewMain`). Enumerar por PID e filtrar `FMT*`. |
+| 2 | Há **várias** janelas `FMT*` | Uma por form instanciado, e pode haver **órfãs invisíveis** com a mesma classe e tamanho da real. Escolher sempre a **VISÍVEL de maior área** — pegar só "a de maior área" traz a órfã e o `PrintWindow` sai **preto**. |
+| 3 | Ordem importa: restaurar **antes** de escolher | Com o app minimizado nenhuma `FMT*` está visível, então a seleção cai numa órfã e a captura sai preta — **mesmo restaurando logo depois**. Ordem: restaurar → escolher janela → capturar. |
+| 4 | App minimizado ⇒ captura preta | Quem fica *iconic* é a `TFMAppClass`; os forms só viram `IsWindowVisible = False`. Restaurar o form não adianta: `ShowWindow` na janela **iconic** com **`SW_SHOWNOACTIVATE` (4)**. |
+| 5 | Coordenadas não batem sozinhas | `PostMessage` usa coordenadas de **cliente**; `PrintWindow` captura a **janela inteira**, com barra de título. **Recortar a captura na área de cliente** faz as coordenadas da imagem baterem **1:1** com as do clique. E `SetProcessDPIAware()` antes de qualquer coordenada. |
+
+**Ritmo:** dar tempo ao app recém-iniciado — clique cedo demais na primeira tela não pega.
+
+**Entrega ≠ efeito.** Um `PostMessage` pode ser entregue e mesmo assim não surtir efeito, se o
+controle FMX não estiver no estado esperado. É por isso que o log é lido **em paralelo** (§6.1)
+e não como enfeite: sem ele, o agente confunde "cliquei e nada aconteceu" com "cliquei e o app
+está errado" — e a diferença é ⛔ BLOQUEADO vs ❌ FALHOU.
+
+**Bônus de graça — detector de vazamento.** Como o FMX cria uma janela nativa por form, listar
+as `FMT*` do processo é um detector barato de form vazado: 20 `FMTCompProduto` vivas para 9
+produtos denunciam que ninguém está liberando. Vale reportar quando a contagem crescer ao longo
+da bateria.
 
 ### 6.5 Relatório e bilinguismo
 
@@ -299,10 +357,14 @@ en-US `✅ PASS / ❌ FAIL / ⛔ BLOCKED / ⏭️ SKIPPED`, com tabela de mapeam
 
 ### 6.7 Versionamento e READMEs
 
-Bump 3.0.0 → **3.1.0** (capacidade nova). Sincronizar `plugin.json`, `marketplace.json`,
-`commands/about.md` (2 linhas: Version/Versão). Atualizar os dois READMEs (tabela de features,
-tabela de skills, lista de commands). Corrigir o item 4 da seção de versionamento do
-`CLAUDE.md`, que manda atualizar uma string de versão inexistente nos READMEs.
+**Atualizado 2026-08-31:** a **3.1.0 já foi usada** (correções do `/new-project` e do RAG,
+publicada). O `/e2e` entra como **3.2.0**.
+
+Sincronizar `plugin.json`, `marketplace.json` e `commands/about.md` (2 linhas: Version/Versão).
+Atualizar os dois READMEs: tabela de features (linha do `/e2e`), tabela de skills
+(`delphi-e2e`) e lista de commands. **Os READMEs não têm string de versão** — o item 4 da seção
+de versionamento do `CLAUDE.md` mandava atualizar um texto inexistente e **já foi corrigido**
+(commit `8b80370`).
 
 ### 6.8 Questão de escopo em aberto (não perguntada)
 
@@ -316,8 +378,8 @@ suíte de regressão. É quase de graça (o agente já lê/escreve markdown) e "
 
 1. ~~Reapresentar §5.1–5.3~~ **FEITO** — aprovadas, decisões 12/13/14.
 2. ~~Apresentar §6.1–6.3~~ **FEITO** — aceitas.
-3. **Apresentar §6.4–6.7** (armadilhas técnicas, relatório bilíngue, guarda Windows-only,
-   versionamento) — são mecânicas, podem ir num bloco só.
+3. ~~Apresentar §6.4–6.7~~ — **§6.2–6.4 reescritas em 2026-08-31** sobre o mecanismo sem foco,
+   após leitura completa de `fmx-automacao-windows-sem-foco.md`. §6.5–6.7 seguem mecânicas.
 4. **Decidir §6.8** — persistência de cenários em `docs/e2e/*.md` como suíte de regressão.
    É a única pergunta de escopo que resta. Proposta original: fora do v1.
 5. Promover este arquivo a spec aprovada (remover o cabeçalho de STATUS), rodar a
@@ -447,16 +509,26 @@ outras janelas, o desenvolvedor decide."*
 
 **Default: primeiro plano.** Flag para rodar ao fundo.
 
-**A propriedade que torna isso barato:** como o mecanismo novo (§10.1) usa `PostMessage` +
-`WM_CHAR` + `PrintWindow`, **a automação funciona identicamente nos dois modos** — ela nunca
-precisou de foco. Trazer a janela para a frente vira um ato puramente **cosmético**: um
-`SetWindowPos` a mais no início, para o dev assistir. Não é escolha de mecanismo, é escolha de
-exibição.
+**⚠️ CORREÇÃO (2026-08-31) — eu tinha invertido a direção do custo.** A leitura completa de
+`fmx-automacao-windows-sem-foco.md` mostra que **o FMX ATIVA o form ao processar o clique, mesmo
+vindo de `PostMessage`**. Ou seja: `PostMessage` sozinho **não** mantém a janela ao fundo — ela
+sobe sozinha.
+
+Portanto o custo está no **modo ao fundo**, não no primeiro plano:
+
+| Modo | Custo |
+|---|---|
+| **Primeiro plano (default)** | **zero** — é o comportamento natural do FMX |
+| **Ao fundo (flag)** | `SetWindowPos(h, HWND_BOTTOM, SWP_NOMOVE\|SWP_NOSIZE\|SWP_NOACTIVATE)` ao subir o app **e depois de cada clique e cada digitação**, com um `Sleep` curto antes para o FMX terminar de tratar a mensagem |
+
+O `SWP_NOACTIVATE` é o que evita trocar um problema por outro. A decisão 15 continua válida — o
+default em primeiro plano é inclusive o mais barato — mas o modo ao fundo **é código a mais no
+`gui.ps1`**, não um `if` de exibição.
 
 Consequências:
 
-- **Um só caminho de código**, sem `if` espalhado pelo harness. O `gui.ps1` clica e digita do
-  mesmo jeito nos dois modos.
+- **O núcleo do clique e da digitação é o mesmo** nos dois modos; o modo ao fundo acrescenta o
+  reposicionamento pós-interação.
 - **Nenhum dos dois modos rouba digitação.** Mesmo em primeiro plano, o texto vai por `WM_CHAR`
   para a fila da janela alvo — o bug do `tácola` não volta.
 - **O modo ao fundo ganha um caso de uso próprio:** bateria longa rodando enquanto o dev
