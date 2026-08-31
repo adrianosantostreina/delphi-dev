@@ -34,6 +34,9 @@ Conhecimento geral de Delphi fica em [`../core/INDEX.md`](../core/INDEX.md).
 - [deployment-arquivos-extras.md](deployment-arquivos-extras.md) — Deployment de assets no APK/IPA
 - [android-deploy-e8712-buildtools.md](android-deploy-e8712-buildtools.md) — Erro E8712 / Android build-tools no deploy
 
+## Windows Desktop
+- [fmx-win32-automacao-sem-foco.md](fmx-win32-automacao-sem-foco.md) — Dirigir um app FMX no Windows sem roubar foco nem mexer no cursor: `PostMessage` (clique), `WM_CHAR` (texto, imune a acento morto ABNT), `PrintWindow` flag 2 (captura mesmo coberta). Cinco armadilhas: `MainWindowHandle` devolve a fantasma `TFMAppClass`; escolher a `FMT*` visível de maior área (só "maior área" traz órfã e a captura sai preta); restaurar ANTES de escolher; `SW_SHOWNOACTIVATE` para app minimizado; recortar na área de cliente para as coordenadas baterem 1:1
+
 ## Uses e Componentes
 - [uses-fmx-components.md](uses-fmx-components.md) — Tabela tipo → unit FMX/FireDAC/RTL
 
