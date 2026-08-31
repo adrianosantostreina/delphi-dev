@@ -113,7 +113,7 @@ teste que só olha a rajada em si (sem esse segundo cheque) passar por engano.
 
 `THTTPClient` (unit `System.Net.HttpClient`) é a classe correta para a chamada —
 não há `IHTTPClient` na RTL, só `THTTPClient` como classe concreta; `IHTTPResponse`
-(o retorno de `.Get`) sim é interface, de `System.Net.URLClient`. `TParallel.For`
+(o retorno de `.Get`) sim é interface, também de `System.Net.HttpClient`. `TParallel.For`
 vem de `System.Threading`.
 
 ```pascal
