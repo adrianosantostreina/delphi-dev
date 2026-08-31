@@ -217,3 +217,55 @@ function Test-DelphiShotIsBlank {
     return $true
   } finally { $bmp.Dispose() }
 }
+
+function Invoke-DelphiClick {
+  <#
+    PostMessage entrega direto na fila da janela: nao precisa de foco e nao move o cursor.
+    Coordenadas sao de CLIENTE — as mesmas da imagem recortada por Get-DelphiShot.
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][int]$X,
+    [Parameter(Mandatory)][int]$Y,
+    [int]$SettleMs = 250
+  )
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  if ($X -lt 0 -or $Y -lt 0 -or $X -ge $w.ClientWidth -or $Y -ge $w.ClientHeight) {
+    throw "Coordenada ($X,$Y) fora da area de cliente ($($w.ClientWidth)x$($w.ClientHeight))."
+  }
+  $lParam = [IntPtr](($Y -shl 16) -bor ($X -band 0xFFFF))
+  [DelphiGui]::PostMessage($w.Handle, $script:WM_MOUSEMOVE,   [IntPtr]::Zero, $lParam) | Out-Null
+  [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONDOWN, [IntPtr]1,      $lParam) | Out-Null
+  [DelphiGui]::PostMessage($w.Handle, $script:WM_LBUTTONUP,   [IntPtr]::Zero, $lParam) | Out-Null
+  Start-Sleep -Milliseconds $SettleMs
+}
+
+function Send-DelphiText {
+  <#
+    WM_CHAR nao depende de foco de teclado e NAO sofre com acento morto de teclado ABNT
+    (problema classico do SendKeys).
+  #>
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][AllowEmptyString()][string]$Text,
+    [int]$PerCharMs = 20
+  )
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  foreach ($ch in $Text.ToCharArray()) {
+    [DelphiGui]::PostMessage($w.Handle, $script:WM_CHAR, [IntPtr][int]$ch, [IntPtr]::Zero) | Out-Null
+    Start-Sleep -Milliseconds $PerCharMs
+  }
+}
+
+function Send-DelphiKey {
+  # Teclas sem caractere: Esc = 27, Enter = 13, Tab = 9, Backspace = 8.
+  param(
+    [Parameter(Mandatory)][int]$ProcessId,
+    [Parameter(Mandatory)][int]$VirtualKey,
+    [int]$SettleMs = 200
+  )
+  $w = Get-DelphiWindow -ProcessId $ProcessId
+  [DelphiGui]::PostMessage($w.Handle, $script:WM_KEYDOWN, [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  [DelphiGui]::PostMessage($w.Handle, $script:WM_KEYUP,   [IntPtr]$VirtualKey, [IntPtr]::Zero) | Out-Null
+  Start-Sleep -Milliseconds $SettleMs
+}
