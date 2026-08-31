@@ -109,7 +109,12 @@ Por isso `ExecutarAutoteste` **precisa** incluir um caso que dispare N requisiç
 paralelo e confira duas coisas: (1) nenhuma delas falhou, e (2) o serviço **continua
 respondendo depois** — um recurso compartilhado corrompido pela corrida costuma
 sobreviver à rajada e só quebrar a próxima chamada sequencial, o que faria um
-teste que só olha a rajada em si (sem esse segundo cheque) passar por engano:
+teste que só olha a rajada em si (sem esse segundo cheque) passar por engano.
+
+`THTTPClient` (unit `System.Net.HttpClient`) é a classe correta para a chamada —
+não há `IHTTPClient` na RTL, só `THTTPClient` como classe concreta; `IHTTPResponse`
+(o retorno de `.Get`) sim é interface, de `System.Net.URLClient`. `TParallel.For`
+vem de `System.Threading`.
 
 ```pascal
 function TestarConcorrencia: Boolean;
@@ -117,33 +122,38 @@ const
   C_N_PARALELAS = 10;
 var
   LErros: TArray<Boolean>;
+  LTodasOk: Boolean;
   LI: Integer;
 begin
   SetLength(LErros, C_N_PARALELAS);
   TParallel.For(0, C_N_PARALELAS - 1,
     procedure(AIndex: Integer)
     var
-      LCliente: IHTTPClient;
+      LCliente: THTTPClient;
       LResposta: IHTTPResponse;
     begin
+      LCliente := THTTPClient.Create;
       try
-        LCliente := THTTPClient.Create;
-        LResposta := LCliente.Get('http://localhost:8080/api/produtos');
-        LErros[AIndex] := LResposta.StatusCode <> 200;
-      except
-        LErros[AIndex] := True;
+        try
+          LResposta := LCliente.Get('http://localhost:8080/api/produtos');
+          LErros[AIndex] := LResposta.StatusCode <> 200;
+        except
+          LErros[AIndex] := True;
+        end;
+      finally
+        LCliente.Free;
       end;
     end);
 
-  Result := True;
+  LTodasOk := True;
   for LI := 0 to High(LErros) do
     if LErros[LI] then
-      Exit(False);
+      LTodasOk := False;
 
   // Segundo cheque: depois da rajada, o servico continua respondendo?
   // Conexao/estado compartilhado corrompido pela corrida sobrevive ate a
   // proxima chamada sequencial — e so quebra ali.
-  Result := TestarLoginValido;
+  Result := LTodasOk and TestarLoginValido;
 end;
 ```
 

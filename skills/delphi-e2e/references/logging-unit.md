@@ -49,10 +49,34 @@ uses
   System.IOUtils,
   System.SyncObjs;
 
-var
-  FLock: TCriticalSection;
+type
+  TAppLog = class
+  strict private
+    class var FLock: TCriticalSection;
+  public
+    class constructor Create;
+    class destructor Destroy;
+    class procedure Registrar(const AMensagem: string);
+  end;
 
 procedure Log(const AMensagem: string);
+begin
+  TAppLog.Registrar(AMensagem);
+end;
+
+{ TAppLog }
+
+class constructor TAppLog.Create;
+begin
+  FLock := TCriticalSection.Create;
+end;
+
+class destructor TAppLog.Destroy;
+begin
+  FLock.Free;
+end;
+
+class procedure TAppLog.Registrar(const AMensagem: string);
 var
   LArquivo: string;
   LLinha: string;
@@ -67,17 +91,16 @@ begin
   end;
 end;
 
-initialization
-  FLock := TCriticalSection.Create;
-
-finalization
-  FLock.Free;
-
 end.
 ```
 
 Notas de implementação:
 
+- Variável global (`var FLock: TCriticalSection;` solto na `implementation`) é
+  proibida pelo padrão do plugin — o lock vira `class var` dentro de `TAppLog`,
+  com `class constructor`/`class destructor` cuidando do ciclo de vida no lugar
+  de `initialization`/`finalization`. `Log(AMensagem)` continua sendo a única
+  API pública da unit; por baixo, delega para `TAppLog.Registrar`.
 - `TFile.AppendAllText` abre, escreve e fecha o arquivo a cada chamada — é o que
   garante o append imediato sem depender de flush manual em cima de um stream
   mantido aberto.
