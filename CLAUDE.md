@@ -58,7 +58,8 @@ When bumping the plugin version, update **all** of:
 1. `.claude-plugin/plugin.json` → `"version"`
 2. `.claude-plugin/marketplace.json` → `plugins[0].version`
 3. `commands/about.md` → the `Versão:` line
-4. `README.md` and `README.pt-BR.md` → "current version should be **X.Y.Z**"
+4. ~~`README.md` and `README.pt-BR.md`~~ — **the READMEs carry no version string**; nothing to
+   update there. (Verified 2026-08-31; this item used to point at text that does not exist.)
 
 `marketplace.json` uses an unusual nested `source` shape (`"source": {"source": "url", "url": "..."}`) — this was a deliberate fix (see commit `905fe6b`) for Claude Code plugin installation. Don't "simplify" it.
 

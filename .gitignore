@@ -18,3 +18,9 @@ installer/.vite/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build output e lockfile — nao versionados por design.
+# A CI roda `npm install` + `npm run build`; o installer faz o wiring na maquina do usuario.
+scripts/dist/
+hooks/dist/
+package-lock.json
