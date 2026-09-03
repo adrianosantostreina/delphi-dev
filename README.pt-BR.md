@@ -107,10 +107,11 @@ Este único comando:
 > local. **Não registre os hooks à mão:** na v3.0.0 e anteriores o caminho de
 > captura grava ruído de sessão no índice carimbado como autoritativo.
 
-> **Instalando pelo marketplace?** O `/plugin marketplace add` faz um clone do
-> repositório, e o `rag/rag.db` **não** é versionado — ou seja, esse caminho chega
-> **sem base de conhecimento**. Rode `npx delphi-dev sync-kb` para baixá-la do
-> último release. Sem isso o RAG não tem conteúdo curado para devolver.
+> **Não há nada a fazer quanto à base de conhecimento agora.** O acervo curado é
+> distribuído como `rag.db` em cada release e o `npx delphi-dev` o baixa para você. Hoje
+> ele **não é lido por nada**, porque o único consumidor é o hook de injeção por prompt,
+> que está desligado — uma instalação sem ele se comporta de forma idêntica. Quando o
+> servidor MCP local sair, o `npx delphi-dev update` trará o acervo e o código que o lê.
 
 ### Atualizar
 

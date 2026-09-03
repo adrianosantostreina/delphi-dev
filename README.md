@@ -107,10 +107,11 @@ This single command:
 > MCP server. **Do not register them by hand:** on v3.0.0 and earlier the capture
 > path writes session noise into the index tagged as authoritative.
 
-> **Installing from the marketplace?** `/plugin marketplace add` clones the repo,
-> and `rag/rag.db` is **not** versioned — so that path arrives **without a
-> knowledge base**. Run `npx delphi-dev sync-kb` to download it from the latest
-> release. Without it the RAG has no curated content to return.
+> **Nothing to do about the knowledge base right now.** The curated corpus ships as
+> `rag.db` on each release and `npx delphi-dev` downloads it for you. It is currently
+> **read by nothing**, because the only consumer is the per-prompt injection hook, which
+> is off — so an install without it behaves identically. When the local MCP server lands,
+> `npx delphi-dev update` will bring both the corpus and the code that reads it.
 
 ### Update
 
