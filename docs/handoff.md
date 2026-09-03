@@ -475,6 +475,19 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
       adverso melhor que qualquer fixture, e serve para calibrar o `maxDistance` (o 0.6 sugerido é
       chute, e o `RELEVANCE_FLOOR=1.0` também nunca foi calibrado contra base real).
 
+13. **BUG NO HOOK `fix-encoding` — corromperia `.dfm`/`.fmx` (NOVO, 2026-09-03). BLOQUEADOR.**
+    `hooks/fix-encoding.ts:8` declara `DELPHI_EXTENSIONS = ['.pas', '.dfm', '.dpr', '.dpk',
+    '.inc', '.fmx']` e **injeta BOM UTF-8** em todos. Mas a própria KB do plugin
+    (`dfm-fmx-sem-bom.md`) documenta que **`.dfm`/`.fmx` NUNCA podem ter BOM**: o BOM antes
+    de `object` quebra o `ObjectTextToBinary` do IDE com `Error creating form: Invalid
+    stream format`. **Se os hooks forem religados hoje, este hook corrompe todo form que o
+    Claude escrever.** Só `.pas`/`.dpr`/`.dpk`/`.inc` levam BOM.
+    - Correção: remover `.dfm` e `.fmx` da lista de extensões.
+    - **Bloqueia o item 5 (MCP local) e qualquer religamento de hooks.** Corrigir ANTES.
+
+14. **Mapa de testes das v3.1.0/v3.2.0** — [`docs/testes-v3.1-v3.2.md`](testes-v3.1-v3.2.md).
+    Cobre `/e2e`, `/new-project`, KB, RAG e release, com registro do que NÃO foi verificado.
+
 > Nota: ao definir a v3.0, perguntar ao usuário a ordem exata — ele pediu para eu reapresentar as opções "mais tarde, quando ele pedir". As 4 opções acima são o conjunto a reapresentar.
 
 ## Armadilhas / o que não fazer
