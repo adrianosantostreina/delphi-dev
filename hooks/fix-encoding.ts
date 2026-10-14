@@ -5,11 +5,25 @@
  */
 import * as fs from 'fs';
 
-const DELPHI_EXTENSIONS = ['.pas', '.dfm', '.dpr', '.dpk', '.inc', '.fmx'];
+// Source files only. .dfm/.fmx must never get a BOM: it breaks ObjectTextToBinary
+// ("Error creating form: Invalid stream format") — see knowledge dfm-fmx-sem-bom.md.
+const DELPHI_EXTENSIONS = ['.pas', '.dpr', '.dpk', '.inc'];
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 function hasBom(buf: Buffer): boolean {
   return buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
+}
+
+export function fixEncoding(filePath: string): void {
+  const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
+  if (!DELPHI_EXTENSIONS.includes(ext)) return;
+  if (!fs.existsSync(filePath)) return;
+
+  const content = fs.readFileSync(filePath);
+  if (hasBom(content)) return;
+
+  const withBom = Buffer.concat([UTF8_BOM, content]);
+  fs.writeFileSync(filePath, withBom);
 }
 
 async function main(): Promise<void> {
@@ -26,15 +40,9 @@ async function main(): Promise<void> {
   }
 
   if (!filePath) return;
-  const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
-  if (!DELPHI_EXTENSIONS.includes(ext)) return;
-  if (!fs.existsSync(filePath)) return;
-
-  const content = fs.readFileSync(filePath);
-  if (hasBom(content)) return;
-
-  const withBom = Buffer.concat([UTF8_BOM, content]);
-  fs.writeFileSync(filePath, withBom);
+  fixEncoding(filePath);
 }
 
-main().catch(() => {}); // silent fail — hook must not block the user
+if (require.main === module) {
+  main().catch(() => {}); // silent fail — hook must not block the user
+}
