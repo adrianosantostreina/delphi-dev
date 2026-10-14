@@ -50,11 +50,30 @@ export function registerHooks(): void {
   writeSettings({ ...settings, hooks: merged });
 }
 
+interface HookCommand { command?: string }
+interface HookGroup { hooks?: HookCommand[] }
+
+// Matches every command registerHooks() ever wrote (v2.0–v2.2.1), with either path separator.
+const DELPHI_HOOK_COMMAND = /delphi-dev[\\/](scripts[\\/](capture|search)|hooks[\\/]fix-encoding)\.js/;
+
+function isDelphiHook(hook: HookCommand): boolean {
+  return typeof hook.command === 'string' && DELPHI_HOOK_COMMAND.test(hook.command);
+}
+
+/** Removes only delphi-dev's own entries; hooks from the user or other plugins stay. */
 export function removeHooks(): void {
   const settings = readSettings();
-  const hooks = (settings.hooks as Record<string, unknown[]>) ?? {};
+  const hooks = (settings.hooks as Record<string, HookGroup[]>) ?? {};
   for (const key of DELPHI_HOOK_KEYS) {
-    delete hooks[key];
+    const groups = hooks[key];
+    if (!Array.isArray(groups)) continue;
+
+    const kept = groups
+      .map((group) => ({ ...group, hooks: (group.hooks ?? []).filter((hook) => !isDelphiHook(hook)) }))
+      .filter((group) => group.hooks.length > 0);
+
+    if (kept.length > 0) hooks[key] = kept;
+    else delete hooks[key];
   }
   writeSettings({ ...settings, hooks });
 }
