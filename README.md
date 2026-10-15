@@ -23,7 +23,8 @@
 | **`/spec`** | Analyzes the current project source code and auto-generates a complete `SPEC.md` |
 | **`/tdd`** | Generates a complete DUnitX unit test suite for the project |
 | **`/e2e`** | Runs end-to-end scenarios against a running Delphi desktop app — builds it, opens the `.exe`, drives the screens and reports a verdict per scenario |
-| **`/contribute-kb`** | Packages local learnings captured by the hooks and opens a PR to the community knowledge base *(needs hooks, currently disabled — see Installation)* |
+| **`/contribute-kb`** | Drafts one Delphi learning from the conversation and, with your approval, sends it to the community knowledge base (PR via `gh` or a prefilled issue) |
+| **`/update`** | Updates the knowledge base now and checks for a newer plugin version |
 | **`/dashboard`** | Displays GitHub repository metrics — stars, forks, issues, PRs, commits, releases, contributors |
 | **`/about`** | Displays plugin info, version, and available commands |
 
@@ -94,24 +95,17 @@ npx delphi-dev
 
 This single command:
 - Installs the Claude Code plugin
-- Downloads the RAG knowledge base
+- Ships the knowledge base inside the plugin (it then updates itself daily)
 - Installs the VS Code extension (if VS Code is detected)
 - Removes any stale automation hooks left by older versions
 
-**Requirements:** Node.js 18+, Claude Code CLI, git
+**Requirements:** Claude Code CLI and git. Node.js 22.13+ enables fast knowledge search, automatic updates and the automation hooks; without it the plugin still works in reduced mode.
 
-> **Automation hooks are disabled since v2.2.2.** They depended on native modules
-> that broke clean installs on Windows. The knowledge base still ships and the
-> skills, commands and agents all work — what is currently off is the automatic
-> per-prompt knowledge injection and session capture. They return with the local
-> MCP server. **Do not register them by hand:** on v3.0.0 and earlier the capture
-> path writes session noise into the index tagged as authoritative.
-
-> **Nothing to do about the knowledge base right now.** The curated corpus ships as
-> `rag.db` on each release and `npx delphi-dev` downloads it for you. It is currently
-> **read by nothing**, because the only consumer is the per-prompt injection hook, which
-> is off — so an install without it behaves identically. When the local MCP server lands,
-> `npx delphi-dev update` will bring both the corpus and the code that reads it.
+> **Knowledge base and hooks (v4).** The plugin ships its Delphi knowledge base and checks once a
+> day for updates published by the maintainer — no database download, no native modules. Two
+> hooks run automatically: one adds a UTF-8 BOM to `.pas`/`.dpr`/`.dpk`/`.inc` files (never to
+> `.dfm`/`.fmx`), and one adds up to three short knowledge excerpts to Delphi-related prompts. An
+> MCP server (`delphi-dev-kb`) lets the agent search the base on demand. Run `/update` to refresh now.
 
 ### Update
 

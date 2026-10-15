@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-This repo is **not** a Delphi project — it is the source of the **`delphi-dev` Claude Code plugin** (a marketplace plugin that makes Claude a Delphi expert). The "code" is entirely markdown + JSON consumed by the Claude Code harness at install time. There is no build, lint, or test command.
+This repo is **not** a Delphi project — it is the source of the **`delphi-dev` Claude Code plugin** (a marketplace plugin that makes Claude a Delphi expert). The "code" is entirely markdown + JSON consumed by the Claude Code harness at install time. The only code is the knowledge-base runtime in `kb/` (TypeScript): `cd kb && npm test`, and `npm run build:runtime` regenerates the committed bundles in `runtime/` — always commit them together with the source change (CI fails otherwise).
 
 Test changes by installing the plugin from a local checkout (`/plugin marketplace add <path>` then `/plugin install delphi-dev@delphi-dev`) and exercising the affected skill/command/agent in a real session. Changes to `.md` / `.json` files only take effect after re-install.
 
@@ -15,6 +15,7 @@ Three primitives, each loaded by Claude Code differently:
 - **Skills** (`skills/<name>/SKILL.md`) — auto-activated when their `description:` frontmatter matches user intent or detected files. They form the always-available knowledge layer. Some skills (`delphi-laudo`, `delphi-spec`, `delphi-standards`, `delphi-tests`) have a `references/` subdirectory the skill loads on demand to keep the base SKILL.md small.
 - **Commands** (`commands/<name>.md`) — explicit slash commands (`/audit`, `/write`, etc.). Commands are thin orchestrators that delegate to skills + agents.
 - **Agents** (`agents/<name>.md`) — subagents invoked via the Agent tool for heavier, isolated work (deep audit, full code generation, SPEC writing, test generation).
+- **Knowledge base runtime** (`kb/` → `runtime/*.mjs`) — FTS5 index over `knowledge/`, served by the `UserPromptSubmit` hook (`hooks/hooks.json`) and the `delphi-dev-kb` MCP server (`.mcp.json`). `runtime/` is committed on purpose: nothing may require `npm install` or native modules on the user's machine (the v2.2.2 lesson).
 
 Key invocation flows worth knowing before editing:
 
@@ -68,3 +69,4 @@ When bumping the plugin version, update **all** of:
 - Both READMEs (`README.md` and `README.pt-BR.md`) must be updated together when commands, skills, or agents change.
 - Skill `description:` frontmatter is the auto-activation trigger — be precise about file extensions and trigger phrases. Vague descriptions cause the skill to either never activate or activate spuriously.
 - Don't add a new command without also: (a) listing it in both READMEs' feature table, (b) mentioning it in `commands/about.md`, (c) wiring it to a skill or agent that does the actual work.
+- `/sync-kb` lives in `.claude/commands/` (project-only) and is never shipped in the plugin.

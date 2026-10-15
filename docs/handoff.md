@@ -1,7 +1,41 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-08-31**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-10-14**.
 > No início de uma nova sessão, ler este arquivo para retomar.
+
+## Ponto de retomada (2026-10-14) — v4: Sprint 1 + Sprint 2 (base de conhecimento) IMPLEMENTADOS, branch local
+
+**Branch `feature/v4.0-multi-agente`, só local — NÃO pushada.** Sprint 1 (itens 1.1–1.7) e Sprint 2
+foram implementados por subagent-driven development.
+Docs: spec `docs/superpowers/specs/2026-10-14-kb-v4-design.md`, plano
+`docs/superpowers/plans/2026-10-14-kb-v4.md` (25 tasks), plano de sprints
+`docs/superpowers/plans/2026-10-13-v4.0-multi-agente.md`.
+
+- **Feito:** pacote `kb/` (FTS5 via `node:sqlite`, MCP `delphi-dev-kb`, hooks `fix-encoding` + inject,
+  `kb-cli`, atualização a partir do `kb-latest`, contribuição via `gh`/issue, `/sync-kb`); bundles
+  commitados em `runtime/`; CI (`build-kb`, `validate-community`, `kb-issue-to-pr`, `runtime-check`);
+  `/update`; `/contribute-kb` redesenhado; status no `/about`; RAG antigo removido; installer enxuto
+  (só limpa hooks legados). Suíte `kb`: **202 testes verdes**; installer: **9 testes verdes**.
+- **Calibração (Task 21, 2026-10-14, 40 docs):** `MIN_SCORE = 6.5`, `STRONG_SCORE = 8.0`. 20/20
+  consultas pt-BR em 1º lugar; inglês 3/3 em 1º. Maior score negativo (prompt sem Delphi) 5.91; menor
+  acerto verdadeiro 9.70. Detalhe em `docs/rag-governance.md`.
+- **Hotfix 3.2.1 (separado, em `master`):** cherry-pick do fix do `removeHooks` + bump; `master`
+  pushado e release GitHub `v3.2.1` é o Latest, com `rag.db` anexado. **PENDENTE: `npm publish` do
+  installer 3.2.1** — precisa do login npm do usuário (`npm whoami` deu 401). Comando, em `master`:
+  `cd installer && npm run build && npm publish`.
+- **PENDENTE com o usuário:** Task 19 (validar os hooks sem Node no PATH, no Claude Code no Windows —
+  procedimento no plano); Task 25 (primeiro `/sync-kb`, importando os ~37 arquivos pendentes e
+  resolvendo conflitos como `horse-gbswagger-rotas-jwt.md`); a revisão final da branch inteira e a
+  onda de correções dela; depois o merge.
+- **Configuração manual no GitHub antes de os workflows funcionarem:** criar os rótulos
+  `kb-contribuicao` e `kb-aprovado`; Settings → Actions → General → habilitar "Allow GitHub Actions to
+  create and approve pull requests".
+- **Conflito esperado no merge para `master`:** strings de versão (master está em 3.2.1; a branch ainda
+  em 3.2.0/2.2.2) em `.claude-plugin/plugin.json`, `marketplace.json`, `commands/about.md`,
+  `installer/package.json` e `installer/src/index.ts`. O bump para 4.0.0 é do Sprint 5.
+- **PRÓXIMO PASSO:** Task 25 (primeiro `/sync-kb`) e a Task 19; depois revisão final + merge. Sprints
+  seguintes: 3 (núcleo portável + Codex), 4 (OpenCode), 5 (installer/docs/release 4.0.0/matriz de
+  validação).
 
 ## Ponto de retomada (2026-08-31) — SPEC DO `/e2e` APROVADA + v3.1.0 PUBLICADA ✅
 
@@ -499,10 +533,9 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 
 ## Como rodar / validar
 
-- Testes: `cd scripts && npx vitest run` (11 testes)
-- Build scripts: `cd scripts && npm run build`
-- Build RAG: `node scripts/dist/build-rag.js ./knowledge ./rag/rag.db`
-- Smoke test RAG: `echo '{"prompt":"..."}' | RAG_DB_PATH=./rag/rag.db node scripts/dist/search.js`
+- Testes da base: `cd kb && npm test`
+- Regenerar os bundles de `runtime/` (commitar junto com o fonte): `cd kb && npm run build:runtime`
+- Testes do installer: `cd installer && npx vitest run`
 - Testar o plugin: instalação local via `/plugin marketplace add <checkout>` + `/plugin install delphi-dev@delphi-dev` (mudanças em `.md`/`.json` só valem após reinstalar).
 
 ## Branch / sincronização

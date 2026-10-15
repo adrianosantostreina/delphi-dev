@@ -23,7 +23,8 @@
 | **`/spec`** | Analisa o código-fonte do projeto atual e gera automaticamente um `SPEC.md` completo |
 | **`/tdd`** | Gera suite completa de testes unitários DUnitX para o projeto |
 | **`/e2e`** | Executa cenários end-to-end num app Delphi desktop em execução — builda, abre o `.exe`, opera as telas e devolve um veredito por cenário |
-| **`/contribute-kb`** | Empacota os aprendizados locais capturados pelos hooks e abre um PR para a base de conhecimento comunitária *(depende dos hooks, hoje desligados — ver Instalação)* |
+| **`/contribute-kb`** | Redige um aprendizado de Delphi a partir da conversa e, com sua aprovação, envia para a base comunitária (PR via `gh` ou issue pré-preenchida) |
+| **`/update`** | Atualiza a base de conhecimento agora e verifica se há versão nova do plugin |
 | **`/dashboard`** | Exibe métricas do repositório GitHub — estrelas, forks, issues, PRs, commits, releases, contribuidores |
 | **`/about`** | Exibe informações do plugin, versão e comandos disponíveis |
 
@@ -93,25 +94,18 @@ npx delphi-dev
 
 Este único comando:
 - Instala o plugin no Claude Code
-- Baixa a base de conhecimento RAG
+- Embute a base de conhecimento no plugin (que depois se atualiza sozinha todo dia)
 - Instala a extensão VS Code (se detectado)
 - Remove hooks de automação obsoletos deixados por versões antigas
 
-**Requisitos:** Node.js 18+, Claude Code CLI, git
+**Requisitos:** Claude Code CLI e git. O Node.js 22.13+ habilita a busca rápida, a atualização automática e os hooks de automação; sem ele o plugin funciona em modo reduzido.
 
-> **Os hooks de automação estão desligados desde a v2.2.2.** Eles dependiam de
-> módulos nativos que quebravam a instalação limpa no Windows. A base de
-> conhecimento continua sendo distribuída e as skills, comandos e agentes
-> funcionam normalmente — o que está desligado é a injeção automática de
-> conhecimento a cada prompt e a captura de sessão. Voltam com o servidor MCP
-> local. **Não registre os hooks à mão:** na v3.0.0 e anteriores o caminho de
-> captura grava ruído de sessão no índice carimbado como autoritativo.
-
-> **Não há nada a fazer quanto à base de conhecimento agora.** O acervo curado é
-> distribuído como `rag.db` em cada release e o `npx delphi-dev` o baixa para você. Hoje
-> ele **não é lido por nada**, porque o único consumidor é o hook de injeção por prompt,
-> que está desligado — uma instalação sem ele se comporta de forma idêntica. Quando o
-> servidor MCP local sair, o `npx delphi-dev update` trará o acervo e o código que o lê.
+> **Base de conhecimento e hooks (v4).** O plugin traz a base de conhecimento Delphi embutida e
+> confere uma vez por dia se o mantenedor publicou atualizações — sem baixar banco, sem módulos
+> nativos. Dois hooks rodam sozinhos: um põe BOM UTF-8 em `.pas`/`.dpr`/`.dpk`/`.inc` (nunca em
+> `.dfm`/`.fmx`) e outro acrescenta até três trechos curtos da base a prompts sobre Delphi. Um
+> servidor MCP (`delphi-dev-kb`) deixa o agente pesquisar a base quando precisar. Use `/update`
+> para atualizar na hora.
 
 ### Atualizar
 
