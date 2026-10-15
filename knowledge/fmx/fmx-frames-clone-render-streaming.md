@@ -81,9 +81,29 @@ texto default do template.
 - `TRectangle`/`TShape` **não têm** `TabOrder` → pôr `TabOrder = 0` no `.fmx` dá
   `EReadError: Property TabOrder does not exist` em runtime (compila!). `TLayout`/
   `TLabel`/`TButton` aceitam.
+- **`TSpeedButton` também NÃO tem `TabOrder`** (ao contrário do `TButton`) →
+  `Error reading BtnX.TabOrder: Property TabOrder does not exist` ao abrir o form.
+  Pegadinha clássica ao montar SpeedButton à mão no `.fmx` copiando bloco de
+  `TEdit`/`TLabel`/`TButton`. Remover a linha `TabOrder` do SpeedButton.
 - `TagString`/`TagFloat`/`TagObject` são **public, não published** → não podem ir no
   `.fmx` (`EReadError: Property TagString does not exist`). Use `Tag` (Integer, esse é
   published) ou defina em código.
+
+## 5b. Converter `TListBox` → `TVertScrollBox` no `.fmx`: remover props exclusivas de TListBox
+
+Ao trocar a classe de um container no `.fmx` à mão (ex.: `object Lista: TListBox` →
+`object Lista: TVertScrollBox`), o `.pas` **compila normal**, mas ao abrir a tela dá
+`EReadError: Property X does not exist` em runtime — uma prop de cada vez. Propriedades
+que existem em `TListBox`/`TCustomListBox` mas **NÃO** em `TVertScrollBox`:
+
+- `DisableFocusEffect` (apesar de parecer de `TStyledControl`, **não** existe em
+  TVertScrollBox → `Property DisableFocusEffect does not exist`).
+- `DefaultItemStyles.ItemStyle` / `.GroupHeaderStyle` / `.GroupFooterStyle`.
+- `AlternatingRowBackground`, `ItemHeight`, `Columns`, `ItemIndex`, `Sorted`.
+
+**Válidas em ambos (manter):** `Align`, `Size.*`, `TabOrder`, `Viewport.Width/Height`,
+`Touch.*`. Regra: ao converter, deixe só o subconjunto comum; valide abrindo a tela no
+device (o build não pega). Cada `EReadError` revela a próxima prop a remover — repita.
 
 ## 6. `System.IOUtils.TPath` sombreia `FMX.Objects.TPath`
 

@@ -51,7 +51,13 @@ iOS é mais simples: a versão da SDK casa com a versão do iOS de mesmo número
 | 12.1 | Abr/2024 | 34 | 23 | iOS 17 |
 | 12.2 | Set/2024 | 34 | 23 | iOS 18 |
 | **12.3** | **Mar/2025** | **35** (Android 15) | **23** | **iOS 18** |
-| 12.4+ | (futuro) | provável 36 | 23 | provável iOS 26 |
+| **13.0 (RAD 37.0)** | **2025/2026** | **36** (Android 16) | **23** | **iOS 26 (SDK iPhoneOS26.x)** |
+
+**Bundles confirmados do Delphi 13 / RAD Studio 37.0** (visto em máquina real):
+- BDS reg key: `HKCU\Software\Embarcadero\BDS\37.0`
+- SDK Android default: `AndroidSDK-37.0.59082.6021` (API 36.1), NDK `27.1.12297006`, cmdline-tools `16.0`
+- targetSdkVersion default `36`, minSdkVersion `23`; SDK iOS `iPhoneOS26.2.sdk`
+- ⚠️ Em migrações 12→13 a SDK do catálogo pode vir **sem `build-tools`** (quebra empacotamento) — ver [android-deploy-e8712-buildtools.md](android-deploy-e8712-buildtools.md).
 
 **Bundles do Delphi 12.3 (verificável em `Tools > Manage Platforms`):**
 - NDK: `27.1.12297006`

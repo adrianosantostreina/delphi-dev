@@ -28,6 +28,18 @@ Isso faz o msbuild gravar um arquivo de resposta (`<Projeto>.cmds`) e passar
 apenas `@Projeto.cmds` ao `dcc` — eliminando o limite de tamanho da linha de comando.
 É a opção menos invasiva: não remove paths nem altera a estrutura do projeto.
 
+### Pegadinha: `DCC_ForceExecute` no `.dproj` não basta quando o build vem do Git Bash
+
+Mesmo com `<DCC_ForceExecute>true</DCC_ForceExecute>` no `.dproj`, o MSB6003 pode
+**persistir** se o `build.bat` for chamado via `cmd.exe /c` a partir do **Git Bash**:
+o `cmd.exe` herda variáveis POSIX do Bash que incham o ambiente, e a propriedade do
+`.dproj` pode não ser avaliada antes de a linha estourar. Solução robusta (vale para
+qualquer shell): passar a propriedade **explicitamente** na linha do msbuild, não só no `.dproj`:
+
+```bat
+msbuild "Projeto.dproj" /t:Build /p:Config=%CONFIG% /p:Platform=%PLAT% /p:DCC_ForceExecute=true ...
+```
+
 ## Alternativas (se ainda estourar ou não puder mexer no .dproj)
 
 - Encurtar `DCC_UnitSearchPath`: remover paths de libs não usadas pelo projeto.

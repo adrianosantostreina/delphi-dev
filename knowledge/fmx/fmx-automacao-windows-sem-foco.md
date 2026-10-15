@@ -21,16 +21,8 @@ script mandou `cola` no campo do app e o texto dela vazou junto — o campo fico
 
 ## Manter a janela no fundo (o ponto principal)
 
-**Em app com navegação entre telas, o form FMX subiu na ordem-Z ao processar um
-clique vindo de `PostMessage`** — só usar `PostMessage` não bastou: a janela subiu
-sozinha na frente do usuário.
-
-**Escopo dessa observação.** Ela não se reproduziu num app FMX **mínimo** (um form,
-um botão) no Delphi 13/Win32: ordem-Z e `GetForegroundWindow` ficaram inalterados
-depois do clique por `PostMessage`. Ou seja, a ativação vem do que o *handler* faz —
-abrir ou focar outro form, por exemplo —, não do `PostMessage` em si. O
-reposicionamento abaixo continua valendo a pena: é barato e cobre o caso em que a
-subida acontece.
+**O FMX ATIVA o form ao processar o clique — mesmo vindo de `PostMessage`.** Só
+usar `PostMessage` não basta: a janela sobe sozinha na frente do usuário.
 
 1. **Subir o app já no fundo**: após o `Start-Process`, chamar em todas as janelas
    visíveis do processo
@@ -102,8 +94,46 @@ detector de vazamento barato. Se cada item de lista é construído como um `TFor
 e ninguém libera, as janelas acumulam — 20 `FMTCompProduto` vivas para 9 produtos
 denunciou exatamente isso.
 
+## Rolar lista (wheel/arrasto) sem mexer no cursor
+
+Clique funciona por `PostMessage`, **rolagem não** — e falha calada (screenshot
+igual, nenhum erro). Motivo, lido em `FMX.Platform.Win` (Delphi 13):
+
+- `WM_MOUSEMOVE` só chega ao form se `GetCursorPos` (cursor **real**) mudou
+  desde o último move (`if P <> LastMousePos`). Com o cursor parado, moves
+  sintéticos são descartados — exceto **o primeiro** depois de um
+  `WM_LBUTTONDOWN`/`UP` (eles resetam `LastMousePos`). Arrastar thumb ou
+  conteúdo com N moves não anda.
+- `WM_MOUSEWHEEL` → `TCommonCustomForm.MouseWheel` acha o alvo por
+  `ObjectAtPoint(MouseService.GetMousePos)` — posição do cursor **real**, não a
+  do `lParam`. Cursor fora do app = wheel para ninguém.
+- **Exceção que resolve:** se houver controle **capturado** (`FCaptured`), o
+  wheel vai direto para ele, sem olhar o cursor.
+
+Receita que funciona: `WM_LBUTTONDOWN` num ponto **não clicável** da lista
+(vão entre cards, ou card com `HitTest=False` — captura o `TVertScrollBox`),
+N × `WM_MOUSEWHEEL` (delta ±120 no HIWORD do `wParam`, `MK_LBUTTON` no
+LOWORD, coordenada de **tela** no `lParam`), `WM_LBUTTONUP` no mesmo ponto.
+Rola ~1 card por notch e dispara `OnViewportPositionChange` normalmente (scroll
+infinito/paginação testável). Cuidado com o ponto do down: em cima de botão
+vira clique.
+
+## Diálogo nativo aberto pelo app
+
+Um `#32770` (MessageBox/TaskDialog) aparece como janela própria do PID e
+**bloqueia** o app (modal) — os cliques no form param de surtir efeito. Ler o
+texto com `EnumChildWindows` + `GetWindowText`; fechar com
+`PostMessage(hDlg, WM_CLOSE)` (TaskDialog não tem `Button` filho, então
+`BM_CLICK` não serve). Conferir `Janelas` depois de toda ação que possa abrir
+diálogo.
+
 ## O que pedir ao usuário
 
 Só uma coisa: **deixar a janela aberta, mesmo atrás das outras — não minimizar.**
 Minimizado o Windows para de renderizar; dá para restaurar sozinho com
 `SW_SHOWNOACTIVATE`, mas custa alguns segundos por ciclo.
+
+## Ver também
+
+- [rodar-app-mobile-no-desktop.md](rodar-app-mobile-no-desktop.md) — o que
+  costuma impedir um app FMX mobile de abrir no Windows.

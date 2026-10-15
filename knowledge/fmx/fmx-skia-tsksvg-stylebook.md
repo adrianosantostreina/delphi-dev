@@ -15,6 +15,31 @@ O erro aparece **no momento em que um controle aplica o estilo com o ícone**
 (lazy), não ao carregar o StyleBook. Por isso pode surgir só quando você troca o
 `StyleLookup` de um botão para um estilo que tem ícone SVG.
 
+## Variante em BUILD: `E2161 RLINK32: Error opening file <StyleBook>.fmx`
+
+Se o Skia está **quebrado/mal instalado** (ou o pacote design-time do Skia não
+carregou no IDE), o mesmo StyleBook com `TSkSvg` pode falhar já no **link**, não em
+runtime:
+
+```
+[dcc32 Error] E2161 Error: RLINK32: Error opening file "...\IFood.View.Style.Geral.fmx"
+```
+
+O RLINK32 chega até a etapa de link (todos os units compilaram), mas não consegue
+processar/abrir o `.fmx` do StyleBook porque a classe `TSkSvg` nele não está
+resolvida pela instalação do Skia.
+
+**Pegadinha de diagnóstico (não persiga o caminho errado):** o `.fmx` parece 100%
+saudável — existe, **sem BOM**, não é read-only, não está travado, é **byte a byte
+idêntico a um commit que já linkou antes**. Isso induz à hipótese errada de "lock do
+Designer / handle preso do IDE". **Não é lock.** Se o form é um StyleBook com
+`TSkSvg` e o erro é RLINK32 "Error opening file", **suspeite primeiro da instalação
+do Skia** (pacote design-time, DCUs, `sk4d.dll`), não do arquivo.
+
+**Correção:** reparar/reinstalar o Skia no IDE (ou `Project → Enable Skia` +
+`<Skia>true</Skia>`, abaixo). Caso real: erro sumiu após corrigir a instalação do
+Skia, sem tocar no `.fmx`.
+
 ## Correção — habilitar Skia (Delphi 12 Athens / RAD 23.0+)
 
 Via IDE é um clique: **Project → Enable Skia**. Por linha de comando / edição

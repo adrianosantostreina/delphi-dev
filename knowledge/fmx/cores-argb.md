@@ -7,10 +7,17 @@ O primeiro par (`AA`) é o **alpha** (opacidade). Para cores totalmente opacas, 
 
 | Contexto | Prefixo | Exemplo |
 |---|---|---|
-| `.fmx` / Object Inspector / propriedades de design | `#` | `#FFF0F2F8` |
+| **Arquivo `.fmx`/`.dfm` (texto, editado à mão)** | `x` **ou nome** | `Fill.Color = xFFF0F2F8` / `Fill.Color = claWhite` |
+| Object Inspector (digitando no IDE) | `#` | `#FFF0F2F8` (o IDE grava como `x`) |
 | Código Pascal (constantes, atribuições) | `$` | `$FFF0F2F8` |
 
 **Nunca omitir o alpha.** Não usar `#F0F2F8` nem `$F0F2F8` — o FMX exige os 8 dígitos.
+
+> ⚠️ **Ao editar um `.fmx` à mão (fora do IDE), NUNCA use `#` para cor.** No texto do `.dfm`/`.fmx` o `#`
+> inicia um **escape de caractere** (`#231`), então `Fill.Color = #FFF0F2F8` faz o compilador de recursos
+> falhar com **`E2161 RLINK32: Error opening file <form>.fmx`** — erro genérico e enganoso (o arquivo está
+> intacto e destravado; a causa é o `#`). Use o prefixo **`x`** (`xFFF0F2F8`) ou um **nome** de cor
+> (`claDarkorange`, `claWhite` — como o `RecBack` do projeto faz). Confirmado no EagleSystem, 2026-07.
 
 ## Convertendo de CSS/Figma
 

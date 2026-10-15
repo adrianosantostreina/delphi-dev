@@ -12,10 +12,46 @@ O log prova que a ordem dos dados está correta nas duas montagens (mesmos índi
 0..N na mesma sequência) — o problema é puramente o **empilhamento visual** dos
 filhos `Align=Top`, que não é estável entre montagens.
 
-## Causa
+## ⚠️ Leia primeiro: `Index` só decide quando o `Position.Y` empata
 
-Com `Align=Top`, o FMX empilha os filhos seguindo a **ordem deles na lista de
-filhos do pai** (o `Index`). Ao adicionar via `AddObject`/`Parent :=`, o esperado
+Corrigido em 2026-08-05, depois de aplicar a receita abaixo num caso de
+**controles de design-time** e ela **não funcionar**.
+
+Com `Align=Top`, o realign do FMX ordena os irmãos alinhados pelo **`Position.Y`
+corrente**. O `Index` só governa quando os Y estão **empatados**:
+
+| Cenário | Y dos filhos | Quem decide a ordem |
+|---|---|---|
+| Controles criados em runtime | todos `0` (empatados) | **`Index`** — a receita abaixo vale |
+| Controles vindos do `.fmx` | cada um com o Y de projeto, todos diferentes | **`Position.Y`** — mexer no `Index` não faz nada |
+
+Sintoma do segundo caso: a tela aparece numa ordem que não é a de projeto nem a
+programada, e reordenar por `Index` (ou até mover o bloco no `.fmx`) não muda
+nada — porque o `Position.Y` de projeto continua mandando.
+
+Correção para controles de design-time: reescrever o `Position.Y` em ordem
+crescente, usando-o **apenas como chave de ordenação** (o `Align=Top` recalcula o
+Y real logo em seguida):
+
+```pascal
+MainLayout.BeginUpdate;
+try
+  for I := 0 to High(FOrdem) do
+  begin
+    FOrdem[I].Position.Y := I * 100;  // chave de ordenacao; o Align recalcula
+    FOrdem[I].Index := I;             // mantem a lista de filhos coerente
+  end;
+finally
+  MainLayout.EndUpdate;
+end;
+```
+
+---
+
+## Causa (caso original: controles criados em runtime)
+
+Com `Align=Top` e todos os filhos com `Position.Y = 0`, o FMX empilha seguindo a
+**ordem deles na lista de filhos do pai** (o `Index`). Ao adicionar via `AddObject`/`Parent :=`, o esperado
 é append (vai para o fim). Mas após `Free` em massa + re-adição, a posição em que
 os novos filhos entram na lista **não é garantida** — em containers que já foram
 populados/realinhados, o resultado pode sair invertido. Confiar só na ordem de
@@ -61,6 +97,22 @@ no momento da remontagem (aba recém-ativada) o scroll ainda não tem largura fi
 então a âncora trava uma margem direita errada e os cards encolhem. `Align=Top`
 calcula a largura a cada realign (à prova desse estado transitório) — mantenha
 `Align=Top` e resolva a ordem pelo `Index`, como acima.
+
+## Variante em layout ESTÁTICO editado à mão: ordem segue `Position.X/Y`, não a declaração
+
+Ao inserir/editar controles `Align=Top` (ou `Align=Left`) **direto no `.fmx`** (fora do
+Designer), o FMX empilha os irmãos pela **`Position.Y`** (Top) / **`Position.X`** (Left),
+**não** pela ordem em que aparecem no arquivo. Sintoma real: um `TLayout` novo declarado
+logo após o primeiro irmão, mas com `Position.Y` alto (sobra de outro bloco), aparece
+**lá embaixo**; botões `Align=Left` com `Position.X = 0` (default, não informado) **pulam
+para a frente** de um label que tem `Position.X = 4`.
+
+**Regra:** ao montar `.fmx` à mão, definir `Position.Y` (Top) / `Position.X` (Left)
+**crescente na ordem visual desejada** para TODOS os irmãos do grupo — não basta a ordem
+de declaração. Ex.: stepper `Quantidade: [-] [campo] [+]` → `Position.X` 4, 129, 190, 290;
+coluna Resumo→Plano→Entrada→... → `Position.Y` 12, 140, 200, 270, ...
+(O Designer grava esses valores automaticamente; o erro só aparece quando se edita o texto
+do `.fmx` na mão. Compila normal — quebra/desalinha só no runtime ao abrir o form.)
 
 ## Diagnóstico
 

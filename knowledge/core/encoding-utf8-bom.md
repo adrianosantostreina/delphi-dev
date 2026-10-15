@@ -165,9 +165,144 @@ Tabela de codepoints comuns em PT-BR:
 
 > `Set-Content -Encoding UTF8` é instável entre PS 5.1 e 7+. `[System.IO.File]::WriteAllText` com `UTF8Encoding($true)` *deveria* incluir BOM mas mostrou falhar — usar `WriteAllBytes` com BOM manual é o caminho seguro.
 
+## Também afeta `.ps1` (scripts PowerShell) — sintoma é erro de parsing, não mojibake
+
+> **Caso observado (2026-09):** script `.ps1` gerado pelo Write tool com acentos/travessão PT-BR
+> (usado num heredoc `@'...'@` para popular um `CLAUDE.md`) saiu **sem BOM**. Rodar o script no
+> **Windows PowerShell 5.1** (não no PowerShell 7+) deu uma cascata de erros de sintaxe sem relação
+> aparente com o ponto real do problema: `'}' de fechamento ausente`, `A cadeia de caracteres não
+> tem o terminador: "`, `Token ')' inesperado` — em linhas *fora* de qualquer heredoc, bem depois do
+> texto com acento.
+
+Causa: sem BOM, o parser do PowerShell 5.1 decodifica o arquivo pelo codepage ANSI do sistema
+(não UTF-8). Um travessão `—` (`E2 80 94` em UTF-8) vira 3 bytes lidos separadamente em Windows-1252;
+o último (`0x94`) mapeia para `”` (aspas curvas de fechamento, U+201D). O parser do PowerShell trata
+esse tipo de "aspas inteligentes" Unicode como equivalente a `"` para fins de abertura/fechamento de
+string — então uma string comum vira "não fechada" do ponto de vista do parser, e o erro real fica
+muitas linhas depois do byte que causou tudo. **PowerShell 7+ não tem esse problema** (assume UTF-8
+por padrão mesmo sem BOM); só afeta 5.1, que ainda é o `powershell.exe` default do Windows 10/11.
+
+Verificação sem executar o script (não precisa rodar de verdade para achar o erro):
+
+```powershell
+$errors = $null; $tokens = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile('caminho\script.ps1', [ref]$tokens, [ref]$errors)
+if ($errors.Count -eq 0) { 'OK' } else { $errors | ForEach-Object { "$($_.Message) @ linha $($_.Extent.StartLineNumber)" } }
+```
+
+Fix (mais simples que o procedimento de `.pas` acima — `WriteAllText` com BOM funcionou neste caso,
+ao contrário do que a nota da linha 166 registra para `.pas`; confirme sempre com o `ParseFile` acima
+em vez de assumir):
+
+```powershell
+$path = 'caminho\script.ps1'
+$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding($true)))
+```
+
+Regra prática: **todo `.ps1` gravado pelo Write tool que contenha acento/travessão/aspas PT-BR deve
+ser validado com `ParseFile` antes de entregar** — não confiar em leitura visual do conteúdo, porque
+o texto aparece correto no editor mesmo quando o BOM está faltando.
+
+## `.dfm` / `.fmx` com acentos criados/editados pelo Claude Code — usar `#NNN` (ASCII, sem BOM)
+
+> ⚠️ **Correção 2026-07 (confirmada por build no Delphi 10.3.3):** a regra abaixo foi **revista**. A
+> orientação anterior ("gravar `.fmx` com acento literal em UTF-8 COM BOM") é **arriscada no 10.3.3** — o
+> BOM antes de `object` dispara `Invalid stream format` no leitor de forms (ver
+> [dfm-fmx-sem-bom.md](dfm-fmx-sem-bom.md)); o Delphi 12 às vezes tolera, mascarando até o downgrade. A rota
+> **segura e nativa** é acento como escape **`#NNN`** em ASCII puro **sem BOM** — exatamente o que o Form
+> Designer grava ao salvar, e o formato de todos os `.fmx` legados.
+
+| Rota para acento em `.fmx`/`.dfm` | 10.3.3 | Observação |
+|---|---|---|
+| `#NNN` (ASCII puro, **sem BOM**): `Header = 'C'#243'digo'` | ✅ | **Formato nativo do IDE.** Preferido. |
+| Literal UTF-8 **com BOM** | ⚠️ | BOM → `Invalid stream format` no 10.3.3. Evitar. |
+| Literal UTF-8 **sem BOM** | ❌ | Lido como ANSI → mojibake (`CÃ³digo`, `opÃ§Ãµes`, `MÃ¡x`). |
+| UTF-16 (com/sem BOM) | ❌ | `E2141 Bad file format` — o compilador de recursos lê `.fmx` só como UTF-8 ou ANSI. |
+
+**Regra:** ao criar/editar um `.fmx`/`.dfm` com acentos pelo Write/Edit, gravar cada acento como escape
+**`#NNN`** (code point decimal), em ASCII puro e **sem BOM**. Isto **não** é o anti-padrão de `.pas`
+(`'x' + #227 + 'y'` com `+`, em código de runtime): no form, `'C'#243'digo'` (fragmentos justapostos) é a
+**sintaxe própria do formato de form**, idêntica ao que o IDE gera. A convenção "`.pas` = UTF-8 COM BOM +
+acento literal" (topo deste arquivo) vale só para código-fonte; forms seguem a regra oposta.
+
+Conversão literal→`#NNN` (percorre cada string do form; cada char `>127` vira `#<ord>`, partes ASCII
+ficam em `'...'`, `''` preservado). Ex.: `Text = 'Descrição'` → `Text = 'Descri'#231#227'o'`. Depois,
+confirmar que o arquivo é 100% ASCII e não tem BOM.
+
+### Histórico (rota antiga, NÃO usar no 10.3.3 — mantida só como registro)
+
+> **Caso observado (2026-06), com correção confirmada por build:** ao criar um `.fmx` novo pelo Write tool, o arquivo saiu em **UTF-8 sem BOM**. Os acentos LITERAIS nas propriedades de texto (`Text = 'Conexão com a API'`) ficaram em bytes UTF-8 (`C3 A3`), mas o leitor de stream do FMX (IDE Designer e compilador), na ausência de BOM, interpretou cada byte como ANSI/Win-1252 → **mojibake** (`ConexÃ£o`, `VersÃ£o`, `PreferÃªncias`). Sintoma típico: o **Form Designer** mostra os textos estáticos corrompidos (e o título com o default `LblTitulo`, porque `LblTitulo.Text` só é setado em runtime pelo `.pas`).
+>
+> ⚠️ **UTF-16 NÃO serve.** Tentar salvar o `.fmx` em UTF-16 LE com BOM faz o dcc falhar com **`E2141 Bad file format`** — o compilador de recursos do RAD Studio lê `.fmx`/`.dfm` apenas como **UTF-8 (com ou sem BOM) ou ANSI**, nunca UTF-16.
+
+**Regra (confirmada):** um `.fmx`/`.dfm` com acentos literais deve estar em **UTF-8 COM BOM** (`EF BB BF`) — o mesmo encoding dos `.pas`. O Write tool grava UTF-8 **sem** BOM, então **após criar/editar um `.fmx` com acentos, prepender o BOM UTF-8**, mantendo os acentos literais (NÃO usar o hack `#NNN` para "compor" acento — o acento é caractere real; o que muda é só o BOM do arquivo).
+
+> `.fmx` legados que só têm ASCII (acentos escapados como `#NNN`, ex.: `'Refer'#234'ncia'`) são puro ASCII e não precisam de BOM — funcionam como estão. A regra do UTF-8 BOM vale quando você grava acentos LITERAIS no arquivo (caminho preferido com o Claude). Não é preciso converter os legados.
+
+Correção segura (o conteúdo já está em UTF-8 válido; só falta o BOM):
+
+```powershell
+$path = 'caminho\Inforsys.View.X.fmx'
+$text = [System.IO.File]::ReadAllText($path, (New-Object System.Text.UTF8Encoding($false)))
+$enc  = New-Object System.Text.UTF8Encoding($true)   # UTF-8 COM BOM
+[System.IO.File]::WriteAllText($path, $text, $enc)
+# Conferir: deve comecar com ef bb bf
+(([System.IO.File]::ReadAllBytes($path))[0..2] | ForEach-Object { $_.ToString('x2') }) -join ' '
+```
+
+> Pré-condição: o `.fmx` precisa estar em UTF-8 **válido** (acentos como `C3 xx`), não já corrompido. Se o Write degradou acentos para `?`/`�`, recriar o conteúdo antes de adicionar o BOM.
+
+### Atenção ao editar depois um `.fmx` já com BOM
+
+Ferramentas de texto (incl. o Edit tool) podem regravar sem o BOM. Após qualquer edição de um `.fmx` com acentos, **reconferir os 3 primeiros bytes** (`EF BB BF`) e reprepender se necessário.
+
 ## Armadilhas conhecidas
 
 - **`__history/` e `__recovery/`**: o IDE pode regravar versões antigas (sem BOM, com hack `#NNN`) por cima das corrigidas se você fizer roundtrip pelo Object Inspector. Adicionar `__history/` e `__recovery/` ao `.gitignore` (já é prática padrão) e fechar/reabrir o projeto após a conversão.
-- **`.dfm` / `.fmx`**: por design ficam em UTF-16 LE com BOM no Delphi atual (não UTF-8). Não converter.
+- **`.dfm` / `.fmx`**: o compilador lê como **UTF-8 (com/sem BOM) ou ANSI** — **nunca UTF-16** (dá `E2141 Bad file format`). Com acentos literais, usar UTF-8 COM BOM (seção dedicada acima).
 - **`.dproj`** (XML): UTF-8 sem BOM é o default do MSBuild. Manter como está.
 - **Compilação cruzada Windows ↔ Android**: a regra do BOM é a mesma — o compilador Delphi não muda comportamento por plataforma-alvo, só por encoding do arquivo-fonte.
+
+## Nunca adicione BOM em massa sem detectar o encoding real do arquivo
+
+Erro cometido em 2026-08-31 no TMV 3.0, e vale para qualquer projeto Delphi legado.
+
+Ao padronizar "todo `.pas` com BOM UTF-8", a tentação é varrer o projeto assim:
+
+```python
+# ERRADO — assume que todo arquivo com byte alto ja e UTF-8
+if not b.startswith(b'\xef\xbb\xbf') and any(x > 127 for x in b):
+    open(p,'wb').write(b'\xef\xbb\xbf' + b)
+```
+
+Projeto Delphi antigo tem `.pas` em **CP1252**, não em UTF-8. Nesses, `ç` é o byte
+único `E7` — sequência **inválida** em UTF-8. Prepender o BOM faz o arquivo *declarar*
+UTF-8 carregando bytes Latin-1: o compilador passa a ler os acentos errado. Ou seja, a
+"padronização" produz exatamente a corrupção que ela existia para evitar.
+
+**Sintoma no build:** avisos novos e aparentemente sem nexo, tipo
+`W1064 Widening given AnsiString constant lost information`, em arquivo que você só
+"carimbou". O build não falha — por isso passa despercebido.
+
+### Detectar antes de escrever
+
+```python
+corpo = b[3:] if b.startswith(b'\xef\xbb\xbf') else b
+try:
+    txt = corpo.decode('utf-8')       # ja era UTF-8: so falta o BOM
+except UnicodeDecodeError:
+    txt = corpo.decode('cp1252')      # era ANSI: precisa CONVERTER, nao carimbar
+open(p, 'wb').write(b'\xef\xbb\xbf' + txt.encode('utf-8'))
+```
+
+### Auditoria depois de qualquer conversão em massa
+
+Para cada arquivo tocado: tirar o BOM e tentar `decode('utf-8')` estrito. Qualquer
+`UnicodeDecodeError` é um arquivo que declara UTF-8 sem ser. Deve dar **zero**.
+
+Confira também uma linha acentuada de cada arquivo convertido (`Instruções SQL`,
+`Endereço`, `Obrigatório`). Se aparecer `Ã§`/`Ã£`, houve dupla codificação; se aparecer
+`�` (U+FFFD), a informação **se perdeu** e só se recupera reescrevendo o texto à mão —
+veja [git-bash-msys-exe-sobrescreve-binario.md](git-bash-msys-exe-sobrescreve-binario.md)
+para o caso em que a corrupção já está gravada na fonte.
