@@ -88,3 +88,34 @@ describe('applySync', () => {
     expect(again.filter((i) => i.action === 'new' || i.action === 'changed')).toEqual([]);
   });
 });
+
+describe('sync line endings', () => {
+  it('treats a CRLF source and an LF destination with the same text as same', () => {
+    const source = tmpDir('kb-shared-');
+    const knowledge = tmpDir('kb-knowledge-');
+    writeTree(source, { 'a.md': '# A\r\nlinha\r\n' });
+    writeTree(knowledge, { 'core/a.md': '# A\nlinha\n' });
+    expect(planSync(source, knowledge, {}).map((i) => i.action)).toEqual(['same']);
+  });
+
+  it('treats a CRLF destination and an LF source as same, and changed when only the source moved', () => {
+    const source = tmpDir('kb-shared-');
+    const knowledge = tmpDir('kb-knowledge-');
+    writeTree(source, { 'a.md': '# A\nlinha\n', 'b.md': '# B v2\n' });
+    writeTree(knowledge, { 'core/a.md': '# A\r\nlinha\r\n', 'core/b.md': '# B v1\r\n' });
+    const state = { 'b.md': { dest: 'core' as const, sha256: sha256('# B v1\n') } };
+    const plan = Object.fromEntries(planSync(source, knowledge, state).map((i) => [i.name, i.action]));
+    expect(plan).toEqual({ 'a.md': 'same', 'b.md': 'changed' });
+  });
+
+  it('copies a CRLF source as LF and stores the normalised hash', () => {
+    const source = tmpDir('kb-shared-');
+    const knowledge = tmpDir('kb-knowledge-');
+    writeTree(source, { 'a.md': '# A\r\nlinha\r\n' });
+    writeTree(knowledge, { 'core/INDEX.md': '# Core\n' });
+    const items = planSync(source, knowledge, {});
+    const next = applySync(items, source, knowledge, {});
+    expect(fs.readFileSync(path.join(knowledge, 'core', 'a.md'), 'utf8')).toBe('# A\nlinha\n');
+    expect(next['a.md'].sha256).toBe(sha256('# A\nlinha\n'));
+  });
+});

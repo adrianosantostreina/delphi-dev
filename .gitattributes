@@ -1,2 +1,5 @@
 # Bundles gerados: LF sempre, para a checagem de CI comparar byte a byte.
 runtime/*.mjs text eol=lf
+
+# Base de conhecimento: LF sempre, para os hashes do indice/manifest batem em qualquer checkout.
+knowledge/** text eol=lf

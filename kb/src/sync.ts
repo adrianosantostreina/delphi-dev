@@ -21,6 +21,11 @@ function firstH1(content: string): string {
   return content.replace(/^\uFEFF/, '').match(/^#\s+(.+)$/m)?.[1]?.trim() ?? '';
 }
 
+/** Line-ending-insensitive bytes: a CRLF checkout (core.autocrlf) must compare equal to the LF index. */
+export function normalizeEol(data: Buffer): Buffer {
+  return Buffer.from(data.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+}
+
 export function classifyDest(name: string, content: string): Dest {
   return /^fmx-/i.test(name) || /\bFMX\b|FireMonkey/i.test(firstH1(content)) ? 'fmx' : 'core';
 }
@@ -50,14 +55,14 @@ export function planSync(sourceDir: string, knowledgeDir: string, state: SyncSta
   const items: SyncItem[] = [];
   const names = sourceFiles(sourceDir);
   for (const name of names) {
-    const sourceBytes = fs.readFileSync(path.join(sourceDir, name));
+    const sourceBytes = normalizeEol(fs.readFileSync(path.join(sourceDir, name)));
     const existing = (['core', 'fmx'] as Dest[]).find((d) => fs.existsSync(path.join(knowledgeDir, d, name)));
     const dest = existing ?? state[name]?.dest ?? classifyDest(name, sourceBytes.toString('utf8'));
     if (!existing) {
       items.push({ name, dest, action: 'new' });
       continue;
     }
-    const destHash = sha256(fs.readFileSync(path.join(knowledgeDir, dest, name)));
+    const destHash = sha256(normalizeEol(fs.readFileSync(path.join(knowledgeDir, dest, name))));
     const sourceHash = sha256(sourceBytes);
     const action: SyncAction =
       destHash === sourceHash ? 'same' : state[name]?.sha256 === destHash ? 'changed' : 'conflict';
@@ -85,7 +90,7 @@ export function applySync(items: SyncItem[], sourceDir: string, knowledgeDir: st
   const indexLines: Record<Dest, string[]> = { core: [], fmx: [] };
   for (const item of items) {
     if (item.action === 'conflict' || item.action === 'plugin-only') continue;
-    const bytes = fs.readFileSync(path.join(sourceDir, item.name));
+    const bytes = normalizeEol(fs.readFileSync(path.join(sourceDir, item.name)));
     if (item.action === 'new' || item.action === 'changed') {
       fs.mkdirSync(path.join(knowledgeDir, item.dest), { recursive: true });
       fs.writeFileSync(path.join(knowledgeDir, item.dest, item.name), bytes);
