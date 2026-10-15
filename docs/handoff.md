@@ -16,9 +16,10 @@ Docs: spec `docs/superpowers/specs/2026-10-14-kb-v4-design.md`, plano
   commitados em `runtime/`; CI (`build-kb`, `validate-community`, `kb-issue-to-pr`, `runtime-check`);
   `/update`; `/contribute-kb` redesenhado; status no `/about`; RAG antigo removido; installer enxuto
   (só limpa hooks legados). Suíte `kb`: **202 testes verdes**; installer: **9 testes verdes**.
-- **Calibração (Task 21, 2026-10-14, 40 docs):** `MIN_SCORE = 6.5`, `STRONG_SCORE = 8.0`. 20/20
-  consultas pt-BR em 1º lugar; inglês 3/3 em 1º. Maior score negativo (prompt sem Delphi) 5.91; menor
-  acerto verdadeiro 9.70. Detalhe em `docs/rag-governance.md`.
+- **Calibração (2026-10-15, 115 docs, recalibrado após o primeiro `/sync-kb`):** `MIN_SCORE = 7.5`,
+  `STRONG_SCORE = 9.5` (antes 6.5 / 8.0 com 40 docs). 20/20 consultas pt-BR no top 3 (19 em 1º);
+  inglês 3/3 em 1º. Maior score negativo (prompt sem Delphi) 7.01; menor acerto verdadeiro 11.61.
+  Detalhe em `docs/rag-governance.md`.
 - **Hotfix 3.2.1 (separado, em `master`):** cherry-pick do fix do `removeHooks` + bump; `master`
   pushado e release GitHub `v3.2.1` é o Latest, com `rag.db` anexado. **PENDENTE: `npm publish` do
   installer 3.2.1** — precisa do login npm do usuário (`npm whoami` deu 401). Comando, em `master`:

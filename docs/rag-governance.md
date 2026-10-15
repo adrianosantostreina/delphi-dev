@@ -22,15 +22,16 @@ community só preenche o que sobra; um resultado por arquivo.
 
 | Constante | Valor | Onde |
 |---|---|---|
-| `MIN_SCORE` | 6.5 | `kb/src/search.ts` |
-| `STRONG_SCORE` | 8.0 | `kb/src/search.ts` (hook sem sinal explícito de Delphi) |
+| `MIN_SCORE` | 7.5 | `kb/src/search.ts` |
+| `STRONG_SCORE` | 9.5 | `kb/src/search.ts` (hook sem sinal explícito de Delphi) |
 
-Calibrado em 2026-10-14 contra 40 arquivos: 20/20 consultas pt-BR no top 3 (todas em 1º lugar);
-consultas em inglês: 3/3 (também em 1º). Tabela completa em `kb/__tests__/calibration.test.ts`
+Calibrado em 2026-10-15 contra 115 arquivos (recalibrado após o primeiro `/sync-kb`; antes era
+6.5 / 8.0 com 40 arquivos): 20/20 consultas pt-BR no top 3 (19 em 1º lugar, uma em 2º); consultas em
+inglês: 3/3 (todas em 1º). Tabela completa em `kb/__tests__/calibration.test.ts`
 (rode com `--reporter=verbose`).
 
-Medido: o maior score de um prompt sem relação com Delphi (negativo) foi 5.91; o menor acerto
-verdadeiro foi 9.70. Regra usada: `MIN_SCORE` fica logo acima do teto de ruído (os negativos);
+Medido: o maior score de um prompt sem relação com Delphi (negativo) foi 7.01; o menor acerto
+verdadeiro foi 11.61 (consulta em inglês "OnClick not firing on iOS rectangle"). Regra usada: `MIN_SCORE` fica logo acima do teto de ruído (os negativos);
 `STRONG_SCORE` fica entre o teto de ruído e o menor acerto verdadeiro.
 
 ## Distribuição

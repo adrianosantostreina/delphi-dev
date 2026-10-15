@@ -13,7 +13,7 @@ const text = (r: { content: { text: string }[] }) => r.content[0].text;
 
 describe('kb_search', () => {
   it('returns labeled snippets', () => {
-    const r = kbSearch(ctx(), { query: 'ModalResult mrCancel callback' });
+    const r = kbSearch(ctx(), { query: 'ShowModal ModalResult mrCancel callback' });
     expect(r.isError).toBeUndefined();
     expect(text(r)).toContain('fmx/modal.md');
   });
