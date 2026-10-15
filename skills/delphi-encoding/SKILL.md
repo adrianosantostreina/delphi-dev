@@ -12,17 +12,26 @@ description: >
 Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explícitos
 ("responda em inglês" / "respond in English").
 
-## Regra fundamental
+## Regra fundamental — depende do tipo de arquivo
 
-**Todo arquivo Delphi deve ser salvo em UTF-8 com BOM.**
+| Arquivo | Encoding | Acento em string |
+|---|---|---|
+| `.pas` / `.dpr` / `.dpk` / `.inc` | UTF-8 **com** BOM | caractere direto: `'Opção'` |
+| `.dfm` / `.fmx` | ASCII puro, **sem** BOM | escape `#NNN`, como o IDE grava: `'Op'#231#227'o'` |
 
-O hook `PostToolUse` do plugin injeta o BOM automaticamente ao gravar
-`.pas`/`.dfm`/`.dpr`/`.dpk`/`.inc`/`.fmx`. Mas se o hook não estiver ativo, ou para
-arquivos existentes sem BOM, use o procedimento abaixo.
+- **Form com BOM** → `Error creating form: Invalid stream format` ao abrir no designer.
+- **Form com acento cru (UTF-8 sem BOM)** → o compilador de recursos lê como ANSI e a tela mostra
+  "OpÃ§Ã£o".
+- **Nome de objeto em form** (`object mnItOpcoes: TMenuItem`) → **sempre ASCII**. Identificador não
+  aceita `#NNN`; se encontrar um com acento, renomeie no `.dfm`/`.fmx` **e** no `.pas`.
+
+O hook `PostToolUse` do plugin aplica isso ao gravar: põe BOM em `.pas`/`.dpr`/`.dpk`/`.inc` e
+converte acentos de strings de `.dfm`/`.fmx` em `#NNN`. Sem o hook ativo (sem Node), siga a tabela
+à mão.
 
 ## Referência completa
 
-Consulte `knowledge/core/encoding-utf8-bom.md` para:
+Consulte a base (`kb_get` com `core/encoding-utf8-bom.md`, ou o arquivo em `knowledge/`) para:
 - Diagnóstico de mojibake
 - Como verificar e corrigir BOM em arquivos existentes
 - `{$CODEPAGE UTF8}` para forçar encoding em units específicas
@@ -31,17 +40,22 @@ Consulte `knowledge/core/encoding-utf8-bom.md` para:
 
 ## Checklist ao criar/editar arquivo Delphi
 
-1. Arquivo novo → BOM já injetado automaticamente pelo hook
-2. Arquivo antigo sem BOM → adicionar BOM antes de commitar
-3. `TStringList.LoadFromFile` → sempre passar `TEncoding.UTF8` como segundo parâmetro
-4. String literal com acento → não use `#NNN` — use o caractere diretamente (UTF-8)
+1. `.pas` novo → BOM (o hook injeta)
+2. `.dfm`/`.fmx` novo → sem BOM, acentos de `Caption`/`Text`/`Hint` como `#NNN`, nomes de objeto ASCII
+3. Arquivo antigo → conferir os 3 primeiros bytes antes de commitar (`EF BB BF` só em fonte)
+4. `TStringList.LoadFromFile` → sempre passar `TEncoding.UTF8` como segundo parâmetro
 
 ## Anti-padrão comum
 
 ```delphi
-// PROIBIDO — concatenação de caracteres especiais
+// PROIBIDO em .pas — concatenação de caracteres especiais
 LMsg := 'Op' + #231 + #227 + 'o selecionada';
 
-// CORRETO — UTF-8 direto (com BOM no arquivo)
+// CORRETO em .pas — UTF-8 direto (arquivo com BOM)
 LMsg := 'Opção selecionada';
+```
+
+```
+// CORRETO em .dfm/.fmx — é assim que o próprio IDE grava
+Caption = 'Op'#231#227'o selecionada'
 ```

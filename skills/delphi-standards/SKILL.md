@@ -100,3 +100,18 @@ As regras detalhadas (com exemplos de certo/errado) vivem em `rules/` na raiz do
 - `rules/security.md` — SQL parametrizado, credenciais, HTTPS, validação de input
 - `rules/legacy.md` — estratégia incremental para código legado
 - `rules/testing.md` — DUnitX, padrão AAA, nomenclatura Test_Metodo_Cenario
+
+## Base de conhecimento delphi-dev
+
+- Antes de responder a um erro de compilação, a uma armadilha de framework ou a um comportamento
+  estranho de IDE, consulte a base: ferramenta `kb_search` do MCP `delphi-dev-kb`; para o arquivo
+  inteiro, `kb_get`. Trechos rotulados `[canonical/...]` prevalecem sobre `[community/...]`.
+- Sem `kb_search` disponível, procure nos `.md` de `~/.delphi-dev/kb-cache/current/` e, se a pasta
+  não existir, em `knowledge/` na raiz do plugin.
+
+## Sugerir contribuição
+
+Depois de resolver com o usuário algo **não trivial** — erro de compilação que exigiu investigação,
+armadilha de framework, comportamento de IDE que não é óbvio — ofereça contribuir seguindo a skill
+`delphi-contribute` no **modo sugestão**. No máximo **uma vez por sessão**, nunca em tarefa trivial,
+e só se `kb_prefs` (ou `~/.delphi-dev/config.json`) não tiver `suggestions: off`.

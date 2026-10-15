@@ -252,3 +252,9 @@ Secoes obrigatorias:
 - references/estimativas-modernizacao.md: Estimativas de esforco por tipo de modernizacao
 
 Carregue o arquivo de referencia relevante conforme necessidade durante a analise.
+
+## Base de conhecimento delphi-dev
+
+Consulte `kb_search` (MCP `delphi-dev-kb`) sobre o framework e os componentes envolvidos antes de
+escrever ou avaliar o código. Sem a ferramenta, procure nos `.md` de `~/.delphi-dev/kb-cache/current/`
+ou de `knowledge/` na raiz do plugin. `[canonical/...]` prevalece sobre `[community/...]`.

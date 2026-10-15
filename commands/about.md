@@ -21,6 +21,15 @@ Honor explicit overrides:
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
 - **License:** MIT © 2026 Adriano Santos
 
+**Status** — call the `kb_health` tool of the `delphi-dev-kb` MCP server and fill in:
+
+- **Agent:** the agent you are running in (Claude Code, Codex or OpenCode)
+- **Node:** `node` (append "— fast search unavailable, install Node 22.13+" when `indexSupported` is false)
+- **Knowledge base:** `source` (embedded / updated), commit `commit` (first 7 chars), `counts.canonical` canonical + `counts.community` community files, last check `lastCheck`
+- **Newer plugin available:** show `remotePluginVersion` only when it is greater than the version above
+
+Without the MCP server, show "Knowledge base: reduced mode — run /update for details".
+
 ---
 
 **What this plugin does:**
@@ -47,7 +56,8 @@ user's first message and responds in that language. Switch any time with
 | `/spec` | Generates a software specification document (SPEC) for the project or module |
 | `/tdd` | Generates a complete DUnitX unit test suite for the project |
 | `/e2e` | Runs end-to-end scenarios against a running Delphi desktop app — builds it, opens the `.exe`, drives the screens and reports a verdict per scenario (Windows only) |
-| `/contribute-kb` | Packages local learnings and opens a PR to the community knowledge base |
+| `/contribute-kb` | Drafts one Delphi learning from the current conversation and, with your approval, sends it to the community knowledge base |
+| `/update` | Updates the knowledge base now and checks for a newer plugin version |
 | `/dashboard` | Shows GitHub repository metrics (stars, forks, issues, PRs, commits, releases) |
 | `/about` | Shows this information |
 
@@ -70,6 +80,15 @@ user's first message and responds in that language. Switch any time with
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
 - **Licença:** MIT © 2026 Adriano Santos
+
+**Status** — chame a ferramenta `kb_health` do MCP `delphi-dev-kb` e preencha:
+
+- **Agente:** o agente em que você está rodando (Claude Code, Codex ou OpenCode)
+- **Node:** `node` (acrescente "— busca rápida indisponível, instale o Node 22.13+" quando `indexSupported` for false)
+- **Base de conhecimento:** `source` (embutida / atualizada), commit `commit` (7 primeiros caracteres), `counts.canonical` arquivos canonical + `counts.community` community, última checagem `lastCheck`
+- **Versão nova do plugin:** mostre `remotePluginVersion` só quando for maior que a versão acima
+
+Sem o MCP, mostre "Base de conhecimento: modo reduzido — use /update para detalhes".
 
 ---
 
@@ -97,7 +116,8 @@ mensagem do usuário e responde nesse idioma. Troque a qualquer momento com
 | `/spec` | Cria documento de especificação de software (SPEC) do projeto ou módulo |
 | `/tdd` | Gera suite completa de testes unitários DUnitX para o projeto |
 | `/e2e` | Executa cenários end-to-end num app Delphi desktop em execução — builda, abre o `.exe`, opera as telas e devolve um veredito por cenário (somente Windows) |
-| `/contribute-kb` | Empacota os aprendizados locais e abre um PR para a base de conhecimento comunitária |
+| `/contribute-kb` | Redige um aprendizado de Delphi a partir da conversa e, com sua aprovação, envia para a base comunitária |
+| `/update` | Atualiza a base de conhecimento agora e verifica se há versão nova do plugin |
 | `/dashboard` | Exibe métricas do repositório GitHub (estrelas, forks, issues, PRs, commits, releases) |
 | `/about` | Exibe estas informações |
 
