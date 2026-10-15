@@ -89,6 +89,13 @@ export function fixEncoding(filePath: string): void {
   if (!BOM_EXTENSIONS.includes(ext)) return;
   const content = fs.readFileSync(filePath);
   if (content.subarray(0, 3).equals(UTF8_BOM)) return;
+  // UTF-16 (FF FE / FE FF) and anything that is not valid UTF-8 (ANSI/Latin-1) must not get a UTF-8 BOM.
+  if (content.length >= 2 && ((content[0] === 0xff && content[1] === 0xfe) || (content[0] === 0xfe && content[1] === 0xff))) return;
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(content);
+  } catch {
+    return;
+  }
   fs.writeFileSync(filePath, Buffer.concat([UTF8_BOM, content]));
 }
 

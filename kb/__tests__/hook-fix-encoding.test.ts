@@ -66,6 +66,37 @@ describe('fixEncoding', () => {
     expect(hasBom(file)).toBe(true);
   });
 
+  it('leaves a UTF-16LE .pas untouched byte for byte', () => {
+    const file = path.join(tmpDir(), 'U16.pas');
+    const written = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('unit U;', 'utf16le')]);
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
+  it('leaves a UTF-16BE .pas untouched byte for byte', () => {
+    const file = path.join(tmpDir(), 'U16be.pas');
+    const written = Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from('unit U;', 'utf16le').swap16()]);
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
+  it('leaves a Latin-1 (ANSI) .pas untouched', () => {
+    const file = path.join(tmpDir(), 'Ansi.pas');
+    const written = Buffer.from('unit U; // ação', 'latin1');
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
+  it('still adds the BOM to a valid UTF-8 .pas with accents', () => {
+    const file = path.join(tmpDir(), 'Utf8.pas');
+    fs.writeFileSync(file, Buffer.from('unit U; // ação', 'utf8'));
+    fixEncoding(file);
+    expect(hasBom(file)).toBe(true);
+  });
+
   // dfm-fmx-sem-bom.md: a BOM before `object` breaks ObjectTextToBinary.
   it.each(['.dfm', '.fmx'])('never adds BOM to %s', (ext) => {
     const file = path.join(tmpDir(), `Form1${ext}`);
