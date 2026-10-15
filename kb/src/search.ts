@@ -17,9 +17,9 @@ export interface SearchOptions {
   minScore?: number;
 }
 
-// Calibrated against the real knowledge base in Task 21 (see docs/rag-governance.md).
-export const MIN_SCORE = 1.0;
-export const STRONG_SCORE = 5.0;
+// Calibrated on 2026-10-14 against knowledge/ (40 docs): see docs/rag-governance.md.
+export const MIN_SCORE = 6.5;
+export const STRONG_SCORE = 8.0;
 export const SNIPPET_MAX = 400;
 const MAX_TERMS = 12;
 
