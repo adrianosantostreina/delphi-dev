@@ -5,7 +5,8 @@ on:
     paths: ['kb/**', 'runtime/**', 'knowledge/**']
   push:
     branches: [master]
-    paths: ['kb/**', 'runtime/**']
+    paths: ['kb/**', 'runtime/**', 'knowledge/**']
+  workflow_dispatch:
 
 jobs:
   check:

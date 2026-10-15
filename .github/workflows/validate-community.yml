@@ -5,6 +5,9 @@ on:
     paths:
       - 'knowledge/community/**'
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -16,6 +19,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # A community PR may only add knowledge/community/ files: anything else is rejected.
+      - name: Reject changes outside knowledge/community/
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          outside=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -v '^knowledge/community/' || true)
+          if [ -n "$outside" ]; then
+            echo "Community PRs may only touch knowledge/community/. Files outside it:"
+            echo "$outside"
+            exit 1
+          fi
 
       # SHAs and the resulting file list are attacker-controlled on a
       # pull_request trigger, so they are passed via env vars (never
@@ -61,6 +78,6 @@ jobs:
             for f in $FILES; do
               echo ""
               echo "### \`$f\`"
-              node runtime/kb-cli.mjs similar "$f" --knowledge knowledge
+              node runtime/kb-cli.mjs similar "$f" --knowledge knowledge || echo "(similar indisponível)"
             done
           } >> "$GITHUB_STEP_SUMMARY"
