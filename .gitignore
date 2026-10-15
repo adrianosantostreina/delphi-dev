@@ -7,7 +7,6 @@
 node_modules/
 installer/node_modules/
 packages/*/node_modules/
-scripts/node_modules/
 
 # Build output (dist is published to npm, not committed to git)
 installer/dist/
@@ -21,8 +20,6 @@ Thumbs.db
 
 # Build output e lockfile — nao versionados por design.
 # A CI roda `npm install` + `npm run build`; o installer faz o wiring na maquina do usuario.
-scripts/dist/
-hooks/dist/
 package-lock.json
 
 # kb/ é pacote isolado: o lockfile É versionado para os bundles de runtime/ serem reproduzíveis.

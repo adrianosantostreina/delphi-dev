@@ -4,21 +4,16 @@ import { detectSystem } from './detect';
 import { installPlugin, isPluginInstalled } from './plugin';
 import { installVSCodeExtension, isVSCodeAvailable, isVSCodeExtensionInstalled } from './vscode-ext';
 import { removeHooks } from './hooks';
-import { fetchLatestRelease, getRagDownloadUrl, downloadRagDb } from './rag';
 import { verifyInstallation } from './verify';
-import { header, step, success, warn, error, spinner, summary } from './ui';
+import { header, step, success, warn, error, summary } from './ui';
 import chalk from 'chalk';
-import * as os from 'os';
-import * as path from 'path';
-
-const RAG_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 const program = new Command();
 program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
 
 program
   .command('install', { isDefault: true })
-  .description('Install delphi-dev plugin, VS Code extension, and RAG database')
+  .description('Install delphi-dev plugin and VS Code extension')
   .action(async () => {
     header('Installing delphi-dev v2.2');
 
@@ -36,27 +31,11 @@ program
     installPlugin();
     success('Plugin installed');
 
-    // v2.2.2: hooks (RAG-search/capture/auto-BOM) are disabled. They depend on
-    // built JS + native deps that aren't shipped/built in the user environment,
-    // which broke clean installs on Windows. Proactively strip any stale hooks a
-    // previous broken v2.x install left in settings.json so prompts stop erroring.
-    step('Cleaning up legacy hooks in ~/.claude/settings.json...');
+    // v4: hooks are declared by the plugin itself (hooks/hooks.json). The installer only
+    // strips entries that v2.0–v2.2.1 wrote into settings.json, keeping everyone else's.
+    step('Cleaning up legacy delphi-dev hooks in ~/.claude/settings.json...');
     removeHooks();
-    success('Legacy hooks cleaned (hooks return in v3.0)');
-
-    const s = spinner('Downloading RAG knowledge base...');
-    try {
-      const release = await fetchLatestRelease();
-      const url = getRagDownloadUrl(release);
-      if (url) {
-        await downloadRagDb(url, RAG_DEST);
-        s.succeed(`RAG database downloaded (${release.tag_name})`);
-      } else {
-        s.warn('RAG database not found in latest release — skipping');
-      }
-    } catch {
-      s.warn('Could not download RAG database — run "npx delphi-dev sync-kb" later');
-    }
+    success('Legacy hooks cleaned');
 
     if (isVSCodeAvailable()) {
       step('Installing VS Code extension...');
@@ -79,7 +58,6 @@ program
     summary([
       { label: 'Claude Code CLI', ok: result.claudeOk },
       { label: 'delphi-dev plugin active', ok: result.pluginOk },
-      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'missing — run "npx delphi-dev sync-kb"' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'not detected' : undefined },
     ]);
 
@@ -97,31 +75,19 @@ program
 
 program
   .command('update')
-  .description('Update plugin and RAG database to latest version')
-  .action(async () => {
+  .description('Update the delphi-dev plugin (the knowledge base updates itself; use /update in a session)')
+  .action(() => {
     header('Updating delphi-dev');
     step('Pulling latest plugin...');
     installPlugin();
-    success('Plugin updated');
-    const s = spinner('Updating RAG database...');
-    try {
-      const release = await fetchLatestRelease();
-      const url = getRagDownloadUrl(release);
-      if (url) { await downloadRagDb(url, RAG_DEST); s.succeed('RAG updated'); }
-      else s.warn('No rag.db in latest release');
-    } catch { s.fail('RAG update failed'); }
+    success('Plugin updated — restart your Claude Code session');
   });
 
 program
   .command('sync-kb')
-  .description('Download latest RAG knowledge base from GitHub Releases')
-  .action(async () => {
-    const s = spinner('Downloading RAG knowledge base...');
-    const release = await fetchLatestRelease();
-    const url = getRagDownloadUrl(release);
-    if (!url) { s.fail('No rag.db asset in latest release'); process.exit(1); }
-    await downloadRagDb(url, RAG_DEST);
-    s.succeed(`Downloaded rag.db from ${release.tag_name}`);
+  .description('Deprecated: the knowledge base now updates itself')
+  .action(() => {
+    warn('The knowledge base now updates itself. Inside a session, run /update to refresh it now.');
   });
 
 program
@@ -132,7 +98,6 @@ program
     summary([
       { label: 'Claude Code CLI', ok: result.claudeOk },
       { label: 'Plugin active', ok: result.pluginOk },
-      { label: 'RAG knowledge base', ok: result.ragOk, note: !result.ragOk ? 'run "npx delphi-dev sync-kb" to download' : undefined },
       { label: 'VS Code extension', ok: result.vscodeOk },
     ]);
     const allOk = result.claudeOk && result.pluginOk && result.vscodeOk;

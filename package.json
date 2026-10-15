@@ -3,14 +3,14 @@
   "private": true,
   "workspaces": [
     "installer",
-    "packages/vscode",
-    "scripts"
+    "packages/vscode"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces",
+    "test": "npm run test --workspaces && npm test --prefix kb",
     "build:installer": "npm run build --workspace=installer",
-    "build:vscode": "npm run build --workspace=packages/vscode"
+    "build:vscode": "npm run build --workspace=packages/vscode",
+    "build:runtime": "npm run build:runtime --prefix kb"
   },
   "engines": {
     "node": ">=18"
