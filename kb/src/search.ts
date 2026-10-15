@@ -80,10 +80,19 @@ export function searchIndex(dbPath: string, text: string, opts: SearchOptions = 
 export const PRECEDENCE =
   'Canonical prevalece sobre community; community só complementa. Para o arquivo inteiro, use a ferramenta kb_get com o path.';
 
-export function formatInjection(hits: Hit[]): string {
+export interface FormatOptions {
+  /** Hits whose score is below this get a low-confidence marker on their label line. */
+  lowConfidenceBelow?: number;
+}
+
+export function formatInjection(hits: Hit[], opts?: FormatOptions): string {
   if (!hits.length) return '';
+  const below = opts?.lowConfidenceBelow;
   const body = hits
-    .map((h) => `[${h.tier}/${h.category}] ${h.path} — ${h.title}${h.heading ? ` › ${h.heading}` : ''}\n${h.snippet}`)
+    .map((h) => {
+      const mark = below !== undefined && h.score < below ? ' (baixa confiança)' : '';
+      return `[${h.tier}/${h.category}] ${h.path} — ${h.title}${h.heading ? ` › ${h.heading}` : ''}${mark}\n${h.snippet}`;
+    })
     .join('\n\n');
   return `[DELPHI-DEV KNOWLEDGE]\n(${PRECEDENCE})\n\n${body}\n[/DELPHI-DEV KNOWLEDGE]`;
 }

@@ -9,7 +9,7 @@ import {
   dataDir, indexPath, isSafeKbPath, nodeSupportsIndex, pluginRootFromModule, readPluginVersion,
 } from './paths';
 import { logError, readConfig, readState, writeConfig } from './prefs';
-import { formatInjection, searchIndex } from './search';
+import { formatInjection, MIN_SCORE, searchIndex } from './search';
 import { readSnapshot, type Tier } from './snapshot';
 import { isCheckDue, runUpdate, type Fetcher } from './update';
 
@@ -55,8 +55,9 @@ export function kbSearch(ctx: KbContext, args: { query: string; limit?: number; 
   if (!nodeSupportsIndex(ctx.nodeVersion)) return reply(DEGRADED, true);
   const active = resolveActive(ctx.root, ctx.data, ctx.env, ctx.pluginVersion);
   const db = ensureIndex(readSnapshot(active.dir), indexPath(ctx.data));
-  const hits = searchIndex(db, args.query, { limit: args.limit ?? 3, tier: args.tier });
-  return reply(hits.length ? formatInjection(hits) : 'Nenhum resultado relevante na base delphi-dev.');
+  // An explicit request has no relevance floor (the limit bounds the output); weak hits are labeled instead.
+  const hits = searchIndex(db, args.query, { limit: args.limit ?? 3, tier: args.tier, minScore: 0 });
+  return reply(hits.length ? formatInjection(hits, { lowConfidenceBelow: MIN_SCORE }) : 'Nenhum resultado relevante na base delphi-dev.');
 }
 
 export function kbGet(ctx: KbContext, args: { path: string }): ToolText {

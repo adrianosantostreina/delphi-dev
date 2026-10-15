@@ -84,4 +84,17 @@ describe('formatInjection', () => {
     expect(text).toContain('kb_get');
     expect(text.endsWith('[/DELPHI-DEV KNOWLEDGE]')).toBe(true);
   });
+
+  it('marks only hits below lowConfidenceBelow and leaves the default output unchanged', () => {
+    const mk = (path: string, score: number): Hit => ({
+      path, tier: 'canonical', category: 'general', title: 'T', heading: 'H', snippet: 'trecho', score,
+    });
+    const hits = [mk('core/forte.md', 8), mk('core/fraco.md', 3)];
+    const marked = formatInjection(hits, { lowConfidenceBelow: 5 });
+    expect(marked).toContain('[canonical/general] core/forte.md — T › H\ntrecho');
+    expect(marked).toContain('[canonical/general] core/fraco.md — T › H (baixa confiança)\ntrecho');
+    expect(marked.match(/baixa confiança/g)).toHaveLength(1);
+    expect(formatInjection(hits)).not.toContain('baixa confiança');
+    expect(formatInjection(hits, {})).toBe(formatInjection(hits));
+  });
 });

@@ -18,6 +18,10 @@ O índice (`~/.delphi-dev/kb.db`) é cache: apagar é seguro.
 **Precedência:** resultados com `score ≥ MIN_SCORE` entram; canonical ocupa os slots primeiro,
 community só preenche o que sobra; um resultado por arquivo.
 
+Os pisos (`MIN_SCORE`, `STRONG_SCORE`) valem para o hook; a ferramenta `kb_search`, por ser um pedido
+explícito do agente, devolve os melhores resultados independentemente do piso (o `limit` limita a saída)
+e marca como baixa confiança os que ficam abaixo de `MIN_SCORE`.
+
 ## Calibração
 
 | Constante | Valor | Onde |

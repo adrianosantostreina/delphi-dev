@@ -13,9 +13,18 @@ const text = (r: { content: { text: string }[] }) => r.content[0].text;
 
 describe('kb_search', () => {
   it('returns labeled snippets', () => {
-    const r = kbSearch(ctx(), { query: 'ShowModal ModalResult mrCancel callback' });
+    const r = kbSearch(ctx(), { query: 'ModalResult mrCancel callback' });
     expect(r.isError).toBeUndefined();
     expect(text(r)).toContain('fmx/modal.md');
+  });
+
+  it('applies no relevance floor and labels weak hits as low confidence', () => {
+    // On the fixture, `encoding` scores ~2.7 for core/encoding.md, far below MIN_SCORE (7.5).
+    const out = text(kbSearch(ctx(), { query: 'encoding' }));
+    expect(out).not.toContain('Nenhum resultado');
+    const label = out.split('\n').find((l) => l.includes('core/encoding.md'));
+    expect(label).toBeDefined();
+    expect(label).toContain('(baixa confiança)');
   });
 
   it('degrades with an explanation on old Node', () => {
