@@ -28,7 +28,7 @@ export function sha256(data: Buffer | string): string {
 }
 
 export function parseFrontmatter(raw: string): { frontmatter: Record<string, string>; body: string } {
-  const text = raw.replace(/^﻿/, '').replace(/\r\n/g, '\n');
+  const text = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const match = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!match) return { frontmatter: {}, body: text };
   const frontmatter: Record<string, string> = {};

@@ -43,7 +43,7 @@ describe('snapshot', () => {
   });
 
   it('parses frontmatter written with BOM and CRLF, hashing the raw bytes', () => {
-    const raw = '﻿---\r\ntitle: "Com BOM"\r\ncategory: bugs\r\n---\r\n# H1\r\n\r\ncorpo\r\n';
+    const raw = '\uFEFF---\r\ntitle: "Com BOM"\r\ncategory: bugs\r\n---\r\n# H1\r\n\r\ncorpo\r\n';
     const dir = knowledge({ 'community/bom.md': raw });
     const doc = readSnapshot(dir).docs[0];
     expect(doc.title).toBe('Com BOM');
