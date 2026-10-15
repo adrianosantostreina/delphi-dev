@@ -1,0 +1,2 @@
+# Bundles gerados: LF sempre, para a checagem de CI comparar byte a byte.
+runtime/*.mjs text eol=lf

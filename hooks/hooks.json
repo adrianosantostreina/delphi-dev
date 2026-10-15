@@ -1,0 +1,26 @@
+{
+  "description": "delphi-dev: BOM em fontes Delphi e injeção enxuta da base de conhecimento",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}/runtime/hook-fix-encoding.mjs\"; exit 0"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}/runtime/hook-inject.mjs\"; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

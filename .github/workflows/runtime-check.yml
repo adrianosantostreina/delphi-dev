@@ -1,0 +1,26 @@
+name: Runtime check
+
+on:
+  pull_request:
+    paths: ['kb/**', 'runtime/**', 'knowledge/**']
+  push:
+    branches: [master]
+    paths: ['kb/**', 'runtime/**']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:runtime
+      - name: runtime/ must match the committed bundles
+        run: git diff --exit-code -- ../runtime/
+      - run: npm test

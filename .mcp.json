@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "delphi-dev-kb": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/runtime/kb-mcp.mjs"]
+    }
+  }
+}
