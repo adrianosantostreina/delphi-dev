@@ -28,9 +28,37 @@ describe('escapeFormText', () => {
     expect(r.text).toBe("object mnItOpções: TMenuItem\n  Caption = 'Op'#231#245'es'\nend");
     expect(r.nonAsciiOutsideStrings).toBe(true);
   });
+
+  it('throws on an unterminated string literal', () => {
+    expect(() => escapeFormText("Caption = 'sem fim\nend")).toThrow('unterminated string literal');
+  });
 });
 
 describe('fixEncoding', () => {
+  it('leaves an ANSI (Latin-1) form byte-for-byte untouched', () => {
+    const file = path.join(tmpDir(), 'Form1.dfm');
+    const written = Buffer.from("object Form1: TForm1\n  Caption = 'Servi\xe7o'\nend", 'latin1');
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
+  it('leaves a binary form (TPF0) byte-for-byte untouched', () => {
+    const file = path.join(tmpDir(), 'Form1.dfm');
+    const written = Buffer.concat([Buffer.from('TPF0'), Buffer.from([0x06, 0x54, 0xe7, 0x00])]);
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
+  it('leaves a form with an unterminated literal byte-for-byte untouched', () => {
+    const file = path.join(tmpDir(), 'Form1.dfm');
+    const written = Buffer.from("object F: TForm\n  Caption = 'Opção\nend", 'utf8');
+    fs.writeFileSync(file, written);
+    fixEncoding(file);
+    expect(fs.readFileSync(file).equals(written)).toBe(true);
+  });
+
   it.each(['.pas', '.dpr', '.dpk', '.inc'])('adds BOM to %s', (ext) => {
     const file = path.join(tmpDir(), `Unit1${ext}`);
     fs.writeFileSync(file, 'unit Unit1;');
@@ -144,5 +172,27 @@ describe('main', () => {
 
   it('swallows invalid JSON', async () => {
     await expect(main(Readable.from(['not json']))).resolves.toBeUndefined();
+  });
+
+  it('keeps going after a file that fails (directory named A.pas)', async () => {
+    const cwd = tmpDir();
+    fs.mkdirSync(path.join(cwd, 'A.pas'));
+    fs.writeFileSync(path.join(cwd, 'B.pas'), 'unit B;');
+    const payload = JSON.stringify({
+      tool_name: 'apply_patch', cwd,
+      tool_input: { patch: '*** Begin Patch\n*** Update File: A.pas\n*** Update File: B.pas\n*** End Patch' },
+    });
+    await expect(main(Readable.from([payload]))).resolves.toBeUndefined();
+    expect(hasBom(path.join(cwd, 'B.pas'))).toBe(true);
+  });
+
+  it('decodes stdin once, so a multi-byte character split across chunks survives', async () => {
+    const cwd = tmpDir();
+    fs.writeFileSync(path.join(cwd, 'Ação.pas'), 'unit A;');
+    const payload = Buffer.from(JSON.stringify({ tool_name: 'Write', cwd, tool_input: { file_path: 'Ação.pas' } }), 'utf8');
+    // Split inside the two-byte UTF-8 sequence of "ç" (0xC3 0xA7).
+    const cut = payload.indexOf(0xc3) + 1;
+    await main(Readable.from([payload.subarray(0, cut), payload.subarray(cut)]));
+    expect(hasBom(path.join(cwd, 'Ação.pas'))).toBe(true);
   });
 });

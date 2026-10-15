@@ -29,6 +29,7 @@ export function escapeFormText(text: string): { text: string; nonAsciiOutsideStr
       if (plain) parts.push(`'${plain.replace(/'/g, "''")}'`);
       plain = '';
     };
+    let closed = false;
     while (i < text.length) {
       const c = text[i];
       if (c === "'") {
@@ -38,8 +39,10 @@ export function escapeFormText(text: string): { text: string; nonAsciiOutsideStr
           continue;
         }
         i++; // closing quote
+        closed = true;
         break;
       }
+      if (c === '\n' || c === '\r') break;
       const code = c.charCodeAt(0);
       if (code > 127) {
         flush();
@@ -49,6 +52,7 @@ export function escapeFormText(text: string): { text: string; nonAsciiOutsideStr
       }
       i++;
     }
+    if (!closed) throw new Error('unterminated string literal');
     flush();
     out += parts.length ? parts.join('') : "''";
   }
@@ -57,8 +61,18 @@ export function escapeFormText(text: string): { text: string; nonAsciiOutsideStr
 
 function fixForm(filePath: string, content: Buffer): void {
   if (content.every((b) => b < 128)) return;
+  // Binary DFM (TPF0 header) and anything that is not valid UTF-8 (ANSI/Latin-1 legacy forms) are left alone.
+  if (content.subarray(0, 4).toString('latin1') === 'TPF0') return;
   const hadBom = content.subarray(0, 3).equals(UTF8_BOM);
-  const { text, nonAsciiOutsideStrings } = escapeFormText(content.subarray(hadBom ? 3 : 0).toString('utf8'));
+  let source: string;
+  let escaped: { text: string; nonAsciiOutsideStrings: boolean };
+  try {
+    source = new TextDecoder('utf-8', { fatal: true }).decode(content.subarray(hadBom ? 3 : 0));
+    escaped = escapeFormText(source);
+  } catch {
+    return;
+  }
+  const { text, nonAsciiOutsideStrings } = escaped;
   // A non-ASCII identifier only parses with the BOM: keep it (load-bearing) and leave the rename to the skills.
   const keepBom = hadBom && nonAsciiOutsideStrings;
   const next = Buffer.concat([keepBom ? UTF8_BOM : Buffer.alloc(0), Buffer.from(text, 'utf8')]);
@@ -112,11 +126,20 @@ export function pathsFromPayload(payload: unknown): string[] {
 }
 
 export async function main(input: NodeJS.ReadableStream = process.stdin): Promise<void> {
+  let files: string[];
   try {
-    let raw = '';
-    for await (const chunk of input) raw += chunk.toString();
-    for (const file of pathsFromPayload(JSON.parse(raw))) fixEncoding(file);
+    // Decode once from the joined bytes: a multi-byte character split across chunks must not be corrupted.
+    const chunks: Buffer[] = [];
+    for await (const chunk of input) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    files = pathsFromPayload(JSON.parse(Buffer.concat(chunks).toString('utf8')));
   } catch {
-    // silent: a hook must never block the user
+    return; // silent: a hook must never block the user
+  }
+  for (const file of files) {
+    try {
+      fixEncoding(file);
+    } catch {
+      // one failing file must not skip the rest of a multi-file patch
+    }
   }
 }
