@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { runCli, type CliIO } from '../src/cli';
+import type { ContributeDeps } from '../src/contribute';
 import { FIXTURE, makePluginRoot, tmpDir, writeTree } from './helpers';
 
 function io(env: NodeJS.ProcessEnv = {}) {
@@ -9,6 +10,20 @@ function io(env: NodeJS.ProcessEnv = {}) {
   const err: string[] = [];
   const value: CliIO = { out: (l) => out.push(l), err: (l) => err.push(l), env };
   return { value, out, err };
+}
+
+// Fake deps for `contribute`: any real side effect is recorded and then throws, so a regression fails the test
+// instead of acting on GitHub, the browser or the clipboard of whoever runs it.
+function strictDeps(overrides: Partial<ContributeDeps> = {}) {
+  const calls: string[] = [];
+  const deps: ContributeDeps = {
+    run: (cmd, args) => { calls.push(`run ${cmd} ${args.join(' ')}`); throw new Error('real side effect attempted in test'); },
+    openUrl: (url) => { calls.push(`open ${url}`); throw new Error('real side effect attempted in test'); },
+    copyToClipboard: () => { calls.push('clipboard'); throw new Error('real side effect attempted in test'); },
+    now: new Date('2026-10-14T12:00:00Z'),
+    ...overrides,
+  };
+  return { deps, calls };
 }
 
 // No trailing whitespace: extractLearning() trims the issue field.
@@ -39,9 +54,32 @@ describe('kb-cli', () => {
     const file = path.join(tmpDir(), 'c.md');
     fs.writeFileSync(file, GOOD_DOC + '\nPassword=Pr0d2026;\n');
     const run = io();
+    const { deps, calls } = strictDeps();
+    run.value.contributeDeps = deps;
     expect(await runCli(['contribute', file], run.value)).toBe(2);
     expect(run.err.join('\n')).toContain('[conn-string]');
     expect(run.out).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
+  it('contribute falls back to the issue URL when gh is not authenticated', async () => {
+    const file = path.join(tmpDir(), 'c.md');
+    fs.writeFileSync(file, GOOD_DOC);
+    const opened: string[] = [];
+    const { deps, calls } = strictDeps({
+      run: (cmd, args) => { calls.push(`run ${cmd} ${args.join(' ')}`); return { status: 1, stdout: '', stderr: '' }; },
+      openUrl: (url) => { opened.push(url); },
+      copyToClipboard: () => false,
+    });
+    const run = io();
+    run.value.contributeDeps = deps;
+    expect(await runCli(['contribute', file], run.value)).toBe(0);
+    const result = JSON.parse(run.out[0]);
+    expect(result.via).toBe('issue');
+    expect(opened).toHaveLength(1);
+    expect(opened[0]).toMatch(/^https:\/\/github\.com\/adrianosantostreina\/delphi-dev\/issues\/new\?template=kb-contribution\.yml/);
+    expect(result.url).toBe(opened[0]);
+    expect(calls).toEqual(['run gh auth status']);
   });
 
   it('scans a file and exits 2 on findings', async () => {

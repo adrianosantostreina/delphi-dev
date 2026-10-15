@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
-import { contribute, defaultDeps, SecretFoundError } from './contribute';
+import { contribute, defaultDeps, SecretFoundError, type ContributeDeps } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
 import { buildManifest } from './manifest';
@@ -18,6 +18,8 @@ export interface CliIO {
   out(line: string): void;
   err(line: string): void;
   env: NodeJS.ProcessEnv;
+  /** Injected by tests so `contribute` never reaches the real gh, browser or clipboard. */
+  contributeDeps?: ContributeDeps;
 }
 
 const defaultIO: CliIO = {
@@ -150,7 +152,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     case 'contribute': {
       if (!rest[0]) { io.err(USAGE); return 64; }
       try {
-        io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), defaultDeps())));
+        io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), io.contributeDeps ?? defaultDeps())));
       } catch (err) {
         if (!(err instanceof SecretFoundError)) throw err;
         io.err(err.message);
