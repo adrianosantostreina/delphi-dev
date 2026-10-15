@@ -1,0 +1,48 @@
+name: Publish knowledge base
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'knowledge/**'
+      - '.claude-plugin/plugin.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kb-latest
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate community knowledge
+        run: node runtime/kb-cli.mjs validate knowledge/community
+
+      - name: Build manifest
+        env:
+          COMMIT: ${{ github.sha }}
+        run: node runtime/kb-cli.mjs manifest knowledge --commit "$COMMIT" --out kb-manifest.json
+
+      # kb-latest is a prerelease and must NEVER become "Latest": the v3.x installers
+      # download rag.db from the Latest release.
+      - name: Publish to kb-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view kb-latest >/dev/null 2>&1; then
+            gh release create kb-latest --prerelease --latest=false \
+              --title "Knowledge base (latest)" \
+              --notes "Manifest da base de conhecimento do delphi-dev. Atualizado a cada merge em knowledge/**. Não é uma versão do plugin."
+          fi
+          gh release upload kb-latest kb-manifest.json --clobber

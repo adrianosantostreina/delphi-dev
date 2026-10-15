@@ -1,0 +1,24 @@
+name: Contribuição para a base de conhecimento / Knowledge contribution
+description: Um aprendizado sobre desenvolvimento Delphi, enviado pelo /contribute-kb do delphi-dev.
+title: "kb: "
+labels: ["kb-contribuicao"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cole abaixo **apenas** o aprendizado gerado pelo `/contribute-kb`. Nada de código, dados ou credenciais do seu projeto.
+        Paste **only** the learning produced by `/contribute-kb`. No code, data or credentials from your project.
+  - type: textarea
+    id: learning
+    attributes:
+      label: Aprendizado / Learning
+      description: Frontmatter (title, category, tags, source) + Sintoma → Causa → Solução → Exemplo genérico.
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Confirmação / Consent
+      options:
+        - label: O texto não contém código, dados ou credenciais do meu projeto. / The text contains no code, data or credentials from my project.
+          required: true

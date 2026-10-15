@@ -1,0 +1,70 @@
+name: Approved KB issue to PR
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  to-pr:
+    if: github.event.label.name == 'kb-aprovado'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Only maintainers can approve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          perm=$(gh api "repos/$REPO/collaborators/$SENDER/permission" --jq .permission)
+          case "$perm" in
+            admin|maintain|write) echo "approved by $SENDER ($perm)";;
+            *) echo "label applied by $SENDER without write permission ($perm)"; exit 1;;
+          esac
+
+      # The issue body is third-party text: it only ever reaches the CLI through env vars.
+      - name: Write the community file
+        id: file
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          set -euo pipefail
+          path=$(node runtime/kb-cli.mjs issue-to-file --out-dir knowledge/community)
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+
+      # PRs opened with GITHUB_TOKEN do not trigger other workflows, so validate here.
+      - name: Validate
+        env:
+          FILE: ${{ steps.file.outputs.path }}
+        run: node runtime/kb-cli.mjs validate "$FILE"
+
+      - name: Open the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILE: ${{ steps.file.outputs.path }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          branch="kb/issue-$ISSUE_NUMBER"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "$FILE"
+          git commit -m "kb: contribuicao da issue #$ISSUE_NUMBER"
+          git push origin "$branch"
+          gh pr create --base master --head "$branch" \
+            --title "kb: contribuição da issue #$ISSUE_NUMBER" \
+            --body "Closes #$ISSUE_NUMBER. Validado (frontmatter, tamanho e segredos) no job kb-issue-to-pr."
