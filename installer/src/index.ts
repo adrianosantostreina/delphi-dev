@@ -14,13 +14,13 @@ import * as path from 'path';
 const RAG_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev', 'rag', 'rag.db');
 
 const program = new Command();
-program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
+program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('3.2.1');
 
 program
   .command('install', { isDefault: true })
   .description('Install delphi-dev plugin, VS Code extension, and RAG database')
   .action(async () => {
-    header('Installing delphi-dev v2.2');
+    header('Installing delphi-dev v3.2');
 
     const sys = detectSystem();
     if (!sys.hasClaudeCLI) {
