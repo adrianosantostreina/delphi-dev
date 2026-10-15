@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
-import { contribute, defaultDeps } from './contribute';
+import { contribute, defaultDeps, SecretFoundError } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
 import { buildManifest } from './manifest';
@@ -149,7 +149,13 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     case 'prefs': return prefs(rest, io);
     case 'contribute': {
       if (!rest[0]) { io.err(USAGE); return 64; }
-      io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), defaultDeps())));
+      try {
+        io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), defaultDeps())));
+      } catch (err) {
+        if (!(err instanceof SecretFoundError)) throw err;
+        io.err(err.message);
+        return 2;
+      }
       return 0;
     }
     case 'sync': {

@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { communityFileName, slugify } from './issue';
 import { REPO } from './paths';
+import { scanText } from './secret-scan';
 import { parseFrontmatter } from './snapshot';
 
 export interface RunResult {
@@ -23,6 +24,8 @@ export interface ContributeResult {
   url: string;
   clipboard: boolean;
 }
+
+export class SecretFoundError extends Error {}
 
 export const ISSUE_URL_LIMIT = 7500;
 
@@ -61,6 +64,11 @@ function viaGh(raw: string, title: string, run: Runner, now: Date): string | nul
 }
 
 export function contribute(raw: string, deps: ContributeDeps): ContributeResult {
+  // The gh route pushes to a public fork before CI runs: scan the whole text (frontmatter included) first.
+  const findings = scanText(raw);
+  if (findings.length) {
+    throw new SecretFoundError(findings.map((f) => `line ${f.line} [${f.kind}] ${f.excerpt}`).join('\n'));
+  }
   const { frontmatter, body } = parseFrontmatter(raw);
   const title = frontmatter.title || body.match(/^#\s+(.+)$/m)?.[1]?.trim() || 'Aprendizado';
   const prUrl = viaGh(raw, title, deps.run, deps.now);
@@ -85,7 +93,9 @@ export function defaultDeps(): ContributeDeps {
         process.platform === 'win32' ? ['rundll32', ['url.dll,FileProtocolHandler', url]]
         : process.platform === 'darwin' ? ['open', [url]]
         : ['xdg-open', [url]];
-      spawn(cmd as string, args as string[], { detached: true, stdio: 'ignore' }).unref();
+      const child = spawn(cmd as string, args as string[], { detached: true, stdio: 'ignore' });
+      child.on('error', () => {}); // a missing opener must not raise an uncaught error
+      child.unref();
     },
     copyToClipboard(text) {
       if (process.platform === 'win32') {

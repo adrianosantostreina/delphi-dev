@@ -35,6 +35,15 @@ describe('kb-cli', () => {
     expect(dirRun.err.join('\n')).toContain('bad.md');
   });
 
+  it('contribute exits 2 on a secret without calling gh or opening a URL', async () => {
+    const file = path.join(tmpDir(), 'c.md');
+    fs.writeFileSync(file, GOOD_DOC + '\nPassword=Pr0d2026;\n');
+    const run = io();
+    expect(await runCli(['contribute', file], run.value)).toBe(2);
+    expect(run.err.join('\n')).toContain('[conn-string]');
+    expect(run.out).toEqual([]);
+  });
+
   it('scans a file and exits 2 on findings', async () => {
     const file = path.join(tmpDir(), 'x.md');
     fs.writeFileSync(file, 'ok\nPwd=Segredo99;');

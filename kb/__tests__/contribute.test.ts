@@ -74,3 +74,23 @@ describe('contribute via issue', () => {
     );
   });
 });
+
+describe('contribute secret scan', () => {
+  const SECRET_DOC = '---\ntitle: Conexao\ncategory: bugs\ntags: a\nsource: community\n---\n# X\n\nUse Password=Pr0d2026; na conexao\n';
+
+  it('throws on a secret and never calls gh or opens a URL', () => {
+    const { d, calls, opened, copied } = deps(() => ok());
+    expect(() => contribute(SECRET_DOC, d)).toThrow(/line 9 \[conn-string\]/);
+    expect(calls).toEqual([]);
+    expect(opened).toEqual([]);
+    expect(copied).toEqual([]);
+  });
+
+  it('scans the frontmatter too', () => {
+    const doc = SECRET_DOC.replace('title: Conexao', 'title: Password=Pr0d2026;').replace('Password=Pr0d2026; na', 'na');
+    const { d, calls } = deps(() => ok());
+    expect(() => contribute(doc, d)).toThrow(/line 2 \[conn-string\]/);
+    expect(calls).toEqual([]);
+  });
+});
+
