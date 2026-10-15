@@ -15,7 +15,7 @@ Four pieces, each loaded by Claude Code differently:
 - **Skills** (`skills/<name>/SKILL.md`) — auto-activated when their `description:` frontmatter matches user intent or detected files. They form the always-available knowledge layer. Some skills (`delphi-laudo`, `delphi-spec`, `delphi-standards`, `delphi-tests`) have a `references/` subdirectory the skill loads on demand to keep the base SKILL.md small.
 - **Commands** (`commands/<name>.md`) — explicit slash commands (`/audit`, `/write`, etc.). Commands are thin orchestrators that delegate to skills + agents.
 - **Agents** (`agents/<name>.md`) — subagents invoked via the Agent tool for heavier, isolated work (deep audit, full code generation, SPEC writing, test generation).
-- **Knowledge base runtime** (`kb/` → `runtime/*.mjs`) — FTS5 index over `knowledge/`, served by the `UserPromptSubmit` hook (`hooks/hooks.json`) and the `delphi-dev-kb` MCP server (`.mcp.json`). `runtime/` is committed on purpose: nothing may require `npm install` or native modules on the user's machine (the v2.2.2 lesson).
+- **Knowledge base runtime** (`kb/` → `runtime/*.mjs`) — FTS5 index over `knowledge/`, served by the `UserPromptSubmit` hook (`hooks/hooks.json`) and the `delphi-dev-kb` MCP server (declared in `.claude-plugin/plugin.json` → `mcpServers`; not a root `.mcp.json`, which Claude Code would also load as this repo's project MCP config). `runtime/` is committed on purpose: nothing may require `npm install` or native modules on the user's machine (the v2.2.2 lesson).
 
 Key invocation flows worth knowing before editing:
 
