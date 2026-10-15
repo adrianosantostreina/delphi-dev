@@ -1,7 +1,39 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-10-14**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-10-15**.
 > No início de uma nova sessão, ler este arquivo para retomar.
+
+## Ponto de retomada (2026-10-15) — Sprints 1 e 2 PRONTOS, falta só teste manual + npm + merge
+
+**Branch `feature/v4.0-multi-agente`, só local — NÃO pushada.** Sobre o estado de 2026-10-14 (abaixo):
+
+- **Revisão final da branch inteira feita** (1 crítico + 3 importantes corrigidos: BOM em `.pas`
+  UTF-16/ANSI, scanner de segredos dentro do `contribute`, CRLF quebrando hashes, limpeza do swap).
+- **Task 25 FEITA (commit `3f41cf7`):** primeiro `/sync-kb` — 75 novos, 10 conflitos resolvidos com a
+  versão da base compartilhada (eram cópias de 09/06 que a base ampliou), duplicata
+  `fmx-win32-automacao-sem-foco.md` renomeada para `fmx-automacao-windows-sem-foco.md`. Base: 40 → 115 docs.
+- **Recalibração (`932fc54`):** `MIN_SCORE` 7.5 / `STRONG_SCORE` 9.5 (detalhe no item de calibração abaixo).
+- **`kb_search` sem piso (`7b4be44`):** a busca explícita do agente devolve os melhores resultados e
+  marca os abaixo de `MIN_SCORE` como "(baixa confiança)"; o piso vale só para o hook.
+- **MCP agora declarado em `.claude-plugin/plugin.json` → `mcpServers`** (`267052c`). O `.mcp.json`
+  na raiz foi removido: o Claude Code o carregava também como MCP **do projeto** para quem abre este
+  repo, e falhava ("Connection closed") porque `${CLAUDE_PLUGIN_ROOT}` não existe fora do plugin.
+- **Testes do `contribute` isolados** (`cc89f02`): nenhum teste alcança `gh`/navegador/clipboard reais.
+- **GitHub configurado (2026-10-15):** rótulos `kb-contribuicao` e `kb-aprovado` criados; Actions pode
+  criar PRs (token padrão segue só leitura).
+- Suíte `kb`: **220 testes verdes**; installer: 9.
+
+**PENDENTE (com o usuário):**
+1. **`npm publish` do installer 3.2.1** — falta login npm nesta máquina (`npm whoami` → 401). Rodar
+   `npm login` (interativo, navegador + 2FA) e depois, em `master`: `cd installer && npm run build && npm publish`.
+2. **Task 19 (o usuário testa depois):** instalar o plugin a partir do checkout
+   (`/plugin marketplace add <checkout>` → `/plugin install delphi-dev@delphi-dev`), reiniciar e conferir:
+   (a) `/mcp` mostra `plugin:delphi-dev:delphi-dev-kb` conectado e `kb_health` responde;
+   (b) um prompt sobre `E2356` injeta `[DELPHI-DEV KNOWLEDGE]` (ver com Ctrl+O);
+   (c) criar `Teste.pas` e `Teste.dfm` com acento — `.pas` com BOM, `.dfm` sem BOM e com `#NNN`;
+   (d) **sem Node no PATH** (procedimento na Task 19 do plano): nenhum erro de hook na tela.
+   Se (d) mostrar erro, trocar a forma do comando em `hooks/hooks.json` conforme o plano.
+3. **Merge para `master`** depois da Task 19 (conflito esperado só nas strings de versão).
 
 ## Ponto de retomada (2026-10-14) — v4: Sprint 1 + Sprint 2 (base de conhecimento) IMPLEMENTADOS, branch local
 
