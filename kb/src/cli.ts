@@ -9,6 +9,7 @@ import { buildManifest } from './manifest';
 import { contextFromRuntime, healthOf, kbPrefs, kbUpdate } from './mcp-server';
 import { readPluginVersion } from './paths';
 import { searchIndex } from './search';
+import { applySync, planSync, readSyncState } from './sync';
 import { scanText } from './secret-scan';
 import { parseFrontmatter, readSnapshot } from './snapshot';
 import { validateCommunityDoc } from './validate';
@@ -149,6 +150,22 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     case 'contribute': {
       if (!rest[0]) { io.err(USAGE); return 64; }
       io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), defaultDeps())));
+      return 0;
+    }
+    case 'sync': {
+      const { values } = parseArgs({
+        args: rest,
+        options: { apply: { type: 'boolean' }, source: { type: 'string' }, knowledge: { type: 'string' } },
+      });
+      const source = values.source ?? path.join(os.homedir(), '.claude', 'shared', 'delphi-knowledge');
+      const knowledge = values.knowledge ?? path.resolve('knowledge');
+      const state = readSyncState(knowledge);
+      const items = planSync(source, knowledge, state);
+      for (const i of items) io.out(`${i.action.padEnd(11)} ${i.dest.padEnd(4)} ${i.name}`);
+      const pending = items.filter((i) => i.action === 'new' || i.action === 'changed').length;
+      const conflicts = items.filter((i) => i.action === 'conflict').length;
+      io.out(`\n${pending} a copiar, ${conflicts} em conflito${values.apply ? '' : ' (dry-run: use --apply para gravar)'}`);
+      if (values.apply) applySync(items, source, knowledge, state);
       return 0;
     }
     default: io.err(USAGE); return 64;
