@@ -1,4 +1,5 @@
 export const LEARNING_HEADING = 'Aprendizado / Learning';
+export const CONSENT_HEADING = 'Confirma\u00e7\u00e3o / Consent';
 
 /** Issue forms render each field as "### <label>\n\n<value>". */
 export function extractLearning(issueBody: string): string | null {
@@ -7,7 +8,7 @@ export function extractLearning(issueBody: string): string | null {
   const start = text.indexOf(marker);
   if (start < 0) return null;
   const after = text.slice(start + marker.length);
-  const end = after.search(/\n### /);
+  const end = after.indexOf(`\n### ${CONSENT_HEADING}`);
   const value = (end < 0 ? after : after.slice(0, end)).trim();
   return value && value !== '_No response_' ? value : null;
 }

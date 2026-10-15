@@ -30,6 +30,11 @@ describe('validateCommunityDoc', () => {
 
   it('blocks secrets', () => {
     const errors = validateCommunityDoc(doc(GOOD, `${body(MIN_CHARS)}\nPassword=Pr0d2026;`));
-    expect(errors).toEqual([expect.stringContaining('secret (conn-string) at body line')]);
+    expect(errors).toEqual([expect.stringContaining('secret (conn-string) at line 10')]);
+  });
+
+  it('reports a secret in the frontmatter, with raw-text line numbers', () => {
+    const errors = validateCommunityDoc(doc(GOOD.replace('title: T', 'title: Password=Pr0d2026;')));
+    expect(errors).toEqual([expect.stringMatching(/^secret \(conn-string\) at line 2: title: Password=Pr0d2026;/)]);
   });
 });

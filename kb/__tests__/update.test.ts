@@ -6,7 +6,7 @@ import { buildManifest } from '../src/manifest';
 import { cacheCurrentDir, MANIFEST_URL, rawFileUrl } from '../src/paths';
 import { readState, writeState } from '../src/prefs';
 import { readSnapshot, sha256 } from '../src/snapshot';
-import { runUpdate, type Fetcher } from '../src/update';
+import { removeBestEffort, runUpdate, type Fetcher } from '../src/update';
 import { FIXTURE, makePluginRoot, tmpDir, writeTree } from './helpers';
 
 const COMMIT = 'abcdef1';
@@ -101,3 +101,37 @@ describe('runUpdate', () => {
     expect((await runUpdate({ root, data, env: {}, pluginVersion: '4.0.0', fetcher, now: NOW, force: true })).status).toBe('updated');
   });
 });
+
+describe('update cleanup', () => {
+  it('sweeps stale current-old-* and staging-* dirs but keeps fresh ones', async () => {
+    const root = makePluginRoot(FIXTURE);
+    const manifest = buildManifest(readSnapshot(path.join(root, 'knowledge')), COMMIT, '4.0.0', NOW);
+    const fetcher: Fetcher = async () => Buffer.from(JSON.stringify(manifest));
+    const data = tmpDir();
+    const cache = path.join(data, 'kb-cache');
+    const mk = (name: string, ageMin: number) => {
+      const dir = path.join(cache, name);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'x.txt'), 'x');
+      const t = new Date(Date.now() - ageMin * 60_000);
+      fs.utimesSync(dir, t, t);
+    };
+    mk('current-old-stale', 20);
+    mk('staging-stale', 20);
+    mk('current-old-fresh', 1);
+    mk('other-stale', 20);
+    const result = await runUpdate({ root, data, env: {}, pluginVersion: '4.0.0', fetcher, now: NOW });
+    expect(result.status).toBe('up-to-date');
+    expect(fs.existsSync(path.join(cache, 'current-old-stale'))).toBe(false);
+    expect(fs.existsSync(path.join(cache, 'staging-stale'))).toBe(false);
+    expect(fs.existsSync(path.join(cache, 'current-old-fresh'))).toBe(true);
+    expect(fs.existsSync(path.join(cache, 'other-stale'))).toBe(true);
+  });
+
+  it('removeBestEffort never throws, even when removal fails', () => {
+    const data = tmpDir();
+    expect(() => removeBestEffort(path.join(data, 'does-not-exist'), data)).not.toThrow();
+    expect(() => removeBestEffort('bad\0path', data)).not.toThrow();
+  });
+});
+

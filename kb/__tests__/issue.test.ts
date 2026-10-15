@@ -10,6 +10,19 @@ describe('issue helpers', () => {
     expect(extractLearning(body)).toBe('---\ntitle: X\n---\n# X\ntexto');
   });
 
+  it('keeps a learning that has its own ### heading', () => {
+    const body = [
+      '### Aprendizado / Learning', '', '---', 'title: X', '---', '# X', '### Detalhe', 'mais texto', '',
+      '### Confirmação / Consent', '', '- [X] ok',
+    ].join('\n');
+    expect(extractLearning(body)).toBe('---\ntitle: X\n---\n# X\n### Detalhe\nmais texto');
+  });
+
+  it('takes the learning to the end of the text when the consent heading is absent', () => {
+    const body = ['### Aprendizado / Learning', '', '# X', '### Detalhe', 'fim'].join('\n');
+    expect(extractLearning(body)).toBe('# X\n### Detalhe\nfim');
+  });
+
   it('returns null when the section is missing or empty', () => {
     expect(extractLearning('### Outra coisa\n\nx')).toBeNull();
     expect(extractLearning('### Aprendizado / Learning\n\n_No response_\n')).toBeNull();

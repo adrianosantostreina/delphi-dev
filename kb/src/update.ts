@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { resolveActive } from './active';
 import { diffFiles, parseManifest } from './manifest';
 import { cacheCurrentDir, MANIFEST_URL, rawFileUrl } from './paths';
-import { isOffline, readState, writeState } from './prefs';
+import { isOffline, logError, readState, writeState } from './prefs';
 import { readSnapshot, sha256 } from './snapshot';
 
 export type Fetcher = (url: string, timeoutMs: number) => Promise<Buffer>;
@@ -52,6 +52,35 @@ function writeInto(dir: string, rel: string, content: Buffer): void {
   fs.writeFileSync(full, content);
 }
 
+/** Removal must never turn a finished update into a failure: errors are logged, not thrown. */
+export function removeBestEffort(target: string, data: string): void {
+  try {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 3 });
+  } catch (err) {
+    logError(data, 'update:cleanup', err);
+  }
+}
+
+const STALE_MS = 10 * 60 * 1000;
+
+/** Drops leftovers of interrupted updates (current-old-*, staging-*) older than 10 minutes. */
+function sweepStale(data: string): void {
+  const cache = path.join(data, 'kb-cache');
+  try {
+    for (const name of fs.readdirSync(cache)) {
+      if (!/^(current-old-|staging-)/.test(name)) continue;
+      const full = path.join(cache, name);
+      try {
+        if (Date.now() - fs.statSync(full).mtimeMs > STALE_MS) removeBestEffort(full, data);
+      } catch (err) {
+        logError(data, 'update:cleanup', err);
+      }
+    }
+  } catch {
+    // no cache dir yet
+  }
+}
+
 function swapIntoCurrent(data: string, staging: string): void {
   const current = cacheCurrentDir(data);
   const old = `${current}-old-${process.pid}-${Date.now()}`;
@@ -62,7 +91,7 @@ function swapIntoCurrent(data: string, staging: string): void {
     if (fs.existsSync(old)) fs.renameSync(old, current);
     throw err;
   }
-  fs.rmSync(old, { recursive: true, force: true });
+  removeBestEffort(old, data);
 }
 
 export async function runUpdate(opts: UpdateOptions): Promise<UpdateResult> {
@@ -71,6 +100,7 @@ export async function runUpdate(opts: UpdateOptions): Promise<UpdateResult> {
   if (isOffline(data, env)) return { status: 'offline', ...none };
   if (!force && !isCheckDue(data, now)) return { status: 'skipped', ...none };
 
+  sweepStale(data);
   const started = Date.now();
   const staging = path.join(data, 'kb-cache', `staging-${process.pid}-${started}`);
   try {
