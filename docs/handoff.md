@@ -24,7 +24,7 @@
 - Suíte `kb`: **220 testes verdes**; installer: 9.
 
 **PENDENTE (com o usuário):**
-1. **`npm publish` do installer 3.2.1** — falta login npm nesta máquina (`npm whoami` → 401). Rodar
+1. **`npm publish` do installer 3.2.1: ADIADO pelo usuário para sair junto com a 4.0** (política: publicar só quando tudo estiver pronto). Falta login npm nesta máquina (`npm whoami` → 401). Rodar
    `npm login` (interativo, navegador + 2FA) e depois, em `master`: `cd installer && npm run build && npm publish`.
 2. **Task 19 (o usuário testa depois):** instalar o plugin a partir do checkout
    (`/plugin marketplace add <checkout>` → `/plugin install delphi-dev@delphi-dev`), reiniciar e conferir:
