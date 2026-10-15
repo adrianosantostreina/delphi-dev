@@ -98,12 +98,13 @@ Este único comando:
 - Instala a extensão VS Code (se detectado)
 - Remove hooks de automação obsoletos deixados por versões antigas
 
-**Requisitos:** Claude Code CLI e git. O Node.js 22.13+ habilita a busca rápida, a atualização automática e os hooks de automação; sem ele o plugin funciona em modo reduzido.
+**Requisitos:** Claude Code CLI e git. O `npx delphi-dev` precisa de Node.js 18+. O hook de BOM roda no Node 18+; a busca rápida, a injeção nos prompts e a atualização diária exigem Node.js 22.13+. Sem ele o plugin funciona em modo reduzido.
 
 > **Base de conhecimento e hooks (v4).** O plugin traz a base de conhecimento Delphi embutida e
 > confere uma vez por dia se o mantenedor publicou atualizações — sem baixar banco, sem módulos
 > nativos. Dois hooks rodam sozinhos: um põe BOM UTF-8 em `.pas`/`.dpr`/`.dpk`/`.inc` (nunca em
-> `.dfm`/`.fmx`) e outro acrescenta até três trechos curtos da base a prompts sobre Delphi. Um
+> `.dfm`/`.fmx`; ele também reescreve acentos dentro de strings de `.dfm`/`.fmx` como escapes `#NNN`,
+> do jeito que a IDE salva, e nunca mexe em arquivos ANSI, UTF-16 ou binários) e outro acrescenta até três trechos curtos da base a prompts sobre Delphi. Um
 > servidor MCP (`delphi-dev-kb`) deixa o agente pesquisar a base quando precisar. Use `/update`
 > para atualizar na hora.
 

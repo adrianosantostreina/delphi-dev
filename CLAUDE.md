@@ -10,7 +10,7 @@ Test changes by installing the plugin from a local checkout (`/plugin marketplac
 
 ## Architecture: how the pieces wire together
 
-Three primitives, each loaded by Claude Code differently:
+Four pieces, each loaded by Claude Code differently:
 
 - **Skills** (`skills/<name>/SKILL.md`) — auto-activated when their `description:` frontmatter matches user intent or detected files. They form the always-available knowledge layer. Some skills (`delphi-laudo`, `delphi-spec`, `delphi-standards`, `delphi-tests`) have a `references/` subdirectory the skill loads on demand to keep the base SKILL.md small.
 - **Commands** (`commands/<name>.md`) — explicit slash commands (`/audit`, `/write`, etc.). Commands are thin orchestrators that delegate to skills + agents.

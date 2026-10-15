@@ -46,7 +46,7 @@ Respeite pedidos explícitos ("respond in English", "responda em português").
    - Nenhum trecho de código do projeto: escreva um exemplo mínimo novo.
    - Corpo entre 200 e 8000 caracteres.
 3. **Grave** num arquivo temporário (ex.: `%TEMP%\delphi-dev-contribuicao.md` ou `/tmp/...`).
-4. **Escaneie**: `node "<raiz do plugin>/runtime/kb-cli.mjs" scan <arquivo>`.
+4. **Escaneie**: `node "<raiz do plugin>/runtime/kb-cli.mjs" scan "<arquivo>"`.
    - Saída com achados (código 2) → mostre as linhas, reescreva de forma genérica, grave e escaneie
      de novo. **Nunca** envie com achado.
    - Sem Node → revise você mesmo contra a lista: chaves privadas, tokens (`ghp_`, `npm_`, `AKIA`,
@@ -67,11 +67,17 @@ Respeite pedidos explícitos ("respond in English", "responda em português").
    | Não mostrar novamente *(só no modo sugestão)* | Don't show again *(suggestion mode only)* |
 
 7. **Aja**:
-   - Aprovar → `node "<raiz do plugin>/runtime/kb-cli.mjs" contribute <arquivo>`. A saída é JSON
+   - Aprovar → `node "<raiz do plugin>/runtime/kb-cli.mjs" contribute "<arquivo>"`. A saída é JSON
      `{via, url, clipboard}`. Mostre o link.
      - `via: "pr"` — **pt-BR:** "Pull request aberto: <url>. Obrigado! O mantenedor revisa antes de entrar na base." **en-US:** "Pull request opened: <url>. Thank you! The maintainer reviews it before it joins the base."
      - `via: "issue"` — **pt-BR:** "Abri o formulário no navegador. Confira e clique em *Submit new issue*." **en-US:** "I opened the form in your browser. Check it and click *Submit new issue*."
      - `clipboard: true` — acrescente: **pt-BR:** "O texto era longo para o link e foi copiado para a área de transferência: cole no campo *Aprendizado / Learning*." **en-US:** "The text was too long for the link and was copied to your clipboard: paste it into the *Aprendizado / Learning* field."
+   - Sem Node → entregue ao usuário o link do formulário
+     `https://github.com/adrianosantostreina/delphi-dev/issues/new?template=kb-contribution.yml` e
+     peça que cole o texto no campo *Aprendizado / Learning*. **pt-BR:** "Sem o Node não consigo
+     enviar daqui. Abra este link e cole o texto acima no campo *Aprendizado / Learning*: <link>."
+     **en-US:** "Without Node I can't send it from here. Open this link and paste the text above into
+     the *Aprendizado / Learning* field: <link>."
    - Recusar → descarte o arquivo; não insista.
    - Não mostrar novamente → `kb_prefs` com `action: set, suggestions: off` (sem MCP:
      `node "<raiz do plugin>/runtime/kb-cli.mjs" prefs set --suggestions off`). Confirme:

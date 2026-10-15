@@ -24,7 +24,7 @@ Docs: spec `docs/superpowers/specs/2026-10-14-kb-v4-design.md`, plano
   installer 3.2.1** — precisa do login npm do usuário (`npm whoami` deu 401). Comando, em `master`:
   `cd installer && npm run build && npm publish`.
 - **PENDENTE com o usuário:** Task 19 (validar os hooks sem Node no PATH, no Claude Code no Windows —
-  procedimento no plano); Task 25 (primeiro `/sync-kb`, importando os ~37 arquivos pendentes e
+  procedimento no plano); Task 25 (primeiro `/sync-kb`, importando os arquivos pendentes (contagem exata sai do dry-run do /sync-kb, após a normalização de CRLF) e
   resolvendo conflitos como `horse-gbswagger-rotas-jwt.md`); a revisão final da branch inteira e a
   onda de correções dela; depois o merge.
 - **Configuração manual no GitHub antes de os workflows funcionarem:** criar os rótulos
@@ -526,7 +526,7 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 
 ## Armadilhas / o que não fazer
 
-- **Não commitar** `scripts/dist/`, `hooks/dist/`, `package-lock.json` — são build output/untracked por design (a CI roda `npm run build`; o pacote installer faz o wiring no ambiente do usuário). Considerar adicioná-los ao `.gitignore` para parar o ruído no `git status`.
+- **Não commitar** `scripts/dist/` e `hooks/dist/` — build output/untracked por design (a CI roda `npm run build`; o pacote installer faz o wiring no ambiente do usuário). `kb/package-lock.json` **é** commitado (o `npm ci` depende dele); os lockfiles da raiz e do installer continuam untracked. Considerar adicioná-los ao `.gitignore` para parar o ruído no `git status`.
 - **Não simplificar** o shape aninhado de `source` em `marketplace.json` (`"source": {"source": "url", "url": "..."}`) — foi fix deliberado (commit `905fe6b`).
 - Ao bumpar versão, sincronizar `plugin.json` + `marketplace.json` + `about.md` (2 linhas: Version/Versão). Os READMEs **não** têm string de versão (a menção no CLAUDE.md está desatualizada).
 - Release que não toca `knowledge/` não dispara a CI — criar manualmente com `rag.db` anexado (ver seção do v2.2.1).
@@ -540,8 +540,6 @@ Backlog priorizado. **Recomendação:** começar pela Governança do RAG (item 1
 
 ## Branch / sincronização
 
-- Branch: `master`. **4 commits à frente de `origin/master`** (2026-08-30) — todos doc-only
-  (design do `/e2e` + ideia de métricas). Push segurado por política da sessão.
-- Última sincronização real com o origin: `84f3676` (v3.0.0). Release `v3.0.0` publicado como
-  `latest` com `rag.db` anexado.
+- Branch de trabalho: `feature/v4.0-multi-agente`, **local, não pushada** (2026-10-14).
+- `master` está em v3.2.1, com a release `v3.2.1` como Latest (com `rag.db` anexado).
 - Tags `v2.2.1` (e anteriores) pushadas.
