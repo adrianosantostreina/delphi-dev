@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
+import { contribute, defaultDeps } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
 import { buildManifest } from './manifest';
@@ -145,6 +146,11 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     case 'update': return update(rest, io);
     case 'health': io.out(JSON.stringify(healthOf(contextFromRuntime()), null, 2)); return 0;
     case 'prefs': return prefs(rest, io);
+    case 'contribute': {
+      if (!rest[0]) { io.err(USAGE); return 64; }
+      io.out(JSON.stringify(contribute(fs.readFileSync(rest[0], 'utf8'), defaultDeps())));
+      return 0;
+    }
     default: io.err(USAGE); return 64;
   }
 }
