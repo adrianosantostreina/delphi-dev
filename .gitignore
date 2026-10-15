@@ -24,3 +24,7 @@ Thumbs.db
 scripts/dist/
 hooks/dist/
 package-lock.json
+
+# kb/ é pacote isolado: o lockfile É versionado para os bundles de runtime/ serem reproduzíveis.
+!kb/package-lock.json
+kb/node_modules/

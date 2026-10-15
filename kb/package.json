@@ -1,0 +1,20 @@
+{
+  "name": "delphi-dev-kb",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build:runtime": "node scripts/build-runtime.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "^22.13.0",
+    "esbuild": "0.28.2",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.4",
+    "zod": "4.6.7"
+  }
+}
