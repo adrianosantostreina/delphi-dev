@@ -38,4 +38,17 @@ describe('scanText', () => {
     const findings = scanText('linha limpa\n   Password=Segredo123;   ');
     expect(findings).toEqual([{ line: 2, kind: 'conn-string', excerpt: 'Password=Segredo123;' }]);
   });
+
+  it.each([
+    "Params.Values['Password'] := 'Abc12345';",
+    "Params.Values['Password']:='Abc12345';",
+    '"password": "hunter2hunter"',
+    'DB_PASSWORD=hunter2hunter',
+    "client_secret = 'abcdefgh'",
+    "AccessToken = 'abcdefgh'",
+    "User_Password := 'abcdefg'",
+    'OraclePassword=Abc12345;',
+  ])('flags secret with indexed/quoted/prefixed name: %s', (text) => {
+    expect(scanText(text).length).toBeGreaterThan(0);
+  });
 });

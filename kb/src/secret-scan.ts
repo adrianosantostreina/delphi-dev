@@ -22,12 +22,12 @@ const RULES: Rule[] = [
   { kind: 'jwt', pattern: /\beyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g },
   {
     kind: 'conn-string',
-    pattern: /\b(Password|Pwd)=([^;\s]+)/gi,
+    pattern: /(Password|Pwd)=([^;\s]+)/gi,
     allow: (m) => PLACEHOLDER.test(m[2]),
   },
   {
     kind: 'assignment',
-    pattern: /\b(password|passwd|pwd|senha|secret|api[_-]?key|token)\b\s*:?=?\s*[:=]\s*['"]?([^\s'";]{6,}|<[^>]*>)/gi,
+    pattern: /(password|passwd|pwd|senha|secret|api[_-]?key|token)\b['"\]\s]*(?::=|[:=])\s*['"]?([^\s'";]{6,}|<[^>]*>)/gi,
     allow: (m) => PLACEHOLDER.test(m[2]),
   },
   {
