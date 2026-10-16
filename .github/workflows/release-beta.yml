@@ -1,0 +1,82 @@
+name: Release beta
+
+# Dispara quando alguem envia uma tag de pre-release (ex.: v4.0.0-beta.1, v4.0.0-rc.1).
+# Tags estaveis (v4.0.0) NAO casam com o padrao 'v*-*'.
+#
+# O que faz: roda os testes, empacota a extensao VS Code como .vsix e cria um GitHub Release
+# marcado como Pre-release com o .vsix anexado.
+# O que NAO faz, de proposito: publicar no npm e publicar no Marketplace do VS Code. Isso e manual
+# (docs/release-beta.md). So usa o GITHUB_TOKEN; nenhum segredo e necessario.
+
+on:
+  push:
+    tags: ['v*-*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-beta-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: A tag precisa ser v<versao do plugin>
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./.claude-plugin/plugin.json').version")
+          echo "tag=$TAG plugin.json=$VERSION"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::A tag $TAG nao bate com a versao $VERSION de .claude-plugin/plugin.json. Corrija a versao ou crie a tag certa."
+            exit 1
+          fi
+
+      - name: Base de conhecimento (kb) - testes
+        working-directory: kb
+        run: |
+          npm ci
+          npx vitest run
+
+      # installer e packages/vscode sao workspaces da raiz; nao ha package-lock.json na raiz (npm install, nao ci).
+      - name: Dependencias dos workspaces
+        run: npm install --workspace=installer --workspace=packages/vscode
+
+      - name: Instalador - testes
+        working-directory: installer
+        run: npx vitest run
+
+      - name: Extensao VS Code - registro, testes e build
+        run: |
+          npm run check:registry --workspace=packages/vscode
+          npm test --workspace=packages/vscode
+          npx tsc --noEmit -p packages/vscode
+          npm run build --workspace=packages/vscode
+
+      - name: Superficie do Claude Code (sem regressao)
+        run: node kb/scripts/claude-surface.mjs --check
+
+      - name: Empacotar a extensao (.vsix)
+        working-directory: packages/vscode
+        run: npx --yes @vscode/vsce@3.7.1 package --no-dependencies -o "$GITHUB_WORKSPACE/delphi-dev-vscode-$TAG.vsix"
+
+      - name: Criar o Release (Pre-release) com o .vsix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VSIX="delphi-dev-vscode-$TAG.vsix"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$VSIX" --clobber
+          else
+            gh release create "$TAG" "$VSIX" --prerelease --generate-notes --title "delphi-dev $TAG (beta)"
+          fi
