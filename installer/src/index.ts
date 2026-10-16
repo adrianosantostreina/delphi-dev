@@ -7,14 +7,46 @@ import { removeHooks } from './hooks';
 import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, summary } from './ui';
 import chalk from 'chalk';
+import { detectTargets, installedPortableTargets, readInstallManifest, realProbe, resolveTargets, runPortable, type Target } from './targets';
 
 const program = new Command();
 program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
 
 program
   .command('install', { isDefault: true })
-  .description('Install delphi-dev plugin and VS Code extension')
-  .action(async () => {
+  .description('Install delphi-dev for Claude Code, Codex and OpenCode (and the VS Code extension)')
+  .option('--target <list>', 'claude, codex, opencode, a comma list, or all (default: detect)')
+  .option('--from <path>', 'use an existing checkout instead of ~/.delphi-dev/plugin (development)')
+  .option('--scope <scope>', 'user (default) or project (Codex/OpenCode only)')
+  .option('--project <dir>', 'project folder for --scope project')
+  .option('--dry-run', 'show what would change without writing (Codex/OpenCode only)')
+  .option('--force', 'overwrite files that are not ours (a backup is made)')
+  .action(async (opts: { target?: string; from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean }) => {
+    let targets: Target[];
+    try {
+      targets = resolveTargets(opts.target, detectTargets(realProbe()));
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    const portable = targets.filter((t) => t !== 'claude');
+    let portableFailed = false;
+    if (portable.length) {
+      header(`Installing delphi-dev for ${portable.join(' + ')}`);
+      if (!opts.target) step(`Detected: ${targets.join(', ')}`);
+      try {
+        runPortable('install', portable, opts);
+        if (opts.dryRun) success(`Dry run for ${portable.join(' + ')} — nothing was written`);
+        else success(`delphi-dev installed for ${portable.join(' + ')} — restart the agent session`);
+      } catch (err) {
+        error(err instanceof Error ? err.message : String(err));
+        // A Codex/OpenCode problem must never stop the Claude Code install that was also requested.
+        if (!targets.includes('claude')) process.exit(1);
+        portableFailed = true;
+      }
+      if (!targets.includes('claude')) return;
+    }
+
     header('Installing delphi-dev v2.2');
 
     const sys = detectSystem();
@@ -71,6 +103,7 @@ program
       error('Plugin not active. Try: claude plugin list');
       process.exit(1);
     }
+    if (portableFailed) process.exit(1);
   });
 
 program
@@ -78,9 +111,23 @@ program
   .description('Update the delphi-dev plugin (the knowledge base updates itself; use /update in a session)')
   .action(() => {
     header('Updating delphi-dev');
-    step('Pulling latest plugin...');
-    installPlugin();
-    success('Plugin updated — restart your Claude Code session');
+    const installed = installedPortableTargets(readInstallManifest());
+    // Without a Codex/OpenCode install this is exactly the historical Claude Code update.
+    if (!installed.length || detectSystem().hasClaudeCLI) {
+      step('Pulling latest plugin...');
+      installPlugin();
+      success('Plugin updated — restart your Claude Code session');
+    }
+    if (installed.length) {
+      step(`Updating ${installed.join(' + ')}...`);
+      try {
+        runPortable('install', installed, {});
+        success(`Updated ${installed.join(' + ')} — restart the agent session`);
+      } catch (err) {
+        error(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    }
   });
 
 program
@@ -113,6 +160,17 @@ program
     removeHooks();
     success('Hooks removed');
     warn('Plugin files remain in ~/.claude/plugins/delphi-dev — remove manually if desired');
+    const installed = installedPortableTargets(readInstallManifest());
+    if (installed.length) {
+      step(`Removing delphi-dev from ${installed.join(' + ')}...`);
+      try {
+        runPortable('uninstall', installed, {});
+        success('Codex/OpenCode files removed (only what delphi-dev installed)');
+      } catch (err) {
+        error(err instanceof Error ? err.message : String(err));
+        process.exitCode = 1;
+      }
+    }
   });
 
 program.parse();

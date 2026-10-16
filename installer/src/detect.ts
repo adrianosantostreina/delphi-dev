@@ -16,7 +16,7 @@ export function detectSystem(): SystemInfo {
   };
 }
 
-function commandExists(cmd: string): boolean {
+export function commandExists(cmd: string): boolean {
   try {
     execSync(cmd, { stdio: 'ignore' });
     return true;
