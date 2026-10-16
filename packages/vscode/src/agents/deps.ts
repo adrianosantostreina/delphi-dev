@@ -1,6 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import * as vscode from 'vscode';
 import type { AdapterDeps } from './types';
+import { commandOnPath } from './which';
 
 export function realDeps(): AdapterDeps {
   return {
@@ -10,14 +10,7 @@ export function realDeps(): AdapterDeps {
     showInfo: (message, ...actions) => vscode.window.showInformationMessage(message, ...actions),
     showError: (message, ...actions) => vscode.window.showErrorMessage(message, ...actions),
     hasExtension: (id) => vscode.extensions.getExtension(id) !== undefined,
-    commandExists: (cmd) => {
-      try {
-        const r = spawnSync(cmd, ['--version'], { shell: process.platform === 'win32', timeout: 4000, windowsHide: true });
-        return r.status === 0;
-      } catch {
-        return false;
-      }
-    },
+    commandExists: commandOnPath,
     getSetting: <T>(key: string, fallback: T): T => vscode.workspace.getConfiguration('delphiDev').get<T>(key, fallback),
     fetch: async (url, init) => {
       const r = await fetch(url, { ...init, signal: AbortSignal.timeout(2500) });
