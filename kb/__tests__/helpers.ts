@@ -62,8 +62,8 @@ const REPO_BASE: Record<string, string> = {
 };
 
 /** Minimal valid portable repo. `over[path] = null` removes a file. */
-export function makeRepo(over: Record<string, string | null> = {}): string {
-  const root = tmpDir('kb-repo-');
+export function makeRepo(over: Record<string, string | null> = {}, prefix = 'kb-repo-'): string {
+  const root = tmpDir(prefix);
   const files: Record<string, string> = { ...REPO_BASE };
   for (const [rel, content] of Object.entries(over)) {
     if (content === null) delete files[rel];
