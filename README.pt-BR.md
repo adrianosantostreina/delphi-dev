@@ -3,6 +3,55 @@
 > Plugin para Claude Code que transforma o assistente em um especialista sênior em Delphi.
 > 🇺🇸 [Read in English](README.md)
 
+> [!WARNING]
+> **BETA — `v4.0.0-beta.1` (pré-lançamento, para testes).** Esta é uma prévia da próxima versão
+> maior, publicada para ser testada em projetos reais antes do lançamento final. **Nada aqui muda a
+> versão estável**: `npx delphi-dev` continua instalando a estável, e o beta só é instalado de
+> propósito, com os comandos de [Beta: instalar, voltar e reportar](#beta-instalar-voltar-e-reportar).
+> Não faça dele a sua única configuração numa máquina que você não pode se dar ao luxo de quebrar.
+
+---
+
+## Beta: instalar, voltar e reportar
+
+**O que o beta cobre**
+
+- **Claude Code**, como sempre: os mesmos comandos, skills, agentes, hooks e base de conhecimento.
+- **Codex** e **OpenCode** (novos): skills, comandos, subagentes, base de conhecimento (MCP) e hooks, no terminal e nas extensões deles no VS Code.
+- Uma **extensão VS Code multiagente** (nova): roda os comandos Delphi no Claude Code, no Codex ou no OpenCode.
+
+**Como instalar cada parte** (use UM só método para o Claude Code; não misture)
+
+| Parte | Comando |
+|---|---|
+| Claude Code, via `npx` | `npx delphi-dev@beta` |
+| Codex e/ou OpenCode | `npx delphi-dev@beta --target codex` (ou `opencode`, ou `all` — o `all` instala também o Claude Code) |
+| Claude Code, via marketplace de plugins | `/plugin marketplace add adrianosantostreina/delphi-dev#v4.0.0-beta.1` e depois `/plugin install delphi-dev@delphi-dev` |
+| Extensão VS Code | baixe `delphi-dev-vscode-v4.0.0-beta.1.vsix` na [página de Releases](https://github.com/adrianosantostreina/delphi-dev/releases) (a marcada como *Pre-release*) e rode `code --install-extension delphi-dev-vscode-v4.0.0-beta.1.vsix` |
+
+- O `@beta` escolhe o beta no npm; o `npx delphi-dev` puro continua sendo a versão estável. No comando do marketplace, o `#v4.0.0-beta.1` é o que fixa o beta.
+- Se você já tem o delphi-dev no Claude Code, remova antes: `/plugin marketplace remove delphi-dev` (isso também desinstala o plugin). O Claude Code não deixa adicionar um segundo marketplace chamado `delphi-dev` com origem diferente.
+- O `npx delphi-dev@beta update` mantém você no beta; ele nunca volta para a estável em silêncio.
+- A extensão beta **não** está no Marketplace do VS Code, e o instalador não a instala por você.
+
+**Voltando para a versão estável**
+
+1. Claude Code: `claude plugin uninstall delphi-dev@delphi-dev` e `claude plugin marketplace remove delphi-dev` (ou os mesmos `/plugin ...` dentro de uma sessão).
+2. Se você usou o `npx`: apague as pastas `~/.claude/plugins/delphi-dev` e `~/.delphi-dev/plugin` (no Windows: `%USERPROFILE%\.claude\plugins\delphi-dev` e `%USERPROFILE%\.delphi-dev\plugin`). São só cópias do plugin feitas pelo próprio instalador. O beta as deixa fixas na tag do beta, e o instalador estável publicado hoje não consegue atualizar uma cópia fixa.
+3. Instale a estável de novo: `npx delphi-dev` (ou `/plugin marketplace add adrianosantostreina/delphi-dev` e `/plugin install delphi-dev@delphi-dev`).
+4. Codex/OpenCode: `npx delphi-dev uninstall` remove só o que o delphi-dev instalou lá.
+5. Extensão VS Code: `code --uninstall-extension adrianosantos.delphi-dev-vscode`.
+
+**Limitações conhecidas**
+
+- **Codex**: os comandos são skills (`$delphi-cmd-<nome>`); no VS Code a extensão abre o painel do Codex e **copia** o comando para você colar. Os hooks (ajuste de BOM/encoding e injeção da base) só rodam depois que você confia neles uma vez com `/hooks` no Codex.
+- **OpenCode**: no VS Code o comando é digitado no terminal em que a extensão iniciou o `opencode --port 4096`. Se já houver na porta um servidor `opencode serve`/`web` sem TUI, o comando pode se perder; use o terminal que a extensão cria.
+- A busca na base e a injeção em prompts exigem Node.js 22.13+ (sem ele, modo reduzido).
+- **O Antigravity está fora de escopo** neste beta.
+- A base de conhecimento se atualiza a partir de um release `kb-latest` publicado pelo mantenedor. Enquanto esse release não existir, o `/about` pode mostrar HTTP 404 na checagem de atualização; a base embutida continua funcionando.
+
+**Reportando um problema** — abra uma [Issue](https://github.com/adrianosantostreina/delphi-dev/issues) com: seu sistema operacional, `node -v`, o agente e a versão dele, o comando exato que você rodou e a saída de `npx delphi-dev@beta verify` e `claude plugin list`. Para Codex/OpenCode anexe também `node ~/.delphi-dev/plugin/runtime/kb-cli.mjs doctor` (no Windows: `node %USERPROFILE%\.delphi-dev\plugin\runtime\kb-cli.mjs doctor`).
+
 ---
 
 ## O que é
