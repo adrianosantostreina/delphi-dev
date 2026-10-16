@@ -46,6 +46,21 @@
     "onLanguage:objectpascal"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Delphi Dev sends commands to your AI agent and can type into a terminal. In an untrusted workspace the agent, OpenCode port and Codex prompt-URI settings are read only from your user settings, never from the workspace.",
+      "restrictedConfigurations": [
+        "delphiDev.agent",
+        "delphiDev.opencodePort",
+        "delphiDev.codexPromptUri"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Delphi Dev needs a real folder on disk: it passes file paths to the agent and starts a terminal in the workspace."
+    }
+  },
   "contributes": {
     "commands": [
       {
@@ -232,7 +247,8 @@
             "OpenCode"
           ],
           "default": "auto",
-          "description": "Which AI agent receives the Delphi Dev commands."
+          "description": "Which AI agent receives the Delphi Dev commands. In an untrusted workspace only the user setting is honored.",
+          "scope": "machine-overridable"
         },
         "delphiDev.opencodePort": {
           "type": "number",

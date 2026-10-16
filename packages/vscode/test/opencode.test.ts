@@ -138,6 +138,36 @@ describe('opencode adapter', () => {
     expect(d.terminals).toEqual([]);
   });
 
+  it('does not start a terminal nor wait when OpenCode is not installed: offers the install command', async () => {
+    const s = server({ healthyAfter: 1_000_000 });
+    const slept: number[] = [];
+    const d = fakeDeps({
+      fetch: s.fetch,
+      hasExtension: () => false,
+      commandExists: () => false,
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+      showError: async (message, ...actions) => {
+        d.errors.push(message);
+        return actions[0];
+      },
+    });
+    expect(await createOpencodeAdapter(d).send('/delphi-audit')).toBe('unavailable');
+    expect(d.terminals).toEqual([]);
+    expect(slept).toEqual([]);
+    expect(posts(s.hits)).toEqual([]);
+    expect(d.errors).toHaveLength(1);
+    expect(d.clipboard).toEqual(['npm i -g opencode-ai']);
+  });
+
+  it('still reuses a server that is already listening even if the install is not detected', async () => {
+    const s = server();
+    const d = fakeDeps({ fetch: s.fetch, hasExtension: () => false, commandExists: () => false });
+    expect(await createOpencodeAdapter(d).send('/delphi-audit')).toBe('sent');
+    expect(d.terminals).toEqual([]);
+  });
+
   it('survives a network error on health', async () => {
     const d = fakeDeps({
       fetch: async () => {

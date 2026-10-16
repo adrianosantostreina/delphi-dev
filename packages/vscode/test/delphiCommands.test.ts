@@ -89,3 +89,26 @@ describe('package.json settings', () => {
     expect(props['delphiDev.agent'].default).toBe('auto');
   });
 });
+
+describe('package.json workspace trust', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
+  const props = pkg.contributes.configuration.properties;
+
+  it('lets the trusted user pick the agent per workspace, but never an untrusted one', () => {
+    expect(props['delphiDev.agent'].scope).toBe('machine-overridable');
+    expect(pkg.capabilities.untrustedWorkspaces.supported).toBe('limited');
+    expect(pkg.capabilities.untrustedWorkspaces.description).toMatch(/\S/);
+  });
+
+  it('restricts every setting that steers a terminal, an agent or an external URI', () => {
+    expect(pkg.capabilities.untrustedWorkspaces.restrictedConfigurations).toEqual(
+      expect.arrayContaining(['delphiDev.agent', 'delphiDev.opencodePort', 'delphiDev.codexPromptUri']),
+    );
+    for (const key of pkg.capabilities.untrustedWorkspaces.restrictedConfigurations) expect(props[key], key).toBeDefined();
+  });
+
+  it('is not supported in virtual workspaces (needs a real folder and a terminal)', () => {
+    expect(pkg.capabilities.virtualWorkspaces.supported).toBe(false);
+    expect(pkg.capabilities.virtualWorkspaces.description).toMatch(/\S/);
+  });
+});

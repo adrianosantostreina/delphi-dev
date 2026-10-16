@@ -9,6 +9,7 @@ const APPEND_ATTEMPTS = 5;
 // listening), and the server answers /global/health before the TUI has subscribed to events.
 const TUI_SETTLE_MS = 2000;
 const DEFAULT_PORT = 4096;
+const INSTALL_COMMAND = 'npm i -g opencode-ai';
 
 export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
   // The value ends up typed into a shell, and workspace settings can come from a cloned repo:
@@ -64,13 +65,29 @@ export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
     return 'copied';
   }
 
+  const isInstalled = (): boolean => d.hasExtension('sst-dev.opencode') || d.commandExists('opencode');
+
+  async function offerInstall(): Promise<DeliveryResult> {
+    const copy = say(d, 'Copiar comando de instalação', 'Copy install command');
+    const choice = await d.showError(
+      say(d, `OpenCode não encontrado (nem a extensão nem o comando opencode no PATH). Instale com: ${INSTALL_COMMAND}`,
+        `OpenCode not found (neither the extension nor the opencode command on PATH). Install it with: ${INSTALL_COMMAND}`),
+      copy,
+    );
+    if (choice === copy) await d.writeClipboard(INSTALL_COMMAND);
+    return 'unavailable';
+  }
+
   return {
     id: 'opencode',
     label: 'OpenCode',
-    isInstalled: () => d.hasExtension('sst-dev.opencode') || d.commandExists('opencode'),
+    isInstalled,
     invocation: (command, arg) => `/delphi-${command.id}${arg ? ` ${arg}` : ''}`,
     async send(text): Promise<DeliveryResult> {
-      if (await healthy()) {
+      const up = await healthy();
+      // A server that already answers is reusable even when we cannot see the install (e.g. a binary outside PATH).
+      if (!up && !isInstalled()) return offerInstall();
+      if (up) {
         if (await deliver(text)) return 'sent';
         return copyFallback(text);
       }
