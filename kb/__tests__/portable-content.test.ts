@@ -103,3 +103,18 @@ describe('encoding safety net', () => {
     expect(text).toContain('~/.delphi-dev/plugin');
   });
 });
+
+describe('vscode extension hints', () => {
+  const install = 'code --install-extension adrianosantos.delphi-dev-vscode';
+
+  it('about and update suggest the extension when it is missing', () => {
+    expect(read('commands/about.md')).toContain(install);
+    expect(read('commands/update.md')).toContain(install);
+  });
+
+  it('new-project recommends the extension through .vscode/extensions.json', () => {
+    const text = read('commands/new-project.md');
+    expect(text).toContain('.vscode/extensions.json');
+    expect(text).toContain('"recommendations": ["adrianosantos.delphi-dev-vscode"]');
+  });
+});

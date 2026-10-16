@@ -30,3 +30,15 @@ Detecte o idioma do usuário (pt-BR padrão, en-US) e responda nele.
    - **en-US:** "After updating the plugin, restart the session to load the new skills, commands and hooks."
 
 `<raiz do plugin>` é a pasta que contém `runtime/` e `skills/` deste plugin.
+
+## Dica: extensão Delphi-Dev para o VS Code / Tip: Delphi-Dev VS Code extension
+
+Se o comando `code` existir e `code --list-extensions` **não** listar `adrianosantos.delphi-dev-vscode`,
+termine com **uma** linha, no idioma do usuário:
+
+- **pt-BR:** "Dica: instale a extensão Delphi-Dev do VS Code (controle remoto destes comandos):
+  `code --install-extension adrianosantos.delphi-dev-vscode`."
+- **en-US:** "Tip: install the Delphi-Dev VS Code extension (remote control for these commands):
+  `code --install-extension adrianosantos.delphi-dev-vscode`."
+
+Nunca instale sozinho. Não mostre a dica se a extensão já estiver instalada ou se `code` não existir.

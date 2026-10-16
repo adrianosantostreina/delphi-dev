@@ -224,3 +224,15 @@ Depois do `Build OK`:
 5. **Rodar a skill `delphi-claudeignore`** para criar o `.claudeignore` (somente no Claude Code; nos demais agentes, pule este passo).
 6. Informar ao usuário: caminho do `.exe`, como rodar, e o que ainda precisa ser configurado
    (banco de dados, credenciais).
+
+## Recomendação da extensão no VS Code
+
+No fim do scaffold, se a pasta do projeto ainda não tiver `.vscode/extensions.json`, crie-o com:
+
+```json
+{
+  "recommendations": ["adrianosantos.delphi-dev-vscode"]
+}
+```
+
+Se o arquivo já existir, não o sobrescreva. Com isso o VS Code oferece a extensão ao abrir a pasta.
