@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as vscode from 'vscode';
 import { getActiveFileContext } from '../utils/fileUtils';
 import type { RunServices } from '../commands/runCommand';
+import { chooseAgentFlow } from './choose';
 import { createClaudeAdapter } from './claude';
 import { createCodexAdapter } from './codex';
 import { realDeps } from './deps';
@@ -55,10 +56,28 @@ export function createServices(context: vscode.ExtensionContext): Services {
     return resolveAgent({ setting: chosen, installed: chosen === 'auto' ? installedAgents() : [], last: lastAgent(), pick });
   };
 
-  async function chooseAgent(): Promise<AgentId | undefined> {
-    const choice = await pick(ALL);
-    if (choice) await context.globalState.update(LAST_AGENT_KEY, choice);
-    return choice;
+  const chooseAgent = (): Promise<AgentId | undefined> =>
+    chooseAgentFlow({
+      installed: installedAgents(),
+      setting: setting(),
+      labels: { claude: adapters.claude.label, codex: adapters.codex.label, opencode: adapters.opencode.label },
+      pt,
+      pick,
+      remember: (agent) => {
+        void context.globalState.update(LAST_AGENT_KEY, agent);
+      },
+      info: (message) => {
+        void vscode.window.showInformationMessage(message);
+      },
+      notifyNoAgent,
+    });
+
+  async function notifyNoAgent(): Promise<void> {
+    await vscode.window.showWarningMessage(
+      pt
+        ? 'Nenhum agente encontrado (Claude Code, Codex ou OpenCode). Instale um deles e tente de novo.'
+        : 'No agent found (Claude Code, Codex or OpenCode). Install one and try again.',
+    );
   }
 
   const run: RunServices = {
@@ -85,13 +104,7 @@ export function createServices(context: vscode.ExtensionContext): Services {
       );
       if (choice === copy) await vscode.env.clipboard.writeText(command);
     },
-    notifyNoAgent: async () => {
-      await vscode.window.showWarningMessage(
-        pt
-          ? 'Nenhum agente encontrado (Claude Code, Codex ou OpenCode). Instale um deles e tente de novo.'
-          : 'No agent found (Claude Code, Codex or OpenCode). Install one and try again.',
-      );
-    },
+    notifyNoAgent,
   };
 
   return { run, adapters, installedAgents, agentSetting: setting, current, chooseAgent };
