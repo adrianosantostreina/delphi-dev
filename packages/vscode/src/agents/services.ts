@@ -61,10 +61,10 @@ export function createServices(context: vscode.ExtensionContext): Services {
   const run: RunServices = {
     adapters,
     resolve: current,
-    fileRef: () => {
+    fileRef: (withRange) => {
       const ctx = getActiveFileContext();
       if (!ctx) return undefined;
-      return `@${ctx.filePath}${ctx.lineRange ? `:${ctx.lineRange}` : ''}`;
+      return `@${ctx.filePath}${withRange && ctx.lineRange ? `:${ctx.lineRange}` : ''}`;
     },
     pluginPresent: (agent) =>
       pluginPresent(agent, os.homedir(), process.env, (p) => fs.existsSync(p), vscode.workspace.workspaceFolders?.[0]?.uri.fsPath),

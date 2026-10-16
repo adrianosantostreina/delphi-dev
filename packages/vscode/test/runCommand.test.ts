@@ -19,7 +19,7 @@ function services(over: Partial<RunServices> = {}, log: string[] = []): RunServi
   return {
     adapters: { claude: adapter('claude', log), codex: adapter('codex', log), opencode: adapter('opencode', log) },
     resolve: async () => 'claude',
-    fileRef: () => '@src/U.pas:3-9',
+    fileRef: (withRange) => (withRange ? '@src/U.pas:3-9' : '@src/U.pas'),
     pluginPresent: () => true,
     remember: (a) => log.push(`remember:${a}`),
     notifyMissingPlugin: async (a) => {
@@ -44,6 +44,12 @@ describe('runCommand', () => {
     await runCommand(cmd('review', true), services({}, log));
     await runCommand(cmd('audit', false), services({}, log));
     expect(log.filter((l) => l.startsWith('send:'))).toEqual(['send:claude:/review @src/U.pas:3-9', 'send:claude:/audit']);
+  });
+
+  it('only /review carries the selected line range (parity with the old bridge)', async () => {
+    const log: string[] = [];
+    await runCommand(cmd('tdd', true), services({}, log));
+    expect(log.filter((l) => l.startsWith('send:'))).toEqual(['send:claude:/tdd @src/U.pas']);
   });
 
   it('sends without an argument when the command takes a file but none is open', async () => {
