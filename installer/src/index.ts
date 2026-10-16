@@ -31,11 +31,16 @@ program
     }
     const portable = targets.filter((t) => t !== 'claude');
     let portableFailed = false;
+    let portablePartial = false;
     if (portable.length) {
       header(`Installing delphi-dev for ${portable.join(' + ')}`);
       try {
-        runPortable('install', portable, opts);
-        if (opts.dryRun) success(`Dry run for ${portable.join(' + ')} — nothing was written`);
+        const outcome = runPortable('install', portable, opts);
+        if (outcome === 'partial') {
+          // kb-cli exit 2: it ran, but protected some of the user's files. Not a success, not a crash.
+          portablePartial = true;
+          warn(`delphi-dev PARTIALLY installed for ${portable.join(' + ')}: some items were not applied (see the ! and ? lines above). Restart the agent session; re-run after fixing them, or see the README.`);
+        } else if (opts.dryRun) success(`Dry run for ${portable.join(' + ')} — nothing was written`);
         else success(`delphi-dev installed for ${portable.join(' + ')} — restart the agent session`);
       } catch (err) {
         error(err instanceof Error ? err.message : String(err));
@@ -43,7 +48,10 @@ program
         if (!targets.includes('claude')) process.exit(1);
         portableFailed = true;
       }
-      if (!targets.includes('claude')) return;
+      if (!targets.includes('claude')) {
+        if (portablePartial) process.exit(2);
+        return;
+      }
     }
 
     header('Installing delphi-dev v2.2');
@@ -119,6 +127,7 @@ program
       process.exit(1);
     }
     if (portableFailed) process.exit(1);
+    if (portablePartial) process.exit(2);
   });
 
 program
@@ -135,13 +144,19 @@ program
     }
     if (installed.length) {
       step(`Updating ${installed.join(' + ')}...`);
+      let partial = false;
       try {
-        runPortable('install', installed, {});
-        success(`Updated ${installed.join(' + ')} — restart the agent session`);
+        if (runPortable('install', installed, {}) === 'partial') {
+          partial = true;
+          warn(`Update of ${installed.join(' + ')} was PARTIAL: some items were not applied (see the ! and ? lines above)`);
+        } else {
+          success(`Updated ${installed.join(' + ')} — restart the agent session`);
+        }
       } catch (err) {
         error(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
+      if (partial) process.exit(2);
     }
   });
 

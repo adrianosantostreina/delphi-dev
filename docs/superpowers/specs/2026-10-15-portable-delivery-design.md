@@ -266,6 +266,13 @@ fix-encoding <arquivo…>
 `install --target claude` responde que o alvo Claude usa `/plugin` ou `npx delphi-dev` (não é
 duplicado aqui).
 
+**Códigos de saída de `install`:** `0` tudo aplicado · `1` erro de execução · `2` parcial (rodou, mas
+recusou/ignorou itens por proteção: JSONC, JSON inválido, conflito, bloco TOML corrompido, arquivo
+modificado pelo usuário, erro de E/S num item) e imprime `N item(ns) não aplicado(s)` · `64` uso. O
+segundo pacote (`npx delphi-dev`) repassa o `2` e **não** imprime "installed … restart" nesse caso.
+Backups de **pasta** de skill vão para `~/.delphi-dev/backups/<stamp>/` (fora de `skills/`, onde
+virariam skill duplicada); backups de arquivo de config ficam ao lado (`.delphi-dev.bak`).
+
 ## 11. Installer npm
 
 `npx delphi-dev [--target claude|codex|opencode|all] [--from <checkout>] [--scope …]`

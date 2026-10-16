@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
 import {
-  detectTargets, ensureCheckout, installedPortableTargets, kbCliArgs, manifestFile, portableHints, resolveTargets, REPO_URL, type Probe,
+  detectTargets, ensureCheckout, installedPortableTargets, kbCliArgs, manifestFile, portableHints, portableOutcome, resolveTargets, REPO_URL, type Probe,
 } from '../src/targets';
 
 function probe(over: Partial<Probe> & { commands?: string[]; paths?: string[] } = {}): Probe {
@@ -48,6 +48,19 @@ describe('resolveTargets', () => {
   });
   it('rejects an empty list', () => {
     expect(() => resolveTargets(' , ', detected)).toThrow(/--target/);
+  });
+});
+
+describe('portableOutcome (kb-cli exit codes)', () => {
+  it('0 is ok, 2 is partial, anything else is a failure', () => {
+    expect(portableOutcome('install', 0)).toBe('ok');
+    expect(portableOutcome('install', 2)).toBe('partial');
+    expect(() => portableOutcome('install', 1)).toThrow(/codigo 1/);
+    expect(() => portableOutcome('install', 64)).toThrow(/codigo 64/);
+    expect(() => portableOutcome('install', null)).toThrow(/install/);
+  });
+  it('uninstall never reports partial', () => {
+    expect(() => portableOutcome('uninstall', 2)).toThrow(/uninstall/);
   });
 });
 

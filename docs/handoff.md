@@ -44,6 +44,10 @@ validação com os CLIs reais em `docs/testes-v4.0-codex-opencode.md`.
   (CLI, pasta de config ou extensão do VS Code), apenas imprime a dica com o comando exato; só escreve neles com
   `--target codex|opencode|all` explícito (config do usuário nunca é tocada por detecção).
   Falha em Codex/OpenCode nunca impede a instalação do Claude Code pedida junto.
+- **Códigos de saída** de `kb-cli install` / `npx delphi-dev --target …`: `0` tudo aplicado, `1` erro de execução,
+  `2` parcial (recusou/ignorou itens por proteção; imprime `N item(ns) não aplicado(s)`; o npx repassa o 2 e não
+  diz "installed"), `64` uso. `--dry-run` não executa nada (nem o lado Claude). Backups de **pasta** de skill vão para
+  `~/.delphi-dev/backups/<stamp>/` (fora de `skills/`).
 - **Fonte única:** `skills/`, `commands/`, `agents/` geram os arquivos de Codex/OpenCode. Nunca editar os
   gerados à mão; mudar a fonte e rodar o install de novo.
 - **Política de publicação npm:** publicar o installer só quando a 4.0 inteira estiver pronta (`npm login`

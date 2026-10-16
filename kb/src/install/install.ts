@@ -37,11 +37,24 @@ export type UninstallOptions = Pick<InstallOptions, 'targets' | 'home' | 'dryRun
 /** `Report` plus informational lines that are not problems (e.g. "Claude Code installs via the marketplace"). */
 export interface InstallReport extends Report {
   notes: string[];
+  /** Config the install declined to touch on purpose (JSONC, invalid JSON, a conflicting table...). Warnings carry the text. */
+  refused: { path: string; reason: string }[];
+}
+
+/** How many items the install did not apply: skipped files/folders plus refused config. 0 means everything was applied. */
+export function notApplied(report: InstallReport): number {
+  return report.skipped.length + report.refused.length;
 }
 
 const posix = (p: string): string => p.replace(/\\/g, '/');
 const stampOf = (now: Date): string => now.toISOString().replace(/[:.]/g, '-');
-const newInstallReport = (): InstallReport => ({ ...newReport(), notes: [] });
+const newInstallReport = (): InstallReport => ({ ...newReport(), notes: [], refused: [] });
+
+/** Declines to change a file the user owns: a warning for the human and a count for the exit code. */
+function refuse(report: InstallReport, file: string, message: string): void {
+  report.refused.push({ path: file, reason: 'refused' });
+  report.warnings.push(message);
+}
 const isDiskTarget = (t: AnyTarget): t is InstallTarget => t !== 'claude';
 
 function dataDir(o: { home: string; env: NodeJS.ProcessEnv }): string {
@@ -231,12 +244,12 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
 function codexMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRecord, configToml: string): void {
   const toml = fs.existsSync(configToml) ? fs.readFileSync(configToml, 'utf8') : '';
   if (hasManagedBlockProblem(toml)) {
-    base.report.warnings.push(
+    refuse(base.report, configToml,
       `${configToml}: marcadores do delphi-dev desbalanceados; arquivo nao foi alterado e o MCP nao foi configurado. `
       + `Conserte ou apague o trecho a mao e rode de novo:\n${spot(toml, BLOCK_START)}`,
     );
   } else if (hasTableOutsideBlock(toml, `mcp_servers.${MCP_SERVER}`)) {
-    base.report.warnings.push(
+    refuse(base.report, configToml,
       `${configToml}: ja existe [mcp_servers.${MCP_SERVER}] fora do bloco do delphi-dev; MCP nao configurado`,
     );
   } else {
@@ -249,7 +262,7 @@ function codexMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetReco
 function codexHooksConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRecord, hooksJson: string): void {
   const entries = codexHookEntries(o.checkout);
   if (!entries) {
-    base.report.warnings.push(
+    refuse(base.report, hooksJson,
       `${hooksJson}: nao foi alterado (o caminho do checkout tem aspas, % ou quebra de linha: ${o.checkout}); mova o checkout`,
     );
     return;
@@ -257,7 +270,7 @@ function codexHooksConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRe
   const before = fs.existsSync(hooksJson) ? fs.readFileSync(hooksJson, 'utf8') : null;
   const merged = mergeCodexHooks(before, entries);
   if (!merged.ok) {
-    base.report.warnings.push(`${hooksJson}: nao foi alterado (${merged.reason}); adicione os hooks do delphi-dev a mao`);
+    refuse(base.report, hooksJson, `${hooksJson}: nao foi alterado (${merged.reason}); adicione os hooks do delphi-dev a mao`);
   } else {
     if (merged.changed) writeConfigText(ctx, hooksJson, merged.text);
     else base.report.unchanged++;
@@ -311,7 +324,7 @@ function opencodeMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetR
   const before = fs.existsSync(jsonFile) ? fs.readFileSync(jsonFile, 'utf8') : null;
   const merged = mergeOpencodeMcp(before, MCP_SERVER, entry);
   if (!merged.ok) {
-    base.report.warnings.push(
+    refuse(base.report, jsonFile,
       `${jsonFile}: nao foi alterado (${merged.reason}). Adicione em "mcp": "${MCP_SERVER}": ${JSON.stringify(entry)}`,
     );
   } else {

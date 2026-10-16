@@ -138,6 +138,12 @@ and `npx delphi-dev uninstall` removes only what it installed. Use `--dry-run` t
 If your agent has no hook support for a file edit, the `delphi-encoding` skill runs
 `kb-cli fix-encoding` as a safety net.
 
+Exit codes of `npx delphi-dev --target …` and `kb-cli install`: **0** everything applied; **1** an
+execution error; **2** it ran but some items were refused or skipped to protect your files (a
+JSONC/invalid config, a conflicting entry, a file you edited) — it prints `N item(ns) não aplicado(s)`
+and never reports that as a clean install; **64** wrong usage. Replaced skill folders are backed up
+under `~/.delphi-dev/backups/<timestamp>/`, never next to the skills.
+
 Known limitations:
 
 - **Codex hooks need your approval once.** Run `/hooks` in Codex and trust the delphi-dev hooks;

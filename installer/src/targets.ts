@@ -120,13 +120,24 @@ export function realProbe(): Probe {
   };
 }
 
+/**
+ * kb-cli install exits 0 (everything applied), 2 (ran, but some items were refused or skipped on
+ * purpose to protect the user's files) or anything else (an error). 'partial' is NOT a failure and
+ * NOT a clean success: the caller must say so.
+ */
+export function portableOutcome(cmd: 'install' | 'uninstall', status: number | null): 'ok' | 'partial' {
+  if (status === 0) return 'ok';
+  if (status === 2 && cmd === 'install') return 'partial';
+  throw new Error(`kb-cli ${cmd} falhou (codigo ${status})`);
+}
+
 export function runPortable(
   cmd: 'install' | 'uninstall',
   targets: Target[],
   o: { from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean },
-): void {
+): 'ok' | 'partial' {
   const portable = targets.filter((t) => t !== 'claude');
-  if (!portable.length) return;
+  if (!portable.length) return 'ok';
   // git is a real executable on every platform: no shell, so a home path with spaces stays one argument.
   const deps: CheckoutDeps = {
     run: (c, a) => spawnSync(c, a, { stdio: 'inherit' }),
@@ -135,14 +146,14 @@ export function runPortable(
   const checkout = ensureCheckout(checkoutDir(), o.from ? path.resolve(o.from) : undefined, deps, !!o.dryRun);
   if (checkout === null) {
     console.log(`[dry-run] would clone ${REPO_URL} to ${checkoutDir()} and then run kb-cli ${cmd} --dry-run`);
-    return;
+    return 'ok';
   }
   const args = kbCliArgs(cmd, checkout, portable, o);
   if (!fs.existsSync(args[0])) {
     throw new Error(`${args[0]} nao encontrado: o checkout nao tem o suporte a Codex/OpenCode (use --from <checkout v4>)`);
   }
   const result = spawnSync(process.execPath, args, { stdio: 'inherit' });
-  if (result.status !== 0) throw new Error(`kb-cli ${cmd} falhou (codigo ${result.status})`);
+  return portableOutcome(cmd, result.status);
 }
 
 /** Same location rule as kb-cli (`manifestPath`): $DELPHI_DEV_DATA or ~/.delphi-dev. */

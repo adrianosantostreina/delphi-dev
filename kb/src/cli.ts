@@ -45,6 +45,7 @@ const USAGE = [
   '  fix-encoding <arquivo...>',
   '  install --target codex|opencode|all [--scope user|project] [--project <dir>] [--home <dir>] [--checkout <dir> | --from <dir>] [--dry-run] [--force]',
   '  uninstall --target codex|opencode|all [--home <dir>] [--dry-run] [--force]',
+  '  exit codes of install: 0 all applied, 1 execution error, 2 partial (items refused/skipped on purpose), 64 usage',
   '  doctor [--target codex|opencode|all] [--scope user|project] [--home <dir>]',
 ].join('\n');
 

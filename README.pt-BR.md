@@ -138,6 +138,12 @@ pré-visualizar e `--scope project --project <pasta>` para instalar skills, coma
 dentro de um repositório. Se o seu agente não tiver hook para edição de arquivo, a skill
 `delphi-encoding` roda `kb-cli fix-encoding` como rede de proteção.
 
+Códigos de saída de `npx delphi-dev --target …` e `kb-cli install`: **0** tudo aplicado; **1** erro de
+execução; **2** rodou, mas alguns itens foram recusados ou ignorados para proteger seus arquivos
+(config JSONC/inválida, entrada em conflito, arquivo que você editou) — imprime
+`N item(ns) não aplicado(s)` e nunca trata isso como instalação limpa; **64** uso incorreto. Pastas de
+skill substituídas ganham backup em `~/.delphi-dev/backups/<data-hora>/`, nunca ao lado das skills.
+
 Limitações conhecidas:
 
 - **Os hooks do Codex precisam da sua aprovação uma vez.** Rode `/hooks` no Codex e confie nos hooks

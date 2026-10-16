@@ -197,6 +197,51 @@ describe('kb-cli', () => {
       expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(false);
     });
 
+    describe('exit code 2 = partial: something was refused or skipped on purpose', () => {
+      const cases: [string, Record<string, string>][] = [
+        ['opencode.jsonc (comments are not rewritten)', { '.config/opencode/opencode.jsonc': '{\n  // meu\n  "theme": "x"\n}\n' }],
+        ['invalid opencode.json', { '.config/opencode/opencode.json': '{ nao e json' }],
+        ['config.toml already owns [mcp_servers.delphi-dev-kb]', { '.codex/config.toml': '[mcp_servers.delphi-dev-kb]\ncommand = "x"\n' }],
+        ['config.toml with an unterminated delphi-dev block', { '.codex/config.toml': '# >>> delphi-dev (gerenciado; nao edite entre os marcadores) >>>\nx = 1\n' }],
+        ['a foreign file where one of ours goes', { '.config/opencode/agents/delphi-writer.md': 'do usuario\n' }],
+        ['an invalid hooks.json', { '.codex/hooks.json': '{ quebrado' }],
+      ];
+
+      it.each(cases)('%s', async (_name, files) => {
+        const home = tmpDir();
+        writeTree(home, files);
+        const run = io();
+        const code = await runCli(['install', '--target', 'all', '--home', home, '--checkout', await checkoutRoot()], run.value);
+        expect(code).toBe(2);
+        expect(run.out.at(-1)).toMatch(/^\d+ item\(ns\) n\xe3o aplicado\(s\)/);
+        // the rest of the install still happened
+        expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+        expect(fs.existsSync(path.join(home, '.delphi-dev', 'install-manifest.json'))).toBe(true);
+      });
+
+      it('a skip because the user edited our file is partial too; a clean run is 0 with no such line', async () => {
+        const root = await checkoutRoot();
+        const home = tmpDir();
+        const clean = io();
+        expect(await runCli(['install', '--target', 'all', '--home', home, '--checkout', root], clean.value)).toBe(0);
+        expect(clean.out.join('\n')).not.toMatch(/n\xe3o aplicado/);
+        fs.appendFileSync(path.join(home, '.config', 'opencode', 'agents', 'delphi-writer.md'), '\nminha nota\n');
+        const again = io();
+        expect(await runCli(['install', '--target', 'all', '--home', home, '--checkout', root], again.value)).toBe(2);
+        expect(again.out.join('\n')).toContain('1 item(ns) n\xe3o aplicado(s)');
+      });
+
+      it('dry-run reports the same code, so CI can preview', async () => {
+        const home = tmpDir();
+        writeTree(home, { '.config/opencode/opencode.json': '{ nao e json' });
+        expect(await runCli(['install', '--target', 'opencode', '--home', home, '--checkout', await checkoutRoot(), '--dry-run'], io().value)).toBe(2);
+      });
+
+      it('an execution error stays exit 1 (not 2)', async () => {
+        expect(await runCli(['install', '--target', 'opencode', '--home', tmpDir(), '--checkout', tmpDir()], io().value)).toBe(1);
+      });
+    });
+
     it('accepts --from as an alias of --checkout', async () => {
       const home = tmpDir();
       const run = io();

@@ -10,6 +10,7 @@ const state = {
   detected: { codex: false, opencode: false },
   installed: [] as string[],
   portableThrows: '',
+  portableResult: 'ok' as 'ok' | 'partial',
 };
 
 vi.mock('../src/detect', () => ({
@@ -37,6 +38,7 @@ vi.mock('../src/targets', async (importOriginal) => ({
   runPortable: (cmd: string, targets: string[], o: unknown) => {
     calls.push(`runPortable|${cmd}|${targets.join('+')}|${JSON.stringify(o)}`);
     if (state.portableThrows) throw new Error(state.portableThrows);
+    return state.portableResult;
   },
 }));
 vi.mock('../src/plugin', () => ({
@@ -88,7 +90,7 @@ async function runCli(...args: string[]): Promise<number | undefined> {
 beforeEach(() => {
   calls.length = 0;
   Object.assign(sys, { hasClaudeCLI: true, hasGit: true });
-  Object.assign(state, { detected: { codex: false, opencode: false }, installed: [], portableThrows: '' });
+  Object.assign(state, { detected: { codex: false, opencode: false }, installed: [], portableThrows: '', portableResult: 'ok' });
   logged = [];
   process.exitCode = undefined;
   vi.spyOn(process, 'exit').mockImplementation(((code?: number) => { throw new ExitSignal(code ?? 0); }) as never);
@@ -131,6 +133,33 @@ describe('install --target', () => {
       'installPlugin',
       'success|Plugin installed',
     ]);
+  });
+
+  it('partial result (kb-cli exit 2): no "installed" success line, a clear partial message, exit 2', async () => {
+    state.portableResult = 'partial';
+    expect(await runCli('install', '--target', 'codex')).toBe(2);
+    expect(calls.some((c) => c.startsWith('success|') && /installed/.test(c))).toBe(false);
+    expect(calls.find((c) => c.startsWith('warn|'))).toMatch(/partial.*codex.*not applied/i);
+  });
+
+  it('partial portable + Claude: the Claude install still completes, the exit code is 2', async () => {
+    state.portableResult = 'partial';
+    expect(await runCli('install', '--target', 'all')).toBe(2);
+    expect(calls).toContain('installPlugin');
+    expect(calls.some((c) => c.startsWith('success|delphi-dev installed for'))).toBe(false);
+  });
+
+  it('a hard failure (1) wins over a partial one', async () => {
+    state.portableThrows = 'boom';
+    state.portableResult = 'partial';
+    expect(await runCli('install', '--target', 'all')).toBe(1);
+  });
+
+  it('update: a partial result is reported as partial, not as updated', async () => {
+    state.installed = ['codex'];
+    state.portableResult = 'partial';
+    expect(await runCli('update')).toBe(2);
+    expect(calls.some((c) => c.startsWith('success|Updated'))).toBe(false);
   });
 
   it('a Codex/OpenCode failure does not stop the Claude Code install; the exit code is still 1', async () => {

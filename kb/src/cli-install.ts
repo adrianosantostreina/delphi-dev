@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { parseArgs } from 'node:util';
 import type { CliIO } from './cli';
 import { fixEncoding } from './hook-fix-encoding';
-import { doctor, installTargets, uninstallTargets, type InstallReport, type InstallTarget } from './install/install';
+import { doctor, installTargets, notApplied, uninstallTargets, type InstallReport, type InstallTarget } from './install/install';
 import { lintRepo } from './lint';
 import { pluginRootFromModule } from './paths';
 
@@ -135,6 +135,13 @@ export function installCommand(args: string[], io: CliIO): number {
       dryRun, force: !!values.force, env: io.env,
     });
     printReport(io, report, dryRun);
+    // 0 = everything applied, 1 = execution error (above), 2 = ran, but some items were refused/skipped on purpose, 64 = usage.
+    const pending = notApplied(report);
+    if (pending > 0) {
+      // accents as escapes: kb/src stays ASCII ("nao aplicado(s)" with tildes)
+      io.out(`${dryRun ? '[dry-run] ' : ''}${pending} item(ns) n\xe3o aplicado(s): veja as linhas com ! e ? acima`);
+      return 2;
+    }
     return 0;
   });
 }
