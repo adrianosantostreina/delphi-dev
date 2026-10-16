@@ -12,7 +12,7 @@ description: >
 > **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
 > (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em
 > `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin
-> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).
+> (a pasta ao lado de `skills/`; `~/.delphi-dev/plugin/knowledge/` so existe se o plugin foi instalado com `npx delphi-dev --target codex|opencode`).
 
 ## Idioma de saída
 Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explícitos.

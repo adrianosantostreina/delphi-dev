@@ -143,7 +143,8 @@ anterior. Usada só onde o texto enumera ferramentas de propósito (`delphi-cont
 
   > **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
   > (MCP `delphi-dev-kb`); sem ele, procure em `~/.delphi-dev/kb-cache/current/` ou em
-  > `~/.delphi-dev/plugin/knowledge/`.
+  > `knowledge/` na raiz do plugin (`~/.delphi-dev/plugin/knowledge/` só existe se o plugin foi instalado
+  > com `npx delphi-dev --target codex|opencode`).
 
 - `kb_get` passa a **cair no snapshot embutido** quando o arquivo não existe no snapshot atualizado
   (resolve o `INDEX.md` ausente do cache baixado — minor 14 do review final).

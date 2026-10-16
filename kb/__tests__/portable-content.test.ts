@@ -39,7 +39,7 @@ const KB_NOTATION =
   '> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`\n' +
   '> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em\n' +
   '> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin\n' +
-  '> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).';
+  '> (a pasta ao lado de `skills/`; `~/.delphi-dev/plugin/knowledge/` so existe se o plugin foi instalado com `npx delphi-dev --target codex|opencode`).';
 
 const contentFiles = (): string[] => [
   ...skillFiles(),
