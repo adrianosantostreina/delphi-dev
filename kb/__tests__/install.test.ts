@@ -132,6 +132,37 @@ describe('installTargets (user scope)', () => {
   });
 });
 
+describe('one failing item never aborts the install', () => {
+  it('an I/O error on one item becomes a warning + skipped item, and the manifest still records the rest', () => {
+    const home = tmpDir('kb-home-');
+    // ~/.codex is a FILE: everything under it (agents, config.toml, hooks.json) cannot be written.
+    writeTree(home, { '.codex': 'eu sou um arquivo' });
+    const o = opts({ home, targets: ['codex'] });
+    const report = installTargets(o);
+    expect(report.warnings.join('\n')).toMatch(/delphi-writer\.toml.*erro/);
+    expect(report.skipped.some((s) => s.path.endsWith('delphi-writer.toml') && s.reason === 'error')).toBe(true);
+    // what could be written was, and it is in the manifest
+    expect(fs.existsSync(path.join(home, '.agents', 'skills', 'delphi-demo', 'SKILL.md'))).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath(o), 'utf8'));
+    expect(manifest.codex.dirs.map((d: { path: string }) => path.basename(d.path))).toContain('delphi-demo');
+    // and uninstall finds and removes exactly that
+    un(o);
+    expect(fs.existsSync(path.join(home, '.agents', 'skills', 'delphi-demo'))).toBe(false);
+  });
+
+  it('an error in one skill folder does not stop the next ones', () => {
+    const home = tmpDir('kb-home-');
+    // a FILE where the skills dir should be: every skill write fails, the agents/config still go through
+    writeTree(home, { '.agents': 'arquivo' });
+    const o = opts({ home, targets: ['codex'] });
+    const report = installTargets(o);
+    expect(report.skipped.filter((s) => s.reason === 'error').length).toBeGreaterThan(1);
+    expect(fs.existsSync(path.join(home, '.codex', 'agents', 'delphi-writer.toml'))).toBe(true);
+    expect(fs.existsSync(path.join(home, '.codex', 'config.toml'))).toBe(true);
+    expect(fs.existsSync(manifestPath(o))).toBe(true);
+  });
+});
+
 describe('agent names are never trusted as paths', () => {
   it('skips an agent named ../../../pwned with a warning and still installs the others', () => {
     const outer = tmpDir('kb-outer-');

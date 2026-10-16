@@ -175,6 +175,20 @@ function codexHookEntries(checkout: string): HookEntry[] | null {
 
 type Base = Omit<Ctx, 'prev' | 'report'> & { report: InstallReport };
 
+/**
+ * Runs one install item. An exception (permissions, a file where a folder should be, a full disk...)
+ * becomes a warning plus a skipped item instead of aborting the run: whatever was written before is
+ * still recorded in the manifest, so `uninstall` can always find it.
+ */
+function guard(report: InstallReport, label: string, fn: () => void): void {
+  try {
+    fn();
+  } catch (err) {
+    report.skipped.push({ path: label, reason: 'error' });
+    report.warnings.push(`${label}: erro ao gravar (${err instanceof Error ? err.message : String(err)}); item ignorado`);
+  }
+}
+
 function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: TargetRecord): TargetRecord {
   const rec = emptyRecord();
   const ctx: Ctx = { ...base, prev };
@@ -185,7 +199,8 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
 
   for (const skill of inputs.skills) {
     if (!skillTargets(inputs.registry, skill.name).includes('codex')) continue;
-    writeOwnedDir(ctx, path.join(skillsDir, skill.name), skill.files, rec);
+    const dest = path.join(skillsDir, skill.name);
+    guard(base.report, dest, () => writeOwnedDir(ctx, dest, skill.files, rec));
   }
   for (const command of inputs.commands) {
     const generated = toCodexCommandSkill(command);
@@ -193,10 +208,12 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
       ['SKILL.md', Buffer.from(generated.skillMd, 'utf8')],
       ['agents/openai.yaml', Buffer.from(generated.openaiYaml, 'utf8')],
     ]);
-    writeOwnedDir(ctx, path.join(skillsDir, generated.name), files, rec);
+    const dest = path.join(skillsDir, generated.name);
+    guard(base.report, dest, () => writeOwnedDir(ctx, dest, files, rec));
   }
   for (const agent of inputs.agents) {
-    writeOwnedFile(ctx, path.join(agentsDir, `${agent.name}.toml`), toCodexToml(agent), rec);
+    const file = path.join(agentsDir, `${agent.name}.toml`);
+    guard(base.report, file, () => writeOwnedFile(ctx, file, toCodexToml(agent), rec));
   }
   if (!user) {
     base.report.notes.push('codex: escopo de projeto grava skills e agentes; o MCP e os hooks sao do usuario (rode sem --scope project)');
@@ -204,6 +221,14 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
   }
 
   const configToml = path.join(codexHome, 'config.toml');
+  guard(base.report, configToml, () => codexMcpConfig(o, base, ctx, rec, configToml));
+
+  const hooksJson = path.join(codexHome, 'hooks.json');
+  guard(base.report, hooksJson, () => codexHooksConfig(o, base, ctx, rec, hooksJson));
+  return rec;
+}
+
+function codexMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRecord, configToml: string): void {
   const toml = fs.existsSync(configToml) ? fs.readFileSync(configToml, 'utf8') : '';
   if (hasManagedBlockProblem(toml)) {
     base.report.warnings.push(
@@ -219,14 +244,15 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
     writeConfigText(ctx, configToml, next);
     rec.blocks.push(configToml);
   }
+}
 
-  const hooksJson = path.join(codexHome, 'hooks.json');
+function codexHooksConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRecord, hooksJson: string): void {
   const entries = codexHookEntries(o.checkout);
   if (!entries) {
     base.report.warnings.push(
       `${hooksJson}: nao foi alterado (o caminho do checkout tem aspas, % ou quebra de linha: ${o.checkout}); mova o checkout`,
     );
-    return rec;
+    return;
   }
   const before = fs.existsSync(hooksJson) ? fs.readFileSync(hooksJson, 'utf8') : null;
   const merged = mergeCodexHooks(before, entries);
@@ -237,7 +263,6 @@ function installCodex(o: InstallOptions, inputs: Inputs, base: Base, prev: Targe
     else base.report.unchanged++;
     rec.keys.push({ file: hooksJson, key: 'hooks' });
   }
-  return rec;
 }
 
 function opencodeConfigDir(o: { home: string; env: NodeJS.ProcessEnv }): string {
@@ -255,14 +280,17 @@ function installOpencode(o: InstallOptions, inputs: Inputs, base: Base, prev: Ta
 
   for (const skill of inputs.skills) {
     if (!skillTargets(inputs.registry, skill.name).includes('opencode')) continue;
-    writeOwnedDir(ctx, path.join(skillsDir, skill.name), skill.files, rec);
+    const dest = path.join(skillsDir, skill.name);
+    guard(base.report, dest, () => writeOwnedDir(ctx, dest, skill.files, rec));
   }
   for (const command of inputs.commands) {
     const generated = toOpencodeCommand(command);
-    writeOwnedFile(ctx, path.join(commandsDir, generated.fileName), generated.text, rec);
+    const file = path.join(commandsDir, generated.fileName);
+    guard(base.report, file, () => writeOwnedFile(ctx, file, generated.text, rec));
   }
   for (const agent of inputs.agents) {
-    writeOwnedFile(ctx, path.join(agentsDir, `${agent.name}.md`), toOpencodeAgent(agent), rec);
+    const file = path.join(agentsDir, `${agent.name}.md`);
+    guard(base.report, file, () => writeOwnedFile(ctx, file, toOpencodeAgent(agent), rec));
   }
   if (!user) {
     base.report.notes.push('opencode: escopo de projeto grava skills, comandos e agentes; o MCP e o plugin de hooks sao do usuario (rode sem --scope project)');
@@ -271,6 +299,14 @@ function installOpencode(o: InstallOptions, inputs: Inputs, base: Base, prev: Ta
 
   const jsonFile = [path.join(cfg, 'opencode.json'), path.join(cfg, 'opencode.jsonc')].find((f) => fs.existsSync(f))
     ?? path.join(cfg, 'opencode.json');
+  guard(base.report, jsonFile, () => opencodeMcpConfig(o, base, ctx, rec, jsonFile));
+
+  const plugin = path.join(cfg, 'plugins', 'delphi-dev.js');
+  guard(base.report, plugin, () => writeOwnedFile(ctx, plugin, renderOpencodePlugin(o.checkout), rec));
+  return rec;
+}
+
+function opencodeMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetRecord, jsonFile: string): void {
   const entry = { type: 'local', command: ['node', `${posix(o.checkout)}/runtime/kb-mcp.mjs`], enabled: true };
   const before = fs.existsSync(jsonFile) ? fs.readFileSync(jsonFile, 'utf8') : null;
   const merged = mergeOpencodeMcp(before, MCP_SERVER, entry);
@@ -283,9 +319,6 @@ function installOpencode(o: InstallOptions, inputs: Inputs, base: Base, prev: Ta
     else base.report.unchanged++;
     rec.keys.push({ file: jsonFile, key: 'mcp' });
   }
-
-  writeOwnedFile(ctx, path.join(cfg, 'plugins', 'delphi-dev.js'), renderOpencodePlugin(o.checkout), rec);
-  return rec;
 }
 
 /**
@@ -338,9 +371,13 @@ export function installTargets(o: InstallOptions): InstallReport {
 
   for (const target of diskTargets) {
     const previous = manifest[target];
-    const next = target === 'codex'
-      ? installCodex(o, inputs, base, previous)
-      : installOpencode(o, inputs, base, previous);
+    let next = emptyRecord();
+    // Every item is already guarded; this is the last line of defence so the manifest is ALWAYS written.
+    guard(report, target, () => {
+      next = target === 'codex'
+        ? installCodex(o, inputs, base, previous)
+        : installOpencode(o, inputs, base, previous);
+    });
     manifest[target] = union(previous, next);
   }
   manifest.version = readPluginVersion(o.checkout);
