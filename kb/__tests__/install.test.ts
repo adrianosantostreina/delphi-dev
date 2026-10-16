@@ -132,6 +132,29 @@ describe('installTargets (user scope)', () => {
   });
 });
 
+describe('agent names are never trusted as paths', () => {
+  it('skips an agent named ../../../pwned with a warning and still installs the others', () => {
+    const outer = tmpDir('kb-outer-');
+    const home = path.join(outer, 'h', 'deep', 'home');
+    const repo = checkout(undefined, {
+      'agents/evil.md': '---\nname: ../../../../../pwned\ndescription: x\n---\nmal\n',
+    });
+    const report = installTargets(opts({ home, checkout: repo }));
+    expect(report.warnings.join('\n')).toMatch(/agente evil\.md ignorado/);
+    const everything: string[] = [];
+    const walk = (d: string): void => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        everything.push(path.join(d, e.name));
+        if (e.isDirectory()) walk(path.join(d, e.name));
+      }
+    };
+    walk(outer);
+    expect(everything.filter((p) => /pwned/.test(p))).toEqual([]);
+    expect(fs.existsSync(path.join(home, '.codex', 'agents', 'delphi-writer.toml'))).toBe(true);
+    expect(fs.existsSync(path.join(home, '.config', 'opencode', 'agents', 'delphi-writer.md'))).toBe(true);
+  });
+});
+
 describe('claude target', () => {
   it('only informs: nothing is written under the home', () => {
     const o = opts({ targets: ['claude'] });

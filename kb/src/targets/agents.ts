@@ -7,10 +7,14 @@ export interface AgentDef {
   body: string;
 }
 
+export const AGENT_NAME = /^[a-z0-9][a-z0-9-]*$/;
+
 export function parseAgent(raw: string): AgentDef {
   const fm = readFrontmatter(raw);
   const name = fm.data.name;
   if (!name) throw new Error('agent without a name in the frontmatter');
+  // The name becomes a file name under the user's config dirs: no separators, no "..", no drive letters.
+  if (!AGENT_NAME.test(name)) throw new Error(`invalid agent name "${name}" (use lowercase letters, digits and hyphens)`);
   return {
     name,
     description: fm.data.description ?? '',

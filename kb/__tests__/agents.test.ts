@@ -31,6 +31,19 @@ describe('cleanDescription', () => {
   });
 });
 
+describe('parseAgent name safety (the name becomes a file name in the user config)', () => {
+  const agent = (name: string) => `---\nname: ${name}\ndescription: x\n---\ncorpo\n`;
+
+  it.each(['../../../pwned', '..', 'a/b', 'a\\b', '/abs', 'C:evil', 'Upper', '-lead', 'sp ace'])('rejects %j', (name) => {
+    expect(() => parseAgent(agent(name))).toThrow(/name/);
+  });
+
+  it('accepts lowercase kebab-case names', () => {
+    expect(parseAgent(agent('delphi-writer')).name).toBe('delphi-writer');
+    expect(parseAgent(agent('a1-b2')).name).toBe('a1-b2');
+  });
+});
+
 describe('tomlString', () => {
   it('uses a literal multiline string when it is safe', () => {
     expect(tomlString('a\\b "c"')).toBe("'''\na\\b \"c\"\n'''");
