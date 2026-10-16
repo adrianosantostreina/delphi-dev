@@ -64,6 +64,26 @@ describe('runCommand', () => {
     expect(log).toEqual(['remember:opencode', 'missing:opencode', 'send:opencode:/delphi-audit']);
   });
 
+  it('sends even when the missing-plugin notification never resolves (nobody clicks it)', async () => {
+    const log: string[] = [];
+    const never = new Promise<void>(() => undefined);
+    const result = await Promise.race([
+      runCommand(cmd('audit'), services({ resolve: async () => 'opencode', pluginPresent: () => false, notifyMissingPlugin: () => never }, log)),
+      new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 200)),
+    ]);
+    expect(result).toBe('sent');
+    expect(log).toContain('send:opencode:/delphi-audit');
+  });
+
+  it('survives a missing-plugin notification that rejects', async () => {
+    const log: string[] = [];
+    const result = await runCommand(
+      cmd('audit'),
+      services({ pluginPresent: () => false, notifyMissingPlugin: async () => { throw new Error('ui gone'); } }, log),
+    );
+    expect(result).toBe('sent');
+  });
+
   it('does not warn when presence is unknown', async () => {
     const log: string[] = [];
     await runCommand(cmd('audit'), services({ pluginPresent: () => undefined }, log));

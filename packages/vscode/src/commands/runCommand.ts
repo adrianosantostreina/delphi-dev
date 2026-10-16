@@ -20,7 +20,14 @@ export async function runCommand(command: RegistryCommand, s: RunServices): Prom
   }
   const adapter = s.adapters[id];
   s.remember(id);
-  if (s.pluginPresent(id) === false) await s.notifyMissingPlugin(id);
+  // A notification only resolves when the user reacts to it: it must never hold the command back.
+  if (s.pluginPresent(id) === false) {
+    try {
+      void Promise.resolve(s.notifyMissingPlugin(id)).catch(() => undefined);
+    } catch {
+      // a notification that throws is not worth losing the command
+    }
+  }
   const arg = command.takesFile ? s.fileRef(command.id === 'review') : undefined;
   return adapter.send(adapter.invocation(command, arg));
 }
