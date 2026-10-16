@@ -4,6 +4,11 @@ description: Scaffold de novo projeto Delphi com estrutura de pastas e arquivos 
 
 Crie a estrutura inicial de um novo projeto Delphi seguindo boas práticas de arquitetura.
 
+> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
+> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em
+> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin
+> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).
+
 **Idioma de saída:** Detecte o idioma da primeira mensagem do usuário e conduza
 o levantamento e as explicações nesse idioma. Padrão: pt-BR. Suportados: pt-BR, en-US.
 Honre overrides: "respond in English" / "responda em português".
@@ -88,13 +93,13 @@ NomeApp/
 
 ### Regras aplicadas (consultar a KB FMX antes de gerar)
 
-Antes de gerar qualquer form/unit mobile, consultar `knowledge/fmx/INDEX.md`:
+Antes de gerar qualquer form/unit mobile, consultar `kb:fmx/INDEX.md`:
 
-- `knowledge/fmx/dimensoes-form-mobile.md` → ClientWidth=400, ClientHeight=750
-- `knowledge/fmx/unit-naming-android.md` → sem pontos no nome da unit
-- `knowledge/fmx/uses-fmx-components.md` → uses corretos FMX/FireDAC
-- `knowledge/core/firedac-registro-drivers.md` → DataModule com registro explícito de drivers
-- `knowledge/fmx/deployment-arquivos-extras.md` → Deployment pré-configurado de assets
+- `kb:fmx/dimensoes-form-mobile.md` → ClientWidth=400, ClientHeight=750
+- `kb:fmx/unit-naming-android.md` → sem pontos no nome da unit
+- `kb:fmx/uses-fmx-components.md` → uses corretos FMX/FireDAC
+- `kb:core/firedac-registro-drivers.md` → DataModule com registro explícito de drivers
+- `kb:fmx/deployment-arquivos-extras.md` → Deployment pré-configurado de assets
 
 ---
 
@@ -102,13 +107,13 @@ Antes de gerar qualquer form/unit mobile, consultar `knowledge/fmx/INDEX.md`:
 
 Gerar arquivos não é entregar um projeto. **Todo scaffold termina em build verde**, sem exceção.
 Falhas de geração que não são óbvias na leitura aparecem no compilador — e três delas foram
-observadas em projeto real (ver `knowledge/core/`).
+observadas em projeto real (ver `kb:core/INDEX.md`).
 
 ### Passo 4 — Build obrigatório (não pular)
 
 Após gerar todos os arquivos:
 
-1. Gerar o `build.bat` conforme `knowledge/core/build-via-bat-com-log.md` (redireciona a saída
+1. Gerar o `build.bat` conforme `kb:core/build-via-bat-com-log.md` (redireciona a saída
    para `build_log.txt`).
 2. Se o projeto usa Boss, rodar `boss install` **antes** do build.
 3. Carregar a skill `delphi-build` e compilar.
@@ -133,8 +138,8 @@ Estas três já quebraram um projeto gerado por este comando. Consultar a KB e a
 
 ### 1. Tipos das propriedades do `.dproj`
 
-`knowledge/core/dproj-dcc-debuginformation-nao-booleano.md` e
-`knowledge/core/dproj-projectguid-valido.md`.
+`kb:core/dproj-dcc-debuginformation-nao-booleano.md` e
+`kb:core/dproj-projectguid-valido.md`.
 
 - **`DCC_DebugInformation` NÃO é booleana** — é enum numérico (`0` em Debug, `2` em Release).
   O booleano correspondente é `DCC_DebugInfoInExe`. Escrever `true` produz
@@ -151,7 +156,7 @@ vai chamar; gerar um apontando para 12 e outro para 13 é incoerência do gerado
 
 ### 2. `class var` misturado com campos de instância
 
-`knowledge/core/class-var-vaza-para-campos-de-instancia.md`.
+`kb:core/class-var-vaza-para-campos-de-instancia.md`.
 
 `class var` abre uma seção que **linha em branco não fecha**. Num singleton (padrão comum em
 config/factory), declarar `class var FInstancia` e logo abaixo os campos de estado transforma
@@ -168,7 +173,7 @@ ali antes de escrever qualquer linha contra Horse, gbswagger, horse-jwt, ACBr ou
 vendorizada.** A superfície muda entre versões, e escrever de memória produz cascata de
 `E2003`/`E2066`/`E2250` no `.dpr`.
 
-Erros reais já cometidos (ver `knowledge/core/horse-gbswagger-rotas-jwt.md`):
+Erros reais já cometidos (ver `kb:core/horse-gbswagger-rotas-jwt.md`):
 
 | De memória (errado) | Real |
 |---|---|
@@ -185,7 +190,7 @@ runtime**. Tratar `W1074` como erro em controller gbswagger.
 ## Consulta à KB vale para TODOS os tipos de projeto
 
 O bloco "Regras aplicadas" do fluxo FMX não é exclusivo de mobile. Antes de gerar, consultar
-`knowledge/core/INDEX.md` **sempre**, e adicionalmente `knowledge/fmx/INDEX.md` quando FMX.
+`kb:core/INDEX.md` **sempre**, e adicionalmente `kb:fmx/INDEX.md` quando FMX.
 
 | Tipo | Consultar também |
 |---|---|
@@ -211,7 +216,7 @@ Depois do `Build OK`:
 2. **Nunca anunciar URL que não é rota.** Banner de startup deve imprimir o caminho real
    (ex.: `/swagger/doc/html`, não `/swagger`) e esse caminho tem que estar no `SkipRoutes` do
    middleware de autenticação. Fechar com `Flush(Output)` — sem ele nada aparece em saída
-   redirecionada (`knowledge/core/console-writeln-sem-flush-nao-loga.md`).
+   redirecionada (`kb:core/console-writeln-sem-flush-nao-loga.md`).
 3. **Não vazar detalhe de erro interno no corpo HTTP.** Um 500 default do Horse devolve
    fornecedor, versão e caminhos de DLL — reconhecimento gratuito. Gerar middleware de erro que
    loga o detalhe e devolve mensagem genérica.

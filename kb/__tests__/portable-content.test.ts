@@ -33,3 +33,40 @@ describe('rules live inside delphi-standards', () => {
     expect(read('skills/delphi-spring4d/SKILL.md')).toContain('`references/rules/architecture.md`');
   });
 });
+
+const KB_NOTATION =
+  '> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`\n' +
+  '> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em\n' +
+  '> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin\n' +
+  '> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).';
+
+const contentFiles = (): string[] => [
+  ...skillFiles(),
+  ...walkMd(path.join(REAL_ROOT, 'commands')),
+  ...walkMd(path.join(REAL_ROOT, 'agents')),
+];
+
+describe('kb: notation', () => {
+  it('no skill, command or agent uses a raw knowledge/<tier>/ path', () => {
+    for (const file of contentFiles()) {
+      expect(fs.readFileSync(file, 'utf8'), file).not.toMatch(/knowledge\/(?:core|fmx|community)\//);
+    }
+  });
+
+  it('no skill, command or agent builds a broken ../kb: link', () => {
+    for (const file of contentFiles()) {
+      expect(fs.readFileSync(file, 'utf8'), file).not.toMatch(/\]\([^)]*kb:/);
+    }
+  });
+
+  it('every file that uses kb: carries the notation line exactly once', () => {
+    let using = 0;
+    for (const file of contentFiles()) {
+      const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+      if (!/`kb:(?:core|fmx|community)\//.test(text)) continue;
+      using++;
+      expect(text.split(KB_NOTATION).length - 1, file).toBe(1);
+    }
+    expect(using).toBeGreaterThanOrEqual(6);
+  });
+});

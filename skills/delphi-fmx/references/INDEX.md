@@ -1,32 +1,37 @@
 # delphi-fmx References
 
+> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
+> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em
+> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin
+> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).
+
 Arquivos da base de conhecimento referenciados por esta skill. O índice navegável
-completo está em [`knowledge/fmx/INDEX.md`](../../../knowledge/fmx/INDEX.md).
+completo está em `kb:fmx/INDEX.md`.
 
-## FMX (knowledge/fmx/)
-- [cores-argb.md](../../../knowledge/fmx/cores-argb.md)
-- [uses-fmx-components.md](../../../knowledge/fmx/uses-fmx-components.md)
-- [inherited-forms.md](../../../knowledge/fmx/inherited-forms.md)
-- [dimensoes-form-mobile.md](../../../knowledge/fmx/dimensoes-form-mobile.md)
-- [unit-naming-android.md](../../../knowledge/fmx/unit-naming-android.md)
-- [campos-orfaos-fmx.md](../../../knowledge/fmx/campos-orfaos-fmx.md)
-- [deployment-arquivos-extras.md](../../../knowledge/fmx/deployment-arquivos-extras.md)
-- [android-deploy-e8712-buildtools.md](../../../knowledge/fmx/android-deploy-e8712-buildtools.md)
-- [onclick-vs-ontap-mobile.md](../../../knowledge/fmx/onclick-vs-ontap-mobile.md)
-- [imei-device.md](../../../knowledge/fmx/imei-device.md)
-- [ssl-tls-android.md](../../../knowledge/fmx/ssl-tls-android.md)
-- [delphi13-breaking-changes.md](../../../knowledge/fmx/delphi13-breaking-changes.md)
-- [fmx-lista-dinamica-ordem-align-top.md](../../../knowledge/fmx/fmx-lista-dinamica-ordem-align-top.md)
-- [fmx-stringgrid-colunas.md](../../../knowledge/fmx/fmx-stringgrid-colunas.md)
-- [fmx-scrollbox-scroll-vs-toque.md](../../../knowledge/fmx/fmx-scrollbox-scroll-vs-toque.md)
-- [fmx-modalresult-close.md](../../../knowledge/fmx/fmx-modalresult-close.md)
-- [fmx-showmodal-callback-cafree.md](../../../knowledge/fmx/fmx-showmodal-callback-cafree.md)
-- [fmx-frames-clone-render-streaming.md](../../../knowledge/fmx/fmx-frames-clone-render-streaming.md)
-- [fmx-stylebook-form-separado.md](../../../knowledge/fmx/fmx-stylebook-form-separado.md)
-- [fmx-skia-tsksvg-stylebook.md](../../../knowledge/fmx/fmx-skia-tsksvg-stylebook.md)
+## FMX (kb:fmx/)
+- `kb:fmx/cores-argb.md`
+- `kb:fmx/uses-fmx-components.md`
+- `kb:fmx/inherited-forms.md`
+- `kb:fmx/dimensoes-form-mobile.md`
+- `kb:fmx/unit-naming-android.md`
+- `kb:fmx/campos-orfaos-fmx.md`
+- `kb:fmx/deployment-arquivos-extras.md`
+- `kb:fmx/android-deploy-e8712-buildtools.md`
+- `kb:fmx/onclick-vs-ontap-mobile.md`
+- `kb:fmx/imei-device.md`
+- `kb:fmx/ssl-tls-android.md`
+- `kb:fmx/delphi13-breaking-changes.md`
+- `kb:fmx/fmx-lista-dinamica-ordem-align-top.md`
+- `kb:fmx/fmx-stringgrid-colunas.md`
+- `kb:fmx/fmx-scrollbox-scroll-vs-toque.md`
+- `kb:fmx/fmx-modalresult-close.md`
+- `kb:fmx/fmx-showmodal-callback-cafree.md`
+- `kb:fmx/fmx-frames-clone-render-streaming.md`
+- `kb:fmx/fmx-stylebook-form-separado.md`
+- `kb:fmx/fmx-skia-tsksvg-stylebook.md`
 
-## Core relacionados (knowledge/core/)
-- [delphi-android-ios-versions.md](../../../knowledge/core/delphi-android-ios-versions.md)
-- [recursos-rcdata.md](../../../knowledge/core/recursos-rcdata.md)
-- [dpr-uses-project-manager.md](../../../knowledge/core/dpr-uses-project-manager.md)
-- [firedac-registro-drivers.md](../../../knowledge/core/firedac-registro-drivers.md)
+## Core relacionados (kb:core/)
+- `kb:core/delphi-android-ios-versions.md`
+- `kb:core/recursos-rcdata.md`
+- `kb:core/dpr-uses-project-manager.md`
+- `kb:core/firedac-registro-drivers.md`

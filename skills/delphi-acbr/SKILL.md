@@ -8,11 +8,16 @@ description: >
 
 # Delphi ACBr
 
+> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
+> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em
+> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin
+> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).
+
 ## Idioma de saída
 Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explícitos.
 
 ## Referência completa
-Consulte `knowledge/core/acbr-nfce-integracao.md` para:
+Consulte `kb:core/acbr-nfce-integracao.md` para:
 - Units corretas: `pcnConversaoNFe` (não `pcnConversao`) para NFCe
 - SSL=None para ambiente de simulação/homologação
 - PathPDF no DANFE (não no campo Arquivos)

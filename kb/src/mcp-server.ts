@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { resolveActive } from './active';
 import { ensureIndex } from './index';
 import {
-  dataDir, indexPath, isSafeKbPath, nodeSupportsIndex, pluginRootFromModule, readPluginVersion,
+  dataDir, embeddedKnowledgeDir, indexPath, isSafeKbPath, nodeSupportsIndex, pluginRootFromModule, readPluginVersion,
 } from './paths';
 import { logError, readConfig, readState, writeConfig } from './prefs';
 import { formatInjection, MIN_SCORE, searchIndex } from './search';
@@ -63,8 +63,12 @@ export function kbSearch(ctx: KbContext, args: { query: string; limit?: number; 
 export function kbGet(ctx: KbContext, args: { path: string }): ToolText {
   if (!isSafeKbPath(args.path)) return reply(`Caminho inválido: ${args.path}`, true);
   const active = resolveActive(ctx.root, ctx.data, ctx.env, ctx.pluginVersion);
-  const file = path.join(active.dir, ...args.path.split('/'));
-  if (!fs.existsSync(file)) return reply(`Arquivo não encontrado na base: ${args.path}`, true);
+  const parts = args.path.split('/');
+  const candidates = [path.join(active.dir, ...parts)];
+  // The downloaded snapshot has no INDEX.md (it only lists knowledge files): fall back to the embedded copy.
+  if (active.kind === 'updated') candidates.push(path.join(embeddedKnowledgeDir(ctx.root), ...parts));
+  const file = candidates.find((f) => fs.existsSync(f));
+  if (!file) return reply(`Arquivo não encontrado na base: ${args.path}`, true);
   return reply(fs.readFileSync(file, 'utf8'));
 }
 

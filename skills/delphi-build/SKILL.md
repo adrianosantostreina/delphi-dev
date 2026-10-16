@@ -10,6 +10,11 @@ description: >
 
 # Delphi Build
 
+> **Notação `kb:`** — `kb:core/arquivo.md` é um arquivo da base de conhecimento. Leia com `kb_get`
+> (MCP `delphi-dev-kb`); sem ele, leia o arquivo direto: `core/arquivo.md` em
+> `~/.delphi-dev/kb-cache/current/` e, se não estiver lá, em `knowledge/` na raiz do plugin
+> (a pasta ao lado de `skills/`; instalado por `npx delphi-dev`: `~/.delphi-dev/plugin/knowledge/`).
+
 ## Idioma de saída
 Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explícitos.
 
@@ -21,11 +26,11 @@ apenas no exit code — o log tem o erro real (E2003/E2065/etc.).
 
 ## Referência completa
 
-- `knowledge/core/build-via-bat-com-log.md` — template do `.bat` com log + catálogo de
+- `kb:core/build-via-bat-com-log.md` — template do `.bat` com log + catálogo de
   erros comuns (E2003 unit não encontrada, E2065 identificador não declarado, etc.)
-- `knowledge/core/msb6003-command-line-too-long.md` — erro MSB6003 (linha de comando
+- `kb:core/msb6003-command-line-too-long.md` — erro MSB6003 (linha de comando
   longa demais): causa e contorno
-- `knowledge/fmx/android-deploy-e8712-buildtools.md` — erro E8712 e Android build-tools
+- `kb:fmx/android-deploy-e8712-buildtools.md` — erro E8712 e Android build-tools
   no deploy mobile
 
 ## Fluxo recomendado

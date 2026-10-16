@@ -3,7 +3,8 @@ import { buildManifest } from '../src/manifest';
 import { healthOf, kbGet, kbPrefs, kbSearch, kbUpdate, type KbContext } from '../src/mcp-server';
 import { readSnapshot } from '../src/snapshot';
 import * as path from 'node:path';
-import { FIXTURE, makePluginRoot, tmpDir } from './helpers';
+import { cacheCurrentDir } from '../src/paths';
+import { FIXTURE, makePluginRoot, tmpDir, writeTree } from './helpers';
 
 function ctx(over: Partial<KbContext> = {}): KbContext {
   return { root: makePluginRoot(FIXTURE), data: tmpDir(), env: {}, nodeVersion: '24.18.0', pluginVersion: '4.0.0', ...over };
@@ -76,5 +77,18 @@ describe('kb_update', () => {
     const r = await kbUpdate({ ...c, fetcher: async () => Buffer.from(JSON.stringify(manifest)) }, { force: true });
     const summary = JSON.parse(text(r));
     expect(summary).toMatchObject({ status: 'up-to-date', remotePluginVersion: '4.1.0', installedPluginVersion: '4.0.0' });
+  });
+});
+
+describe('kb_get fallback', () => {
+  it('serves a file missing from the updated snapshot from the embedded copy', () => {
+    const c = ctx({ root: makePluginRoot({ 'core/so-embutido.md': '# Embutido\n\ncorpo\n' }) });
+    writeTree(cacheCurrentDir(c.data), {
+      'core/outro.md': '# Outro\n',
+      'meta.json': JSON.stringify({ pluginVersion: c.pluginVersion, commit: 'abcdef1' }),
+    });
+    expect(healthOf(c).source).toBe('updated');
+    expect(text(kbGet(c, { path: 'core/so-embutido.md' }))).toContain('# Embutido');
+    expect(kbGet(c, { path: 'core/nao-existe.md' }).isError).toBe(true);
   });
 });
