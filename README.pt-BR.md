@@ -108,6 +108,44 @@ Este único comando:
 > servidor MCP (`delphi-dev-kb`) deixa o agente pesquisar a base quando precisar. Use `/update`
 > para atualizar na hora.
 
+### Codex e OpenCode
+
+```bash
+npx delphi-dev --target codex      # ou: opencode, ou: all
+```
+
+Sem `--target` o instalador **detecta** quais agentes você tem (CLI, pasta de configuração ou
+extensão do VS Code) e instala para cada um. Ele clona o plugin em `~/.delphi-dev/plugin` e grava:
+
+| | Codex | OpenCode |
+|---|---|---|
+| Skills | `~/.agents/skills` | `~/.agents/skills` (a mesma pasta) |
+| Comandos | skills `$delphi-cmd-<nome>` (ex.: `$delphi-cmd-audit`) | `/delphi-<nome>` (ex.: `/delphi-audit`) |
+| Subagentes | `~/.codex/agents/*.toml` | `~/.config/opencode/agents/*.md` |
+| Base de conhecimento (MCP) | `config.toml` | `opencode.json` |
+| Hooks | `hooks.json` (confie uma vez em `/hooks`) | `plugins/delphi-dev.js` |
+
+Reinicie a sessão do agente depois de instalar. No Codex, digite `$delphi-cmd-audit` (ou outro
+`$delphi-cmd-<nome>`) no terminal ou na extensão do VS Code; no OpenCode, digite `/delphi-audit`
+(ou outro `/delphi-<nome>`). As skills de conhecimento Delphi carregam sozinhas quando você trabalha
+com código Delphi.
+
+Ele nunca sobrescreve arquivo que não é dele: sua configuração, seus hooks e outras skills ficam
+intactos, e `npx delphi-dev uninstall` remove só o que ele instalou. Use `--dry-run` para
+pré-visualizar e `--scope project --project <pasta>` para instalar skills, comandos e subagentes
+dentro de um repositório. Se o seu agente não tiver hook para edição de arquivo, a skill
+`delphi-encoding` roda `kb-cli fix-encoding` como rede de proteção.
+
+Limitações conhecidas:
+
+- **Os hooks do Codex precisam da sua aprovação uma vez.** Rode `/hooks` no Codex e confie nos hooks
+  do delphi-dev; até lá o ajuste de BOM/encoding e a injeção da base não disparam (as skills e o
+  servidor MCP funcionam de qualquer forma).
+- **A busca na base e a injeção em prompts exigem Node.js 22.13+** (igual ao Claude Code); sem ele as
+  skills e os comandos seguem funcionando, em modo reduzido.
+- **Antigravity ainda não é suportado** (fora de escopo por enquanto; acompanhado na issue #9).
+- A instalação do Claude Code não muda: plugin, hooks, comandos e agentes funcionam exatamente como antes.
+
 ### Atualizar
 
 ```bash

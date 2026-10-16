@@ -1,7 +1,81 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-10-15**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-10-16**.
 > No início de uma nova sessão, ler este arquivo para retomar.
+
+## Ponto de retomada (2026-10-16) — Sprint 3A+3B (entrega portátil Codex/OpenCode) IMPLEMENTADO; falta teste manual + 3C
+
+**Branch `feature/v4.0-multi-agente`, só local — NÃO pushada.** Sobre o estado de 2026-10-15 (abaixo).
+Docs: spec `docs/superpowers/specs/2026-10-15-portable-delivery-design.md`, plano
+`docs/superpowers/plans/2026-10-15-portable-delivery.md` (Tasks 1–19 feitas), matriz de testes e saída da
+validação com os CLIs reais em `docs/testes-v4.0-codex-opencode.md`.
+
+**Feito (3A+3B):**
+- `portable.json` (registro de comandos/skills por alvo), lint de portabilidade (`kb-cli lint`), skills
+  autossuficientes (notação `kb:` / `kb_get`, `rules/` virou `skills/delphi-standards/references/rules/`),
+  texto neutro de ferramenta, `AGENTS.md`.
+- Geradores (`kb/src/targets/`): comando → skill `delphi-cmd-<id>` do Codex e `/delphi-<id>` do OpenCode;
+  subagente → TOML (Codex) e MD (OpenCode); merge estrito de `config.toml`, `hooks.json` e `opencode.json`;
+  plugin de hooks do OpenCode (executa `node` a partir do checkout confiável, não do projeto aberto).
+- `kb-cli install|uninstall|doctor --target codex|opencode|all` com manifesto de propriedade
+  (`kb/src/install/`): nunca sobrescreve arquivo que não é nosso; `uninstall` remove só o que instalou.
+- Installer npm: `npx delphi-dev --target claude|codex|opencode|all` (checkout em `~/.delphi-dev/plugin`).
+- Rede de proteção do encoding sem hook: seção "Sem hook ativo" em `skills/delphi-encoding/SKILL.md`
+  (`kb-cli fix-encoding`). READMEs (EN + pt-BR) e `CLAUDE.md` atualizados (Task 19).
+- Validação com os CLIs reais (`kb/scripts/validate-targets.mjs`): 54 PASS, 0 FAIL — saída registrada em
+  `docs/testes-v4.0-codex-opencode.md`.
+- Gates da última rodada: `kb` 473 testes verdes, `tsc --noEmit` limpo, installer 49 verdes, `kb-cli lint`
+  = 0 achados, `claude-surface.mjs --check --validate` = "claude surface unchanged" + `claude plugin validate` OK.
+
+**Próximo passo concreto:**
+1. **Você executa a matriz manual** (`docs/testes-v4.0-codex-opencode.md`, a partir de "Matriz manual";
+   passo a passo, pt-BR simples). O bloco E (Claude Code intacto) é o mais importante. O que a automação
+   NÃO provou: hooks do Codex (precisa confiar em `/hooks`), `tool.execute.after` do OpenCode, `$delphi-cmd-*`
+   e `/delphi-*` executando de verdade (terminal e VS Code), subagentes respondendo, sessão real do Claude Code.
+2. **3C — extensão VS Code multiagente:** executar o plano
+   `docs/superpowers/plans/2026-10-15-vscode-multi-agent.md` (spec `...-vscode-multi-agent-design.md`), 9 tasks.
+3. Depois: bump 4.0.0 (3 arquivos de versão), `npm publish` do installer (só no fim), merge em `master`,
+   release. Antigravity (`agy`) fica fora por enquanto (issue #9, não prometida).
+4. Seguem pendentes os itens (a)–(d) do teste manual do Claude Code da seção de 2026-10-15 (hooks sem Node
+   no PATH etc.); o bloco E/F2 da nova matriz cobre parte disso.
+
+**Decisões (e o porquê):**
+- `npx delphi-dev` **sem `--target`** detecta Codex/OpenCode/Claude instalados (CLI, pasta de config ou
+  extensão do VS Code) e instala para cada um detectado — quem só usa Claude Code tem o comportamento de antes.
+  Falha em Codex/OpenCode nunca impede a instalação do Claude Code pedida junto.
+- **Fonte única:** `skills/`, `commands/`, `agents/` geram os arquivos de Codex/OpenCode. Nunca editar os
+  gerados à mão; mudar a fonte e rodar o install de novo.
+- **Política de publicação npm:** publicar o installer só quando a 4.0 inteira estiver pronta (`npm login`
+  interativo + `npm publish` em `installer/`, em `master`). Até lá, instalar pelo checkout:
+  `node runtime/kb-cli.mjs install --target all`.
+- **Push só com confirmação do usuário** (a branch continua local).
+- Comandos `$delphi-cmd-*` do Codex ficam fora da lista implícita (`allow_implicit_invocation=false`); a
+  chamada explícita `$delphi-cmd-<nome>` é o contrato.
+
+**Armadilhas / o que não fazer:**
+- **ASCII em `kb/src`** (comentários e strings, sem acentos): regra do projeto para o código do runtime.
+- **`python3` trava neste shell** — usar `node` para scripts auxiliares.
+- **CRLF / `core.autocrlf=true`:** o working tree tem CRLF e o índice LF; checar hashes e patches de texto
+  tolerando `\r\n` (regex com `\r?\n`), nunca `includes` de string multilinha.
+- **`codex.exe` no Windows ignora `HOME`/`USERPROFILE`** ao resolver as skills do usuário: no teste isolado,
+  a descoberta de skills do Codex é validada no escopo de projeto (`<projeto>/.agents/skills`). O OpenCode
+  sobe a árvore procurando `.claude/skills`/`.agents/skills`: a pasta de trabalho do validador precisa ficar
+  fora do perfil e `PWD` herdado do shell precisa ser limpo.
+- Hooks do Codex só disparam depois de o usuário confiar neles em `/hooks`; sem Node 22.13+ a injeção da
+  base e a busca ficam desligadas (as skills continuam).
+- `kb/scripts/validate-targets.mjs` não roda no CI (precisa dos CLIs na máquina).
+- Não commitar `.github/copilot-instructions.md` e `.github/instructions/` (untracked, não são deste trabalho).
+- Mudou `kb/src`? Rodar `cd kb && npm run build:runtime` e commitar `runtime/` junto (a CI falha senão).
+
+**Como rodar e validar (da raiz do repo):**
+- `cd kb && npx vitest run` (tudo verde) e `npx tsc --noEmit`
+- `node kb/scripts/claude-surface.mjs --check --validate` (o Claude Code não pode mudar)
+- `node runtime/kb-cli.mjs lint --root .` (0 achados de portabilidade)
+- `cd installer && npx vitest run`
+- `node kb/scripts/validate-targets.mjs --codex <codex.exe> --live-opencode --work D:/Temp/dd-validate`
+  (CLIs reais; comando completo e saída em `docs/testes-v4.0-codex-opencode.md`)
+
+**Sincronização:** branch local `feature/v4.0-multi-agente`; `master` em v3.2.1 (release `v3.2.1` é o Latest).
 
 ## Ponto de retomada (2026-10-15) — Sprints 1 e 2 PRONTOS, falta só teste manual + npm + merge
 

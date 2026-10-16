@@ -121,3 +121,178 @@ pasta de trabalho: D:\Temp\dd-validate
 - `mcp_servers.<nome>.cwd` existe no Codex 0.162 e e aplicado ao processo do servidor MCP (probe do script com um MCP de
   teste). Isso permitiria rodar o `kb-mcp.mjs` a partir do checkout confiavel em vez da pasta do projeto. O OpenCode nao
   foi investigado quanto a isso.
+
+## O que foi verificado automaticamente e o que NAO foi
+
+Resumo honesto, para saber o que ainda depende de voce:
+
+| Ponto | Verificado sozinho? | Como |
+|---|---|---|
+| Instalar, reinstalar (idempotente), desinstalar e `doctor`, para Codex e OpenCode | Sim | `validate-targets.mjs` com os CLIs reais (secao acima) |
+| Config do Codex (`config.toml`, `hooks.json`, 4 agentes `.toml`) aceita pelo Codex real | Sim | `codex app-server --strict-config`, `skills/list`, `hooks/list` |
+| Servidor MCP `delphi-dev-kb` sobe e lista `kb_search` nos dois | Sim | `mcpServerStatus/list` (Codex), `opencode mcp list` (OpenCode) |
+| 15 skills de conhecimento e 11 comandos descobertos nos dois | Sim | `skills/list`, `opencode debug skill` e `agent list` |
+| OpenCode carrega o plugin gerado e dispara o hook de prompt, com a pasta do projeto | Sim | passo `--live-opencode` (plugin de teste, nao o `hook-inject` real) |
+| O que o `hook-inject` real devolve (injecao da base no prompt) | Sim, sem o agente | chamado direto pelo script |
+| O plugin do Claude Code continua intacto (lista de comandos, agentes, skills, hooks) | Sim | `claude-surface.mjs --check --validate` + suite do `kb` |
+| **Hooks do Codex disparando** (BOM/encoding apos editar arquivo, injecao no prompt) | **NAO** | exige voce confiar neles em `/hooks` e o modelo editar um arquivo |
+| **`tool.execute.after` do OpenCode** (BOM apos o modelo usar a ferramenta de edicao) | **NAO** | depende do modelo chamar a ferramenta de edicao |
+| **Comandos `$delphi-cmd-<nome>` no Codex** (terminal e VS Code) realmente executando o roteiro | **NAO** | so a descoberta foi provada; chamar de verdade exige o modelo |
+| **Comandos `/delphi-<nome>` no OpenCode** (terminal e VS Code) realmente executando o roteiro | **NAO** | idem |
+| Subagentes (`@delphi-writer` etc.) respondendo de verdade | **NAO** | no Codex, so "carregou sem aviso"; no OpenCode, so "esta na lista" |
+| Extensoes do VS Code (Codex e OpenCode) | **NAO** | nenhum teste automatico abre o VS Code |
+| Claude Code instalado de verdade (`/plugin`, `/delphi-dev:about`, `/audit`) | **NAO** | so a superficie do plugin e comparada; a sessao real e manual |
+
+## Matriz manual (para voce executar)
+
+Voce nao precisa entender de teste. Cada item diz o que **Fazer** e o que **Deve aparecer**. Marque `[x]` quando passar, `[F]` quando falhar, e anote a data.
+**Se falhar**, me mande: o numero do item, o texto que apareceu na tela (print tambem serve) e o que voce esperava.
+
+Terminal e VS Code devem se comportar igual. Faca primeiro tudo no terminal; depois repita so os itens
+marcados "(VS Code)".
+
+### Preparacao (uma vez)
+
+1. Abra o PowerShell e instale a partir da sua copia do repositorio (o `npx delphi-dev` publicado ainda e a
+   versao antiga; a publicacao so acontece no fim):
+
+   ```powershell
+   cd "D:\2.2 GitHub Adriano Santos\delphi-dev"
+   node runtime\kb-cli.mjs install --target all
+   node runtime\kb-cli.mjs doctor --target all
+   ```
+
+   Deve aparecer: no `install`, a linha final com `0 aviso(s)`; no `doctor`, tudo com `ok` (nenhuma linha `FAIL`).
+   Se falhar: me mande a saida inteira dos dois comandos.
+
+2. Crie uma pasta de teste vazia, por exemplo `D:\Temp\teste-delphi`. Os testes abaixo usam essa pasta.
+3. Feche e abra de novo o Codex e o OpenCode (a sessao so le a instalacao ao iniciar).
+
+Isto grava de verdade na sua maquina (`~/.agents`, `~/.codex`, `~/.config/opencode`). Para desfazer no final:
+`node runtime\kb-cli.mjs uninstall --target all` (so remove o que o delphi-dev instalou).
+
+### Bloco A - Codex, terminal
+
+Abra o PowerShell em `D:\Temp\teste-delphi` e rode `codex`.
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| A1 | Digite `$delphi-` (so isso, sem Enter) | uma lista com `delphi-standards`, `delphi-write`... (as skills de conhecimento). Os `delphi-cmd-*` podem **nao** aparecer na lista; e esperado (ficam escondidos de proposito) | |
+| A2 | Digite `$delphi-cmd-about` e Enter | o Codex responde com informacoes do plugin delphi-dev (versao, comandos). Se pedir confirmacao de algo, aceite | |
+| A3 | Digite `/hooks` | uma tela listando hooks do delphi-dev (um de "prompt" e um de "apos editar"). **Confie neles** (siga a tela). Depois feche e abra o `codex` de novo | |
+| A4 | Peca: `Crie o arquivo Teste.pas com uma unit vazia chamada Teste e um comentario com a palavra Opção.` Depois, **em outro PowerShell**, rode o comando de BOM (abaixo) | os 3 primeiros bytes sao `EF BB BF` (isso e o BOM) | |
+| A5 | Peca: `Crie o arquivo Teste.dfm com um form Delphi simples cujo Caption seja 'Serviço'.` Depois rode o comando de BOM no `Teste.dfm` e o comando do `#231` (abaixo) | os 3 primeiros bytes **nao** sao `EF BB BF`, e o `Select-String` acha `#231` (o "ç" virou `#231`) | |
+| A6 | Pergunte: `Dei o erro E2356 em uma class var. Antes de responder, me diga se voce recebeu algum trecho marcado [DELPHI-DEV KNOWLEDGE] nesta conversa e copie-o.` | ele mostra um trecho `[DELPHI-DEV KNOWLEDGE]` sobre `class var`/E2356. (Teste indireto: o modelo pode se recusar a copiar; se recusar, me avise, ainda nao conta como falha do plugin) | |
+| A7 | Peca: `Use a ferramenta kb_search para procurar "E2356 class var" e me mostre os resultados.` | resultados com caminhos tipo `[canonical/...]` ou `[core/...]` | |
+| A8 | Peca: `Use o subagente delphi-writer para criar uma classe simples TCliente.` | ele delega (ou diz que usaria) o agente `delphi-writer` e escreve codigo Delphi com prefixos `F`/`A`/`L` | |
+
+Comandos de conferencia (rode em **outro** PowerShell, nao dentro do Codex):
+
+```powershell
+Format-Hex -Path D:\Temp\teste-delphi\Teste.pas -Count 3
+Format-Hex -Path D:\Temp\teste-delphi\Teste.dfm -Count 3
+Select-String -Path D:\Temp\teste-delphi\Teste.dfm -Pattern '#231'
+```
+
+Se A4 ou A5 falharem: confira antes se fez o A3 (sem confiar nos hooks o BOM **nao** e aplicado; isso nao e
+bug do plugin, e regra do Codex). Se mesmo apos confiar falhar, me mande o resultado do `Format-Hex` e o texto
+de `/hooks`.
+
+### Bloco B - Codex, extensao do VS Code (VS Code)
+
+Abra `D:\Temp\teste-delphi` no VS Code e abra o painel do Codex.
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| B1 | Repita A1 e A2 no painel do Codex | igual ao terminal | |
+| B2 | Procure como confiar nos hooks no painel (o `/hooks` pode nao existir ai). Se nao achar, use o terminal uma vez (A3) e veja se a confianca vale no painel | anote **como** confiou | |
+| B3 | Repita A4 e A5 | igual ao terminal | |
+
+Se o painel nao tiver `/hooks` e a confianca do terminal nao valer no VS Code, me avise: e uma pergunta em
+aberto que preciso fechar.
+
+### Bloco C - OpenCode, terminal
+
+No PowerShell, em `D:\Temp\teste-delphi`, rode `opencode`. (Apague o `Teste.pas`/`Teste.dfm` do bloco A antes,
+para o teste ser valido.)
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| C1 | Digite `/` (so isso) | a lista de comandos inclui `/delphi-audit`, `/delphi-review`, `/delphi-write`, `/delphi-about`... (11 comandos `delphi-*`) | |
+| C2 | Digite `/delphi-about` e Enter | o OpenCode responde com informacoes do plugin delphi-dev | |
+| C3 | Peca: `Crie o arquivo Teste.pas com uma unit vazia chamada Teste e um comentario com a palavra Opção.` Depois confira o BOM como no bloco A | `EF BB BF` nos 3 primeiros bytes (o plugin do OpenCode aplicou o BOM apos a ferramenta de edicao) | |
+| C4 | Peca: `Crie o arquivo Teste.dfm com um form Delphi simples cujo Caption seja 'Serviço'.` e confira como no A5 | sem BOM e com `#231` | |
+| C5 | Pergunte como no A6 | trecho `[DELPHI-DEV KNOWLEDGE]` sobre E2356 | |
+| C6 | Peca: `Use a ferramenta kb_search para procurar "E2356 class var".` | resultados da base | |
+| C7 | Digite `@delphi-writer crie uma classe simples TCliente` | o subagente responde seguindo os padroes Delphi (prefixos `F`/`A`/`L`) | |
+| C8 | Digite `/delphi-audit` (a pasta de teste precisa ter ao menos um `.pas`) | o OpenCode segue o roteiro de auditoria (pergunta o projeto / comeca o laudo) | |
+
+### Bloco D - OpenCode, extensao do VS Code (VS Code)
+
+Abra `D:\Temp\teste-delphi` no VS Code com a extensao do OpenCode.
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| D1 | Repita C1 e C2 | igual ao terminal | |
+| D2 | Repita C3 e C4 | igual ao terminal | |
+
+### Bloco E - Claude Code continua intacto
+
+**Esta e a mais importante: o plugin nao pode ter quebrado no Claude Code.**
+
+Antes (opcional, 1 minuto, nao precisa de Claude): no PowerShell, na pasta do repositorio,
+
+```powershell
+node kb\scripts\claude-surface.mjs --check --validate
+```
+
+Deve terminar sem erro. Isso compara a lista de comandos/agentes/skills/hooks com a referencia salva.
+
+Agora, de verdade, no Claude Code (terminal ou VS Code):
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| E1 | Digite `/plugin` | `delphi-dev` na lista de instalados e habilitado | |
+| E2 | Digite `/delphi-dev:about` | a tela "Sobre" do plugin, com versao e status da base | |
+| E3 | Digite `/mcp` | `plugin:delphi-dev:delphi-dev-kb` conectado | |
+| E4 | Numa pasta com projeto Delphi (ou com um `.pas`), digite `/audit` | ele comeca o laudo (pode interromper depois das primeiras perguntas) | |
+| E5 | Peca: `Crie o arquivo Teste.pas com uma unit vazia e um comentario com a palavra Opção.` e confira o BOM como no bloco A | `EF BB BF` | |
+| E6 | Pergunte: `erro E2356 em class var` e aperte Ctrl+O | aparece o trecho `[DELPHI-DEV KNOWLEDGE]` | |
+
+Se qualquer item do bloco E falhar, **pare tudo e me avise primeiro**: e o que mais pesa.
+
+### Bloco F - Casos de borda
+
+| # | Faca | Deve aparecer | Resultado |
+|---|---|---|---|
+| F1 | No PowerShell, na pasta do repositorio: `node runtime\kb-cli.mjs install --target all` **de novo** | `0 gravado(s)` (nada mudou na segunda vez) | |
+| F2 | Sem Node no PATH (comandos abaixo, numa janela nova do PowerShell). Nessa mesma janela rode `codex`, mande um prompt qualquer; depois repita com `opencode` | nenhuma mensagem de erro de hook a cada prompt (o agente funciona normal, so sem a injecao da base) | |
+| F3 | `node runtime\kb-cli.mjs uninstall --target all` e depois `node runtime\kb-cli.mjs doctor --target all` | o `uninstall` termina com `0 aviso(s)`; o `doctor` agora **falha** dizendo "nada registrado" (isso e o esperado); seus arquivos de configuracao pessoais continuam la | |
+
+Para o F2, tirar o Node do PATH so nessa janela (nao mexe no resto do Windows):
+
+```powershell
+$env:Path = ($env:Path -split ';' | Where-Object { $_ -notmatch 'nodejs' }) -join ';'
+where.exe node
+```
+
+O `where.exe node` deve dizer que nao encontrou. Se ainda achar, o Node esta em outra pasta: me avise.
+
+Dica para o F3: antes de desinstalar, abra `~/.codex/config.toml` e `~/.config/opencode/opencode.json` e
+veja que o que voce tinha continua la depois.
+
+### Como me devolver o resultado
+
+Cole a tabela preenchida (ou so os itens que falharam) com: o numero do item, o que voce fez, o que apareceu
+na tela e o que esperava. Para itens do Codex, inclua a saida de `codex --version`; para o OpenCode,
+`opencode --version`.
+
+## Pontos que dependem de confirmacao
+
+- Disparo real dos hooks no Codex (exige `/hooks`) e no plugin do OpenCode (API em reescrita V2): itens A4, A5, C3, C4.
+- Se o hook de pos-edicao do Codex dispara quando o modelo edita por `apply_patch`: itens A4 e A5 respondem.
+- `agents/openai.yaml` (`allow_implicit_invocation: false`): a descoberta dos `$delphi-cmd-*` foi provada, a
+  execucao real nao: item A2.
+- `commandWindows` do Codex: forma do comando silencioso sem Node: item F2.
+- Confianca dos hooks na extensao do VS Code do Codex: item B2.
+- Antigravity fica fora de escopo por enquanto (issue #9).

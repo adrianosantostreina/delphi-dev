@@ -108,6 +108,44 @@ This single command:
 > IDE saves them, and never touches ANSI, UTF-16 or binary files), and one adds up to three short knowledge excerpts to Delphi-related prompts. An
 > MCP server (`delphi-dev-kb`) lets the agent search the base on demand. Run `/update` to refresh now.
 
+### Codex and OpenCode
+
+```bash
+npx delphi-dev --target codex      # or: opencode, or: all
+```
+
+Without `--target` the installer **detects** which agents you have (CLI, config folder or VS Code
+extension) and installs for each one. It clones the plugin to `~/.delphi-dev/plugin` and writes:
+
+| | Codex | OpenCode |
+|---|---|---|
+| Skills | `~/.agents/skills` | `~/.agents/skills` (same folder) |
+| Commands | skills `$delphi-cmd-<name>` (e.g. `$delphi-cmd-audit`) | `/delphi-<name>` (e.g. `/delphi-audit`) |
+| Subagents | `~/.codex/agents/*.toml` | `~/.config/opencode/agents/*.md` |
+| Knowledge base (MCP) | `config.toml` | `opencode.json` |
+| Hooks | `hooks.json` (trust once with `/hooks`) | `plugins/delphi-dev.js` |
+
+Restart the agent session after installing. In Codex, type `$delphi-cmd-audit` (or any other
+`$delphi-cmd-<name>`) in the terminal or in the VS Code extension; in OpenCode, type `/delphi-audit`
+(or any other `/delphi-<name>`). The Delphi knowledge skills load on their own when you work on
+Delphi code.
+
+It never overwrites files that are not its own: your config, hooks and other skills are preserved,
+and `npx delphi-dev uninstall` removes only what it installed. Use `--dry-run` to preview and
+`--scope project --project <dir>` to install skills, commands and subagents inside one repository.
+If your agent has no hook support for a file edit, the `delphi-encoding` skill runs
+`kb-cli fix-encoding` as a safety net.
+
+Known limitations:
+
+- **Codex hooks need your approval once.** Run `/hooks` in Codex and trust the delphi-dev hooks;
+  until then the BOM/encoding fix and the knowledge injection do not fire (the skills and the MCP
+  server work regardless).
+- **Knowledge search and prompt injection need Node.js 22.13+** (same as on Claude Code); without
+  it the skills and commands still work, in reduced mode.
+- **Antigravity is not supported yet** (out of scope for now; tracked in issue #9).
+- The Claude Code install is unchanged: plugin, hooks, commands and agents work exactly as before.
+
 ### Update
 
 ```bash

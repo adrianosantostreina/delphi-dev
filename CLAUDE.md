@@ -16,6 +16,7 @@ Four pieces, each loaded by Claude Code differently:
 - **Commands** (`commands/<name>.md`) — explicit slash commands (`/audit`, `/write`, etc.). Commands are thin orchestrators that delegate to skills + agents.
 - **Agents** (`agents/<name>.md`) — subagents invoked via the Agent tool for heavier, isolated work (deep audit, full code generation, SPEC writing, test generation).
 - **Knowledge base runtime** (`kb/` → `runtime/*.mjs`) — FTS5 index over `knowledge/`, served by the `UserPromptSubmit` hook (`hooks/hooks.json`) and the `delphi-dev-kb` MCP server (declared in `.claude-plugin/plugin.json` → `mcpServers`; not a root `.mcp.json`, which Claude Code would also load as this repo's project MCP config). `runtime/` is committed on purpose: nothing may require `npm install` or native modules on the user's machine (the v2.2.2 lesson).
+- **Portable delivery** (`portable.json`, `kb/src/targets/`, `kb/src/install/`) — `kb-cli install --target codex|opencode` generates each agent's files from `skills/`, `commands/` and `agents/` (single source) with strict, owner-tracked writes. Never hand-edit generated Codex/OpenCode files; change the source and re-run the install.
 
 Key invocation flows worth knowing before editing:
 

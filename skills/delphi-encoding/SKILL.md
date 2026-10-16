@@ -29,6 +29,19 @@ O hook `PostToolUse` do plugin aplica isso ao gravar: põe BOM em `.pas`/`.dpr`/
 converte acentos de strings de `.dfm`/`.fmx` em `#NNN`. Sem o hook ativo (sem Node), siga a tabela
 à mão.
 
+## Sem hook ativo (Codex, OpenCode ou Claude Code sem Node)
+
+Se o hook de encoding não estiver rodando, aplique a regra da tabela depois de gravar arquivos
+Delphi, executando:
+
+```
+node "<raiz>/runtime/kb-cli.mjs" fix-encoding <arquivos>
+```
+
+`<raiz>` é a raiz do plugin: `~/.delphi-dev/plugin` no Codex e no OpenCode. O comando põe BOM em
+`.pas/.dpr/.dpk/.inc` e converte acentos de `.dfm/.fmx` em `#NNN`; não toca arquivos ANSI, UTF-16 nem
+binários.
+
 ## Referência completa
 
 Consulte a base (`kb_get` com `core/encoding-utf8-bom.md`, ou o arquivo em `knowledge/`) para:

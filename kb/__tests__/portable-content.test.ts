@@ -94,3 +94,12 @@ describe('the real repository is portable', () => {
     expect(findings.map((f) => `${f.file}:${f.line ?? 0} [${f.rule}] ${f.message}`)).toEqual([]);
   });
 });
+
+describe('encoding safety net', () => {
+  it('delphi-encoding tells agents without hooks to run kb-cli fix-encoding', () => {
+    const text = read('skills/delphi-encoding/SKILL.md');
+    expect(text).toContain('## Sem hook ativo');
+    expect(text).toContain('runtime/kb-cli.mjs" fix-encoding');
+    expect(text).toContain('~/.delphi-dev/plugin');
+  });
+});
