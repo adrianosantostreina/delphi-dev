@@ -301,6 +301,24 @@ describe('installTargets keeps what is not ours', () => {
     expect(report.warnings.join('\n')).toContain('backup');
   });
 
+  it('--force keeps a replaced skill FOLDER out of the skills dir (a backup there would load as a duplicate skill)', () => {
+    const home = tmpDir('kb-home-');
+    writeTree(home, { '.agents/skills/delphi-demo/SKILL.md': '---\nname: delphi-demo\ndescription: alheia\n---\nde terceiros\n' });
+    const o = opts({ home, targets: ['codex'], force: true });
+    const report = installTargets(o);
+    const skills = path.join(home, '.agents', 'skills');
+    expect(fs.readdirSync(skills).filter((n) => n.includes('.bak'))).toEqual([]);
+    const backups = path.join(home, '.delphi-dev', 'backups', '2026-10-15T10-00-00-000Z');
+    expect(read(backups, 'delphi-demo', 'SKILL.md')).toContain('de terceiros');
+    expect(report.warnings.join('\n')).toContain(path.join(backups, 'delphi-demo'));
+    // a second forced run in the same instant never overwrites the first backup
+    fs.rmSync(path.join(skills, 'delphi-demo'), { recursive: true });
+    writeTree(home, { '.agents/skills/delphi-demo/SKILL.md': 'segunda alheia\n' });
+    installTargets({ ...o, home });
+    expect(read(backups, 'delphi-demo', 'SKILL.md')).toContain('de terceiros');
+    expect(read(backups, 'delphi-demo-2', 'SKILL.md')).toBe('segunda alheia\n');
+  });
+
   it('does not overwrite a file the user edited after install unless forced', () => {
     const o = opts({ targets: ['opencode'] });
     installTargets(o);

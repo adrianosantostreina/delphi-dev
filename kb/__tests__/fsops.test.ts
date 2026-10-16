@@ -8,7 +8,7 @@ import {
 import { tmpDir } from './helpers';
 
 function ctx(over: Partial<Ctx> = {}): Ctx {
-  return { dryRun: false, force: false, stamp: 'T', prev: emptyRecord(), report: newReport(), ...over };
+  return { dryRun: false, force: false, stamp: 'T', backupDir: path.join(tmpDir('kb-bak-'), 'T'), prev: emptyRecord(), report: newReport(), ...over };
 }
 
 const files = (obj: Record<string, string>) => new Map(Object.entries(obj).map(([k, v]) => [k, Buffer.from(v)]));
@@ -301,18 +301,23 @@ describe('writeOwnedDir', () => {
     const first = emptyRecord();
     writeOwnedDir(ctx(), dest, files({ 'SKILL.md': '# v1' }), first);
     fs.writeFileSync(path.join(dest, 'SKILL.md'), '# editado');
-    writeOwnedDir(ctx({ force: true, prev: first }), dest, files({ 'SKILL.md': '# v2' }), emptyRecord());
+    const backupDir = path.join(tmpDir('kb-bak-'), 'T');
+    writeOwnedDir(ctx({ force: true, prev: first, backupDir }), dest, files({ 'SKILL.md': '# v2' }), emptyRecord());
     expect(fs.readFileSync(path.join(dest, 'SKILL.md'), 'utf8')).toBe('# v2');
-    expect(fs.readFileSync(path.join(`${dest}.bak-T`, 'SKILL.md'), 'utf8')).toBe('# editado');
+    expect(fs.readFileSync(path.join(backupDir, 'skill', 'SKILL.md'), 'utf8')).toBe('# editado');
+    // a backup next to the skill would be loaded by the agent as a duplicate skill
+    expect(fs.readdirSync(path.dirname(dest))).toEqual(['skill']);
   });
 
   it('with force, a folder without marker is moved to a backup', () => {
     const dest = path.join(tmpDir(), 'terceiro');
     fs.mkdirSync(dest);
     fs.writeFileSync(path.join(dest, 'SKILL.md'), 'de terceiros');
-    writeOwnedDir(ctx({ force: true }), dest, files({ 'SKILL.md': '# nosso' }), emptyRecord());
+    const backupDir = path.join(tmpDir('kb-bak-'), 'T');
+    writeOwnedDir(ctx({ force: true, backupDir }), dest, files({ 'SKILL.md': '# nosso' }), emptyRecord());
     expect(fs.readFileSync(path.join(dest, 'SKILL.md'), 'utf8')).toBe('# nosso');
-    expect(fs.readFileSync(path.join(`${dest}.bak-T`, 'SKILL.md'), 'utf8')).toBe('de terceiros');
+    expect(fs.readFileSync(path.join(backupDir, 'terceiro', 'SKILL.md'), 'utf8')).toBe('de terceiros');
+    expect(fs.readdirSync(path.dirname(dest))).toEqual(['terceiro']);
   });
 
   it('keeps every backup when forced twice with the same stamp', () => {
@@ -320,11 +325,12 @@ describe('writeOwnedDir', () => {
     fs.mkdirSync(dest);
     fs.writeFileSync(path.join(dest, 'SKILL.md'), 'primeiro');
     const rec = emptyRecord();
-    writeOwnedDir(ctx({ force: true }), dest, files({ 'SKILL.md': '# v1' }), rec);
+    const backupDir = path.join(tmpDir('kb-bak-'), 'T');
+    writeOwnedDir(ctx({ force: true, backupDir }), dest, files({ 'SKILL.md': '# v1' }), rec);
     fs.writeFileSync(path.join(dest, 'SKILL.md'), 'segundo');
-    writeOwnedDir(ctx({ force: true, prev: rec }), dest, files({ 'SKILL.md': '# v2' }), emptyRecord());
-    expect(fs.readFileSync(path.join(`${dest}.bak-T`, 'SKILL.md'), 'utf8')).toBe('primeiro');
-    expect(fs.readFileSync(path.join(`${dest}.bak-T-2`, 'SKILL.md'), 'utf8')).toBe('segundo');
+    writeOwnedDir(ctx({ force: true, prev: rec, backupDir }), dest, files({ 'SKILL.md': '# v2' }), emptyRecord());
+    expect(fs.readFileSync(path.join(backupDir, 'terceiro', 'SKILL.md'), 'utf8')).toBe('primeiro');
+    expect(fs.readFileSync(path.join(backupDir, 'terceiro-2', 'SKILL.md'), 'utf8')).toBe('segundo');
   });
 
   it('dry-run touches nothing, with or without force', () => {
@@ -425,11 +431,13 @@ describe('removeOwned', () => {
     const { rec, file, dir } = installed();
     fs.writeFileSync(file, 'editado');
     fs.writeFileSync(path.join(dir, 'SKILL.md'), '# editado');
-    removeOwned(ctx({ prev: rec, force: true }), rec);
+    const backupDir = path.join(tmpDir('kb-bak-'), 'T');
+    removeOwned(ctx({ prev: rec, force: true, backupDir }), rec);
     expect(fs.existsSync(file)).toBe(false);
     expect(fs.existsSync(dir)).toBe(false);
     expect(fs.readFileSync(`${file}.bak-T`, 'utf8')).toBe('editado');
-    expect(fs.readFileSync(path.join(`${dir}.bak-T`, 'SKILL.md'), 'utf8')).toBe('# editado');
+    expect(fs.readFileSync(path.join(backupDir, path.basename(dir), 'SKILL.md'), 'utf8')).toBe('# editado');
+    expect(fs.readdirSync(path.dirname(dir)).filter((n) => n.startsWith(`${path.basename(dir)}.bak-`))).toEqual([]);
   });
 
   it('keeps a folder where the user added a file', () => {

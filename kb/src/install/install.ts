@@ -44,8 +44,17 @@ const stampOf = (now: Date): string => now.toISOString().replace(/[:.]/g, '-');
 const newInstallReport = (): InstallReport => ({ ...newReport(), notes: [] });
 const isDiskTarget = (t: AnyTarget): t is InstallTarget => t !== 'claude';
 
+function dataDir(o: { home: string; env: NodeJS.ProcessEnv }): string {
+  return o.env.DELPHI_DEV_DATA || path.join(o.home, '.delphi-dev');
+}
+
 export function manifestPath(o: { home: string; env: NodeJS.ProcessEnv }): string {
-  return path.join(o.env.DELPHI_DEV_DATA || path.join(o.home, '.delphi-dev'), 'install-manifest.json');
+  return path.join(dataDir(o), 'install-manifest.json');
+}
+
+/** Replaced skill folders go here, outside every skills dir (see Ctx.backupDir). */
+function backupDirOf(o: { home: string; env: NodeJS.ProcessEnv }, stamp: string): string {
+  return path.join(dataDir(o), 'backups', stamp);
 }
 
 /** True when the manifest file exists but is not readable JSON (readManifest then answers "owns nothing"). */
@@ -325,7 +334,7 @@ export function installTargets(o: InstallOptions): InstallReport {
   const file = manifestPath(o);
   const corrupt = manifestIsCorrupt(file);
   const manifest = readManifest(file);
-  const base: Base = { dryRun: o.dryRun, force: o.force, stamp, report };
+  const base: Base = { dryRun: o.dryRun, force: o.force, stamp, backupDir: backupDirOf(o, stamp), report };
 
   for (const target of diskTargets) {
     const previous = manifest[target];
@@ -392,7 +401,8 @@ export function uninstallTargets(o: UninstallOptions): InstallReport {
     return report;
   }
   const manifest = readManifest(file);
-  const base: Base = { dryRun: o.dryRun, force: o.force, stamp: stampOf(o.now ?? new Date()), report };
+  const stamp = stampOf(o.now ?? new Date());
+  const base: Base = { dryRun: o.dryRun, force: o.force, stamp, backupDir: backupDirOf(o, stamp), report };
 
   for (const target of diskTargets) {
     const rec = manifest[target];

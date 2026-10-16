@@ -26,6 +26,8 @@ export interface Ctx {
   dryRun: boolean;
   force: boolean;
   stamp: string;
+  /** Where replaced skill FOLDERS are kept. Never inside a skills dir: a backup there (it has a SKILL.md) would load as a duplicate skill. */
+  backupDir: string;
   prev: TargetRecord;
   report: Report;
 }
@@ -177,6 +179,26 @@ function freeBackupPath(file: string, stamp: string): string {
   return candidate;
 }
 
+/** `<backupDir>/<name>`, or `<name>-2`, `-3`... when taken: a backup is never overwritten. */
+function freeDirBackupPath(ctx: Ctx, dir: string): string {
+  const base = path.join(ctx.backupDir, path.basename(dir));
+  let candidate = base;
+  for (let n = 2; lstatOrNull(candidate) !== null; n++) candidate = `${base}-${n}`;
+  return candidate;
+}
+
+/** rename, falling back to copy + remove when the backup lives on another volume (EXDEV). */
+function moveDir(src: string, dest: string): void {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  try {
+    fs.renameSync(src, dest);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EXDEV') throw err;
+    fs.cpSync(src, dest, { recursive: true });
+    fs.rmSync(src, { recursive: true, force: true });
+  }
+}
+
 function readMarkerHash(marker: string): string | undefined {
   try {
     const h = (JSON.parse(fs.readFileSync(marker, 'utf8')) as { treeHash?: unknown }).treeHash;
@@ -273,12 +295,12 @@ export function writeOwnedDir(ctx: Ctx, destDir: string, files: Map<string, Buff
       for (const [rel, data] of files) atomicWrite(path.join(stage, ...rel.split('/')), data);
       atomicWrite(path.join(stage, MARKER), `${JSON.stringify({ treeHash: next })}\n`);
       if (st !== null) {
-        const aside = backup ? freeBackupPath(destDir, ctx.stamp) : `${destDir}.old-${process.pid}`;
-        fs.renameSync(destDir, aside);
+        const aside = backup ? freeDirBackupPath(ctx, destDir) : `${destDir}.old-${process.pid}`;
+        moveDir(destDir, aside);
         try {
           fs.renameSync(stage, destDir);
         } catch (err) {
-          fs.renameSync(aside, destDir);
+          moveDir(aside, destDir);
           throw err;
         }
         if (!backup) fs.rmSync(aside, { recursive: true, force: true });
@@ -291,7 +313,7 @@ export function writeOwnedDir(ctx: Ctx, destDir: string, files: Map<string, Buff
       fs.rmSync(stage, { recursive: true, force: true });
     }
   } else if (backup) {
-    ctx.report.warnings.push(`backup seria criado: ${freeBackupPath(destDir, ctx.stamp)}`);
+    ctx.report.warnings.push(`backup seria criado: ${freeDirBackupPath(ctx, destDir)}`);
   }
   ctx.report.written.push(destDir);
   upsert(rec.dirs, { path: destDir, treeHash: next });
@@ -335,7 +357,7 @@ export function removeOwned(ctx: Ctx, rec: TargetRecord): void {
       }
       if (!ctx.dryRun) {
         if (owned) fs.rmSync(d.path, { recursive: true, force: true });
-        else fs.renameSync(d.path, freeBackupPath(d.path, ctx.stamp));
+        else moveDir(d.path, freeDirBackupPath(ctx, d.path));
       }
       ctx.report.removed.push(d.path);
     } catch (err) {
