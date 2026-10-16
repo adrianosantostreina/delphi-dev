@@ -13,6 +13,11 @@ describe('renderOpencodePlugin', () => {
     expect(js).toContain('gerenciado');
   });
 
+  it('spawns node from the trusted checkout, never from the project being edited', () => {
+    const js = renderOpencodePlugin('/opt/delphi-dev');
+    expect(js).toMatch(/spawnSync\("node", \[script\], \{[^}]*cwd: ROOT/s);
+  });
+
   it('runs: BOM after an edit and knowledge injected into the system prompt', () => {
     const work = tmpDir('kb-oc-plugin-');
     const plugin = path.join(work, 'delphi-dev.mjs');

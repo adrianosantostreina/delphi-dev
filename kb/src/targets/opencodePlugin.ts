@@ -19,6 +19,9 @@ function run(script, payload) {
       encoding: "utf8",
       timeout: 3000,
       windowsHide: true,
+      // Run from the trusted plugin checkout: on Windows the executable search starts in the working
+      // directory, and the project being edited must not be able to plant a node.exe there.
+      cwd: ROOT,
     });
     return r.status === 0 && typeof r.stdout === "string" ? r.stdout : "";
   } catch {
