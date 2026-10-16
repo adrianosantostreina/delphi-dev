@@ -1,49 +1,47 @@
 import * as vscode from 'vscode';
+import { createServices } from './agents/services';
 import { registerCommands } from './commands/delphiCommands';
-import { DelphiCommandsProvider } from './views/delphiCommandsProvider';
 import { detectDelphiProject, watchDelphiFiles } from './context/delphiDetector';
-import { createStatusBar, updateStatusBar } from './context/statusBar';
+import { createStatusBar, setStatusAgent, updateStatusBar } from './context/statusBar';
 import { checkAndOfferClaudeignore, registerClaudeignoreCommand } from './features/claudeignore';
+import { DelphiCommandsProvider } from './views/delphiCommandsProvider';
 import { VIEWS } from './constants';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  // Register all commands
-  registerCommands(context);
+  const services = createServices(context);
+
+  registerCommands(context, services);
   registerClaudeignoreCommand(context);
 
-  // Set up tree view
-  const treeProvider = new DelphiCommandsProvider();
-  vscode.window.createTreeView(VIEWS.COMMANDS_TREE, {
-    treeDataProvider: treeProvider,
-  });
+  vscode.window.createTreeView(VIEWS.COMMANDS_TREE, { treeDataProvider: new DelphiCommandsProvider() });
 
-  // Set up status bar
   createStatusBar(context);
+  const refreshAgent = async (): Promise<void> => {
+    const installed = services.installedAgents();
+    const configured = vscode.workspace.getConfiguration('delphiDev').get<string>('agent', 'auto');
+    const id = configured !== 'auto' ? (configured as 'claude' | 'codex' | 'opencode') : installed.length === 1 ? installed[0] : undefined;
+    setStatusAgent(id ? services.adapters[id].label : undefined);
+  };
+  context.subscriptions.push(
+    vscode.commands.registerCommand('delphi-dev.refreshStatus', refreshAgent),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('delphiDev.agent')) void refreshAgent();
+      if (e.affectsConfiguration('delphiDev.showStatusBar')) detectDelphiProject().then(updateStatusBar);
+    }),
+  );
+  await refreshAgent();
 
-  // Detect Delphi project and configure UI
+  // The .claudeignore feature only makes sense when Claude Code is the agent in use.
+  const offerClaudeignore = (): void => {
+    if (services.adapters.claude.isInstalled()) checkAndOfferClaudeignore(context);
+  };
   const isDelphi = await detectDelphiProject();
   updateStatusBar(isDelphi);
-
-  if (isDelphi) {
-    checkAndOfferClaudeignore(context);
-  }
-
-  // Watch for changes in Delphi files
+  if (isDelphi) offerClaudeignore();
   watchDelphiFiles(context, (isDelphiNow) => {
     updateStatusBar(isDelphiNow);
-    if (isDelphiNow) {
-      checkAndOfferClaudeignore(context);
-    }
+    if (isDelphiNow) offerClaudeignore();
   });
-
-  // Listen for configuration changes
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('delphiDev.showStatusBar')) {
-        detectDelphiProject().then(updateStatusBar);
-      }
-    })
-  );
 }
 
 export function deactivate(): void {

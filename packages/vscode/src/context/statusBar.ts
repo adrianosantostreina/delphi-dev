@@ -1,27 +1,29 @@
 import * as vscode from 'vscode';
-import { COMMANDS } from '../constants';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
+let agentLabel: string | undefined;
+
+function render(): void {
+  if (!statusBarItem) return;
+  statusBarItem.text = agentLabel ? `$(tools) Delphi Dev · ${agentLabel}` : '$(tools) Delphi Dev';
+}
 
 export function createStatusBar(context: vscode.ExtensionContext): void {
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
-  statusBarItem.text = '$(tools) Delphi Dev';
-  statusBarItem.tooltip = 'Delphi Dev for Claude Code - Click for commands';
-  statusBarItem.command = COMMANDS.ABOUT;
+  statusBarItem.tooltip = 'Delphi Dev - remote control for your AI agent (click to choose the agent)';
+  statusBarItem.command = 'delphi-dev.chooseAgent';
+  render();
   context.subscriptions.push(statusBarItem);
 }
 
+export function setStatusAgent(label: string | undefined): void {
+  agentLabel = label;
+  render();
+}
+
 export function updateStatusBar(visible: boolean): void {
-  if (!statusBarItem) {
-    return;
-  }
-
-  const config = vscode.workspace.getConfiguration('delphiDev');
-  const showStatusBar = config.get<boolean>('showStatusBar', true);
-
-  if (visible && showStatusBar) {
-    statusBarItem.show();
-  } else {
-    statusBarItem.hide();
-  }
+  if (!statusBarItem) return;
+  const showStatusBar = vscode.workspace.getConfiguration('delphiDev').get<boolean>('showStatusBar', true);
+  if (visible && showStatusBar) statusBarItem.show();
+  else statusBarItem.hide();
 }

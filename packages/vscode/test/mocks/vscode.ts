@@ -20,5 +20,16 @@ export class TreeItem {
 export const env = { language: 'en' };
 export const window = {};
 export const workspace = {};
-export const commands = {};
+// Records registrations so tests can look handlers up by id and invoke them.
+export const registeredCommands = new Map<string, (...args: unknown[]) => unknown>();
+export const executedCommands: string[] = [];
+export const commands = {
+  registerCommand(id: string, handler: (...args: unknown[]) => unknown) {
+    registeredCommands.set(id, handler);
+    return { dispose: () => registeredCommands.delete(id) };
+  },
+  async executeCommand(id: string) {
+    executedCommands.push(id);
+  },
+};
 export const extensions = {};

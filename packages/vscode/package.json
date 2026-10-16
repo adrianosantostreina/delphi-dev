@@ -215,7 +215,36 @@
             "en"
           ],
           "default": "pt-BR",
-          "description": "Language for Delphi Dev prompts sent to Claude Code."
+          "description": "Reserved: language for Delphi Dev prompts (not used yet)."
+        },
+        "delphiDev.agent": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "claude",
+            "codex",
+            "opencode"
+          ],
+          "enumDescriptions": [
+            "Use the only installed agent, or the last one you used",
+            "Claude Code",
+            "Codex",
+            "OpenCode"
+          ],
+          "default": "auto",
+          "description": "Which AI agent receives the Delphi Dev commands."
+        },
+        "delphiDev.opencodePort": {
+          "type": "number",
+          "default": 4096,
+          "scope": "machine",
+          "description": "Port used to control OpenCode (opencode --port). A server already listening there is reused. Machine-scoped: a repository .vscode/settings.json cannot change it."
+        },
+        "delphiDev.codexPromptUri": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "description": "Experimental: try to prefill the Codex composer through vscode://openai.chatgpt/?prompt=. Off = open the panel and copy the command. Machine-scoped: a repository .vscode/settings.json cannot change it."
         }
       }
     },

@@ -1,20 +1,5 @@
 export const EXTENSION_ID = 'delphi-dev';
 
-export const COMMANDS = {
-  WRITE: `${EXTENSION_ID}.write`,
-  AUDIT: `${EXTENSION_ID}.audit`,
-  REVIEW: `${EXTENSION_ID}.review`,
-  SPEC: `${EXTENSION_ID}.spec`,
-  TDD: `${EXTENSION_ID}.tdd`,
-  NEW_PROJECT: `${EXTENSION_ID}.newProject`,
-  ABOUT: `${EXTENSION_ID}.about`,
-  CREATE_CLAUDEIGNORE: `${EXTENSION_ID}.createClaudeignore`,
-  BUILD: `${EXTENSION_ID}.build`,
-  REFACTOR: `${EXTENSION_ID}.refactor`,
-  MIGRATE: `${EXTENSION_ID}.migrate`,
-  CONTRIBUTE_KB: `${EXTENSION_ID}.contributeKb`,
-} as const;
-
 export const VIEWS = {
   COMMANDS_TREE: 'delphiDevCommands',
 } as const;
