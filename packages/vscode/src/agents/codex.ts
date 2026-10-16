@@ -1,5 +1,5 @@
 import type { AdapterDeps, AgentAdapter, DeliveryResult } from './types';
-import { say } from './types';
+import { say, tell } from './types';
 
 const EXTENSION = 'openai.chatgpt';
 
@@ -39,7 +39,7 @@ export function createCodexAdapter(d: AdapterDeps): AgentAdapter {
       }
       // Codex has no documented way to receive a prompt: copy it and say so.
       await d.writeClipboard(text);
-      await d.showInfo(
+      tell(d,
         say(d, `Comando copiado: ${text} — cole no Codex e tecle Enter.`, `Command copied: ${text} — paste it into Codex and press Enter.`),
       );
       return 'copied';

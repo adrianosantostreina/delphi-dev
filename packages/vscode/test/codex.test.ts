@@ -106,4 +106,14 @@ describe('codex adapter', () => {
     expect(await createCodexAdapter(d).send('$delphi-cmd-audit')).toBe('unavailable');
     expect(executed).toEqual([]);
   });
+
+  it('returns right after copying even if the info toast is never dismissed', async () => {
+    const d = fakeDeps({ showInfo: () => new Promise<string | undefined>(() => undefined) });
+    const result = await Promise.race([
+      createCodexAdapter(d).send('$delphi-cmd-audit'),
+      new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 200)),
+    ]);
+    expect(result).toBe('copied');
+    expect(d.clipboard).toEqual(['$delphi-cmd-audit']);
+  });
 });

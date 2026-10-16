@@ -1,5 +1,5 @@
 import type { AdapterDeps, AgentAdapter, DeliveryResult, TerminalLike } from './types';
-import { say } from './types';
+import { say, tell } from './types';
 
 export const OPENCODE_TERMINAL_NAME = 'OpenCode - Delphi Dev';
 const HEALTH_ATTEMPTS = 40;
@@ -68,7 +68,7 @@ export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
 
   async function copyFallback(text: string): Promise<DeliveryResult> {
     await d.writeClipboard(text);
-    await d.showInfo(
+    tell(d,
       say(d, `Comando copiado: ${text} — cole no OpenCode e tecle Enter.`, `Command copied: ${text} — paste it into OpenCode and press Enter.`),
     );
     return 'copied';

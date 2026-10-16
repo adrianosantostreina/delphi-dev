@@ -44,3 +44,12 @@ export interface AgentAdapter {
 export function say(d: AdapterDeps, pt: string, en: string): string {
   return d.isPortuguese() ? pt : en;
 }
+
+/** Informational toast that must never hold a command back: it resolves only when the user reacts. */
+export function tell(d: AdapterDeps, message: string): void {
+  try {
+    void Promise.resolve(d.showInfo(message)).catch(() => undefined);
+  } catch {
+    // a toast that cannot be shown is not worth failing the command
+  }
+}

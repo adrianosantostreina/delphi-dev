@@ -251,6 +251,16 @@ describe('opencode adapter', () => {
     expect(d.terminals).toEqual([]);
   });
 
+  it('returns right after copying even if the info toast is never dismissed', async () => {
+    const s = server({ appendFailures: 1_000 });
+    const d = fakeDeps({ fetch: s.fetch, showInfo: () => new Promise<string | undefined>(() => undefined) });
+    const result = await Promise.race([
+      createOpencodeAdapter(d).send('/delphi-audit'),
+      new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 200)),
+    ]);
+    expect(result).toBe('copied');
+  });
+
   it('survives a network error on health', async () => {
     const d = fakeDeps({
       fetch: async () => {
