@@ -26,7 +26,8 @@ jobs:
 
   publish:
     needs: check-version
-    if: needs.check-version.outputs.should_publish == 'true' || github.event_name == 'workflow_dispatch'
+    # Manual runs publish only from master: a branch must never reach the Marketplace.
+    if: (needs.check-version.outputs.should_publish == 'true' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
