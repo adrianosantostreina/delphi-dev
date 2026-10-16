@@ -40,7 +40,7 @@ vi.mock('../src/plugin', () => ({
 }));
 vi.mock('../src/vscode-ext', () => ({
   installVSCodeExtension: () => { calls.push('installVSCodeExtension'); },
-  isVSCodeAvailable: () => false,
+  isVSCodeAvailable: () => true,
   isVSCodeExtensionInstalled: () => false,
 }));
 vi.mock('../src/hooks', () => ({ removeHooks: () => { calls.push('removeHooks'); } }));
@@ -114,7 +114,7 @@ describe('install with a pre-release package', () => {
       'step|Cleaning up legacy delphi-dev hooks in ~/.claude/settings.json...',
       'removeHooks',
       'success|Legacy hooks cleaned',
-      'warn|VS Code not detected — skipping extension install',
+      'step|VS Code extension: the beta is a .vsix on the GitHub Release (not the Marketplace); see the README for "code --install-extension"',
       expect.stringMatching(/^summary\|/),
     ]);
   });
@@ -161,6 +161,20 @@ describe('install with a pre-release package', () => {
     state.pluginThrows = 'boom';
     await expect(runCli()).rejects.toThrow('boom');
     expect(calls.some((c) => c.startsWith('writeRefState'))).toBe(false);
+  });
+});
+
+describe('VS Code extension in the beta', () => {
+  it('a pre-release never installs the Marketplace extension (the beta is a .vsix) and prints no Marketplace tip', async () => {
+    expect(await runCli()).toBeUndefined();
+    expect(calls).not.toContain('installVSCodeExtension');
+    expect(calls.some((c) => c.startsWith('step|VS Code extension: the beta is a .vsix'))).toBe(true);
+  });
+
+  it('a stable package installs it from the Marketplace, as always', async () => {
+    state.version = '4.0.0';
+    expect(await runCli()).toBeUndefined();
+    expect(calls).toContain('installVSCodeExtension');
   });
 });
 

@@ -8,7 +8,7 @@ import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, summary } from './ui';
 import chalk from 'chalk';
 import { packageVersion } from './version';
-import { DEFAULT_BRANCH, clearRefState, planInstallRef, planUpdateRef, readRefState, writeRefState, type RefPlan } from './ref';
+import { DEFAULT_BRANCH, clearRefState, isPrerelease, planInstallRef, planUpdateRef, readRefState, writeRefState, type RefPlan } from './ref';
 import { detectTargets, installedPortableTargets, portableHints, readInstallManifest, realProbe, resolveTargets, runPortable, type Target } from './targets';
 
 const program = new Command();
@@ -130,7 +130,11 @@ program
     removeHooks();
     success('Legacy hooks cleaned');
 
-    if (isVSCodeAvailable()) {
+    // A pre-release is not on the Marketplace: its extension is a .vsix attached to the GitHub Release.
+    const betaExtension = isPrerelease(packageVersion());
+    if (betaExtension) {
+      step('VS Code extension: the beta is a .vsix on the GitHub Release (not the Marketplace); see the README for "code --install-extension"');
+    } else if (isVSCodeAvailable()) {
       step('Installing VS Code extension...');
       try {
         installVSCodeExtension();
@@ -154,7 +158,7 @@ program
       { label: 'VS Code extension', ok: result.vscodeOk, note: !isVSCodeAvailable() ? 'not detected' : undefined },
     ]);
 
-    if (!isVSCodeAvailable() || !isVSCodeExtensionInstalled()) {
+    if (!betaExtension && (!isVSCodeAvailable() || !isVSCodeExtensionInstalled())) {
       console.log(chalk.dim('💡 Tip: Install the Delphi Dev extension for VS Code — search "Delphi Dev" in the Extensions panel or run:'));
       console.log(chalk.dim('   code --install-extension adrianosantos.delphi-dev-vscode'));
       console.log('');
