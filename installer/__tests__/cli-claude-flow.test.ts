@@ -130,6 +130,16 @@ describe('npx delphi-dev (no arguments) -> Claude Code flow', () => {
     expect(logged.join('\n')).not.toContain('--target opencode');
   });
 
+  it('--dry-run executes NOTHING: no plugin install, no settings.json cleanup, no VS Code extension', async () => {
+    const code = await runCli('install', '--dry-run');
+    expect(code).toBeUndefined();
+    expect(calls).not.toContain('installPlugin');
+    expect(calls).not.toContain('removeHooks');
+    expect(calls).not.toContain('installVSCodeExtension');
+    expect(calls.some((c) => c.startsWith('step|') && c.includes('[dry-run]'))).toBe(true);
+    expect(calls[calls.length - 1]).toMatch(/^success|Dry run.*nothing was changed/);
+  });
+
   it('exits 1 with the legacy message when the Claude Code CLI is missing', async () => {
     sys.hasClaudeCLI = false;
     const code = await runCli();

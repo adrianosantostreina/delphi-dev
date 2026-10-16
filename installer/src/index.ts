@@ -19,7 +19,7 @@ program
   .option('--from <path>', 'use an existing checkout instead of ~/.delphi-dev/plugin (development)')
   .option('--scope <scope>', 'user (default) or project (Codex/OpenCode only)')
   .option('--project <dir>', 'project folder for --scope project')
-  .option('--dry-run', 'show what would change without writing (Codex/OpenCode only)')
+  .option('--dry-run', 'show what would change; executes and writes nothing')
   .option('--force', 'overwrite files that are not ours (a backup is made)')
   .action(async (opts: { target?: string; from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean }) => {
     let targets: Target[];
@@ -53,6 +53,15 @@ program
       for (const cmd of portableHints(detectTargets(realProbe()))) {
         console.log(chalk.dim(`Tip: Codex/OpenCode detected - to install delphi-dev there too, run: ${cmd}`));
       }
+    }
+
+    if (opts.dryRun) {
+      // Dry run executes nothing at all: not even the Claude Code part (plugin, settings.json, VS Code).
+      step('[dry-run] would install the Claude Code plugin (git clone/pull + claude plugin marketplace add/install)');
+      step('[dry-run] would remove legacy delphi-dev hooks from ~/.claude/settings.json');
+      if (isVSCodeAvailable()) step('[dry-run] would install the VS Code extension');
+      success('Dry run - nothing was changed');
+      return;
     }
 
     const sys = detectSystem();

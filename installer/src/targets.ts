@@ -56,7 +56,11 @@ export interface CheckoutDeps {
   exists(p: string): boolean;
 }
 
-export function ensureCheckout(dest: string, from: string | undefined, deps: CheckoutDeps): string {
+/**
+ * `dryRun` never runs git: an existing checkout is reused as is, and a missing one is reported as
+ * `null` ("would be cloned") because there is nothing to run `kb-cli --dry-run` from.
+ */
+export function ensureCheckout(dest: string, from: string | undefined, deps: CheckoutDeps, dryRun = false): string | null {
   if (from) {
     if (!deps.exists(path.join(from, 'runtime', 'kb-cli.mjs'))) {
       throw new Error(`--from ${from}: runtime/kb-cli.mjs nao encontrado (esse checkout e da v4?)`);
@@ -65,9 +69,10 @@ export function ensureCheckout(dest: string, from: string | undefined, deps: Che
   }
   if (deps.exists(path.join(dest, '.git'))) {
     // Offline or diverged: keep what is already there.
-    deps.run('git', ['-C', dest, 'pull', '--ff-only']);
+    if (!dryRun) deps.run('git', ['-C', dest, 'pull', '--ff-only']);
     return dest;
   }
+  if (dryRun) return null;
   const result = deps.run('git', ['clone', '--depth=1', REPO_URL, dest]);
   if (result.status !== 0) throw new Error('git clone falhou');
   return dest;
@@ -127,7 +132,11 @@ export function runPortable(
     run: (c, a) => spawnSync(c, a, { stdio: 'inherit' }),
     exists: (p) => fs.existsSync(p),
   };
-  const checkout = ensureCheckout(checkoutDir(), o.from ? path.resolve(o.from) : undefined, deps);
+  const checkout = ensureCheckout(checkoutDir(), o.from ? path.resolve(o.from) : undefined, deps, !!o.dryRun);
+  if (checkout === null) {
+    console.log(`[dry-run] would clone ${REPO_URL} to ${checkoutDir()} and then run kb-cli ${cmd} --dry-run`);
+    return;
+  }
   const args = kbCliArgs(cmd, checkout, portable, o);
   if (!fs.existsSync(args[0])) {
     throw new Error(`${args[0]} nao encontrado: o checkout nao tem o suporte a Codex/OpenCode (use --from <checkout v4>)`);

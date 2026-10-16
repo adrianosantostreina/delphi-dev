@@ -80,6 +80,14 @@ describe('ensureCheckout', () => {
     expect(calls).toEqual([['git', '-C', dest, 'pull', '--ff-only']]);
   });
 
+  it('dry run never runs git: it reuses an existing checkout and reports a missing one as null', () => {
+    const calls: string[][] = [];
+    const run = (c: string, a: string[]) => { calls.push([c, ...a]); return { status: 0 }; };
+    expect(ensureCheckout(dest, undefined, { run, exists: (p) => p === path.join(dest, '.git') }, true)).toBe(dest);
+    expect(ensureCheckout(dest, undefined, { run, exists: () => false }, true)).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
   it('uses --from as is, after checking it is a v4 checkout', () => {
     const from = path.resolve('/src/delphi-dev');
     expect(ensureCheckout(dest, from, { run: () => ({ status: 0 }), exists: () => true })).toBe(from);

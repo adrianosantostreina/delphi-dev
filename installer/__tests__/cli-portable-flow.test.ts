@@ -154,6 +154,14 @@ describe('install --target', () => {
     expect(calls[0]).toMatch(/^error\|.*gemini/);
   });
 
+  it('all --dry-run: the portable part is a dry run AND the Claude part executes nothing', async () => {
+    expect(await runCli('install', '--target', 'all', '--dry-run')).toBeUndefined();
+    expect(calls).toContain('runPortable|install|codex+opencode|{"target":"all","dryRun":true}');
+    expect(calls).not.toContain('installPlugin');
+    expect(calls).not.toContain('removeHooks');
+    expect(calls).not.toContain('installVSCodeExtension');
+  });
+
   it('Codex detected next to Claude Code and no flag: installs ONLY Claude and prints the exact hint', async () => {
     state.detected.codex = true;
     expect(await runCli()).toBeUndefined();
