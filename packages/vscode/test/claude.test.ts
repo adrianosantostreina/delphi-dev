@@ -45,4 +45,40 @@ describe('claude adapter', () => {
     expect(await createClaudeAdapter(d).send('/audit')).toBe('unavailable');
     expect(executed).toEqual([['workbench.extensions.installExtension', 'anthropic.claude-code']]);
   });
+
+  it('without the extension, offers the install and never tries the command or the URI (an unhandled URI can answer true)', async () => {
+    const executed: unknown[][] = [];
+    const d = fakeDeps({
+      hasExtension: () => false,
+      executeCommand: async (command, ...args) => {
+        executed.push([command, ...args]);
+        return undefined;
+      },
+      openExternal: async () => true,
+      showError: async () => 'Instalar Claude Code',
+    });
+    expect(await createClaudeAdapter(d).send('/audit')).toBe('unavailable');
+    expect(executed).toEqual([['workbench.extensions.installExtension', 'anthropic.claude-code']]);
+    expect(d.calls).toEqual([]);
+  });
+
+  it('with the extension installed keeps the exact flow: command first, then the URI, same arguments', async () => {
+    const order: string[] = [];
+    const d = fakeDeps({
+      hasExtension: (id) => id === 'anthropic.claude-code',
+      executeCommand: async (command, ...args) => {
+        order.push(`exec:${command}:${JSON.stringify(args)}`);
+        throw new Error('boom');
+      },
+      openExternal: async (uri) => {
+        order.push(`open:${uri}`);
+        return true;
+      },
+    });
+    expect(await createClaudeAdapter(d).send('/review @a.pas')).toBe('sent');
+    expect(order).toEqual([
+      'exec:claude-vscode.primaryEditor.open:[null,"/review @a.pas"]',
+      `open:vscode://anthropic.claude-code/open?prompt=${encodeURIComponent('/review @a.pas')}`,
+    ]);
+  });
 });
