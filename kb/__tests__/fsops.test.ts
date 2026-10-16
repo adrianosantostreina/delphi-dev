@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-  emptyRecord, MARKER, newReport, readManifest, removeOwned, sha256, writeManifest, writeOwnedDir, writeOwnedFile,
+  atomicWrite, emptyRecord, MARKER, newReport, resolveWriteTarget, readManifest, removeOwned, sha256, writeManifest, writeOwnedDir, writeOwnedFile,
   type Ctx, type TargetRecord,
 } from '../src/install/fsops';
 import { tmpDir } from './helpers';
@@ -22,6 +22,71 @@ function trySymlink(target: string, link: string, type: 'file' | 'dir'): boolean
     return false;
   }
 }
+
+describe('atomicWrite on the user config', () => {
+  it('writes through a symlink and keeps the link (dotfiles managers)', (t) => {
+    const dir = tmpDir();
+    const real = path.join(dir, 'dotfiles', 'config.toml');
+    fs.mkdirSync(path.dirname(real), { recursive: true });
+    fs.writeFileSync(real, 'old\n');
+    const link = path.join(dir, 'config.toml');
+    if (!trySymlink(real, link, 'file')) t.skip();
+    atomicWrite(link, 'new\n');
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(real, 'utf8')).toBe('new\n');
+    expect(fs.readdirSync(dir).sort()).toEqual(['config.toml', 'dotfiles']);
+    expect(fs.readdirSync(path.dirname(real))).toEqual(['config.toml']);
+  });
+
+  it('writes through a relative symlink and through a chain of links', (t) => {
+    const dir = tmpDir();
+    fs.mkdirSync(path.join(dir, 'a'));
+    fs.writeFileSync(path.join(dir, 'a', 'real.toml'), 'old');
+    const mid = path.join(dir, 'mid.toml');
+    const top = path.join(dir, 'top.toml');
+    if (!trySymlink(path.join('a', 'real.toml'), mid, 'file')) t.skip();
+    if (!trySymlink('mid.toml', top, 'file')) t.skip();
+    atomicWrite(top, 'new');
+    expect(fs.readFileSync(path.join(dir, 'a', 'real.toml'), 'utf8')).toBe('new');
+    expect(fs.lstatSync(top).isSymbolicLink()).toBe(true);
+    expect(fs.lstatSync(mid).isSymbolicLink()).toBe(true);
+  });
+
+  // File symlinks need a privilege on Windows, so the rule itself is also checked with a stand-in fs.
+  it('resolveWriteTarget: a symlink resolves to its target, a regular or missing file to itself', () => {
+    const links: Record<string, string> = { '/h/config.toml': '/dot/config.toml', '/h/dangling.toml': '../elsewhere/x.toml' };
+    const io = {
+      lstatSync: (p: string) => {
+        if (p === '/h/missing.toml') throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        return { isSymbolicLink: () => p in links };
+      },
+      realpathSync: (p: string) => {
+        if (p === '/h/dangling.toml') throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        return links[p];
+      },
+      readlinkSync: (p: string) => links[p],
+    };
+    expect(resolveWriteTarget('/h/config.toml', io)).toBe('/dot/config.toml');
+    expect(resolveWriteTarget('/h/plain.toml', io)).toBe('/h/plain.toml');
+    expect(resolveWriteTarget('/h/missing.toml', io)).toBe('/h/missing.toml');
+    expect(resolveWriteTarget('/h/dangling.toml', io)).toBe(path.resolve('/h', '../elsewhere/x.toml'));
+  });
+
+  it.skipIf(process.platform === 'win32')('keeps the mode of the file it replaces', () => {
+    const file = path.join(tmpDir(), 'secrets.toml');
+    fs.writeFileSync(file, 'old');
+    fs.chmodSync(file, 0o600);
+    atomicWrite(file, 'new');
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+    expect(fs.readFileSync(file, 'utf8')).toBe('new');
+  });
+
+  it('a plain new file is still created (parents included)', () => {
+    const file = path.join(tmpDir(), 'x', 'y', 'z.txt');
+    atomicWrite(file, 'ok');
+    expect(fs.readFileSync(file, 'utf8')).toBe('ok');
+  });
+});
 
 describe('writeOwnedFile', () => {
   it('creates a file and records its hash', () => {

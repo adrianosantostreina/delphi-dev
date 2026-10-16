@@ -66,13 +66,52 @@ export function treeHash(files: Map<string, Buffer>): string {
   return h.digest('hex');
 }
 
-/** Writes to a sibling temp file and renames over the target: readers never see a half-written file. */
-export function atomicWrite(file: string, content: string | Buffer): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.tmp-${process.pid}`;
+export interface LinkIO {
+  lstatSync(p: string): { isSymbolicLink(): boolean };
+  realpathSync(p: string): string;
+  readlinkSync(p: string): string;
+}
+
+/**
+ * Where a write to `file` must really land: when `file` is a symlink (a dotfiles manager, say) the
+ * link itself is kept and its target is written. A dangling link resolves to where it points.
+ */
+export function resolveWriteTarget(file: string, io: LinkIO = fs): string {
   try {
+    if (!io.lstatSync(file).isSymbolicLink()) return file;
+  } catch {
+    return file;
+  }
+  try {
+    return io.realpathSync(file);
+  } catch {
+    return path.resolve(path.dirname(file), io.readlinkSync(file));
+  }
+}
+
+/**
+ * Writes to a sibling temp file and renames over the target: readers never see a half-written file.
+ * Symlinks are written through (the link stays) and the file mode of what is replaced is kept.
+ */
+export function atomicWrite(file: string, content: string | Buffer): void {
+  const target = resolveWriteTarget(file);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-${process.pid}`;
+  try {
+    // A config the user locked down (0600) must not come back world-readable after our rewrite.
+    let mode: number | undefined;
+    try {
+      mode = fs.statSync(target).mode & 0o7777;
+    } catch { /* new file */ }
     fs.writeFileSync(tmp, content);
-    fs.renameSync(tmp, file);
+    if (mode !== undefined) {
+      try {
+        fs.chmodSync(tmp, mode);
+      } catch (err) {
+        if (process.platform !== 'win32') throw err;
+      }
+    }
+    fs.renameSync(tmp, target);
   } catch (err) {
     try { fs.rmSync(tmp, { force: true }); } catch { /* best effort */ }
     throw err;
