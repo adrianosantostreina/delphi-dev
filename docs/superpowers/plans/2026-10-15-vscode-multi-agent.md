@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **RESTRIÇÃO MÁXIMA — o Claude Code não pode quebrar.** Todo task termina com `cd kb && npx vitest run` (inclui `__tests__/claude-surface.test.ts`) e `node kb/scripts/claude-surface.mjs --check --validate`. Se a superfície do Claude divergir do baseline, o task só pode seguir se a divergência for intencional, descrita no commit e aceita com `--write` num commit separado e revisável. O revisor de cada task confere esse portão. Antes de qualquer merge: `claude --plugin-dir . -p "/delphi-dev:about"` precisa responder normalmente.
 - Branch `feature/v4.0-multi-agente`. Commits em pt-BR `tipo(escopo): descrição`, terminando com a linha `Co-Authored-By` do modelo que fez o commit. **Push só com confirmação. Nada de `vsce publish`/`npm publish`** (política do mantenedor: publicar só quando tudo estiver pronto).
 - Código em `packages/vscode/src` fica **ASCII** salvo literais de texto para o usuário em português; ferramentas de edição convertem `\uXXXX` em caracteres: confira com `perl -ne 'print "$ARGV:$.\n" if /[^\x00-\x7F]/' <arquivo>`.
 - Testes nunca tocam rede, `gh`, navegador, área de transferência nem o home real: tudo por `AdapterDeps` falsas.

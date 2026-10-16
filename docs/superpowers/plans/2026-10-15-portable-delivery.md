@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **RESTRIÇÃO MÁXIMA — o Claude Code não pode quebrar.** Todo task termina com `cd kb && npx vitest run` (inclui `__tests__/claude-surface.test.ts`) e `node kb/scripts/claude-surface.mjs --check --validate`. Se a superfície do Claude divergir do baseline, o task só pode seguir se a divergência for intencional, descrita no commit e aceita com `--write` num commit separado e revisável. O revisor de cada task confere esse portão. Antes de qualquer merge: `claude --plugin-dir . -p "/delphi-dev:about"` precisa responder normalmente.
 - Branch `feature/v4.0-multi-agente`. Commits em pt-BR `tipo(escopo): descrição`, terminando com a linha `Co-Authored-By` do modelo que fez o commit. **Push só com confirmação do usuário.** Nada de `npm publish`.
 - Toda mudança em `kb/src/**` termina com `cd kb && npm run build:runtime` e o `runtime/*.mjs` regenerado **commitado junto** (o CI falha se divergir).
 - `node:sqlite` só é carregado sob demanda (`createRequire`); bundles com `target: node18`. Nada novo pode importar `node:sqlite` estaticamente.

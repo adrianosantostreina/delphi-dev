@@ -1,0 +1,286 @@
+{
+  "manifests": {
+    ".claude-plugin/plugin.json": {
+      "author": {
+        "email": "adrianosantospro@gmail.com",
+        "name": "Adriano Santos"
+      },
+      "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, project scaffolding, build validation, and RAG-powered knowledge base.",
+      "homepage": "https://github.com/adrianosantostreina/delphi-dev",
+      "keywords": [
+        "delphi",
+        "object-pascal",
+        "clean-code",
+        "style-guide",
+        "code-review",
+        "audit",
+        "firemonkey",
+        "vcl",
+        "firedac",
+        "rad-studio",
+        "rag"
+      ],
+      "license": "MIT",
+      "mcpServers": {
+        "delphi-dev-kb": {
+          "args": [
+            "${CLAUDE_PLUGIN_ROOT}/runtime/kb-mcp.mjs"
+          ],
+          "command": "node"
+        }
+      },
+      "name": "delphi-dev",
+      "repository": "https://github.com/adrianosantostreina/delphi-dev"
+    },
+    ".claude-plugin/marketplace.json": {
+      "metadata": {
+        "description": "Delphi development expert for Claude Code — applies Delphi Style Guide, Clean Code, and SOLID patterns automatically."
+      },
+      "name": "delphi-dev",
+      "owner": {
+        "email": "adrianosantospro@gmail.com",
+        "name": "Adriano Santos"
+      },
+      "plugins": [
+        {
+          "author": {
+            "email": "adrianosantospro@gmail.com",
+            "name": "Adriano Santos"
+          },
+          "category": "development",
+          "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, project scaffolding, build validation, and RAG-powered knowledge base.",
+          "homepage": "https://github.com/adrianosantostreina/delphi-dev",
+          "keywords": [
+            "delphi",
+            "object-pascal",
+            "clean-code",
+            "style-guide",
+            "code-review",
+            "audit",
+            "firemonkey",
+            "vcl",
+            "firedac",
+            "rad-studio"
+          ],
+          "license": "MIT",
+          "name": "delphi-dev",
+          "repository": "https://github.com/adrianosantostreina/delphi-dev",
+          "source": {
+            "source": "url",
+            "url": "https://github.com/adrianosantostreina/delphi-dev.git"
+          }
+        }
+      ]
+    }
+  },
+  "hooks": {
+    "description": "delphi-dev: BOM em fontes Delphi e injeção enxuta da base de conhecimento",
+    "hooks": {
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}/runtime/hook-fix-encoding.mjs\"; exit 0"
+            }
+          ]
+        }
+      ],
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}/runtime/hook-inject.mjs\"; exit 0"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "mcp": {
+    "delphi-dev-kb": {
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/runtime/kb-mcp.mjs"
+      ],
+      "command": "node"
+    }
+  },
+  "commands": {
+    "about.md": {
+      "description": "Information about the delphi-dev plugin — author, version, and features"
+    },
+    "audit.md": {
+      "description": "Gera laudo técnico profissional completo de um projeto Delphi"
+    },
+    "contribute-kb.md": {
+      "name": "contribute-kb",
+      "description": "Redige um aprendizado sobre Delphi a partir da conversa atual e, com sua aprovação, envia para a base de conhecimento comunitária do delphi-dev (PR via gh ou issue pré-preenchida)."
+    },
+    "dashboard.md": {
+      "description": "GitHub repository dashboard — shows stars, forks, issues, PRs, commits, releases, contributors and activity"
+    },
+    "e2e.md": {
+      "description": "Executa cenarios de teste end-to-end num app Delphi desktop — builda, abre o .exe, opera as telas e devolve veredito por cenario"
+    },
+    "new-project.md": {
+      "description": "Scaffold de novo projeto Delphi com estrutura de pastas e arquivos base padronizados"
+    },
+    "review.md": {
+      "description": "Revisão rápida de código Delphi — detecta violações de padrão e sugere correções"
+    },
+    "spec.md": {
+      "description": "Generates a complete software specification document (SPEC) by analyzing the current Delphi project source code"
+    },
+    "tdd.md": {
+      "description": "Generates DUnitX unit tests for the entire Delphi project or a specific class"
+    },
+    "update.md": {
+      "description": "Atualiza a base de conhecimento do delphi-dev agora e verifica se há versão nova do plugin"
+    },
+    "write.md": {
+      "description": "Inicia sessão de escrita de código Delphi novo com todos os padrões aplicados"
+    }
+  },
+  "agents": {
+    "delphi-auditor.md": {
+      "name": "delphi-auditor",
+      "description": "| Subagente especializado em auditoria técnica profunda de projetos Delphi. Use este agente quando o usuário solicitar: laudo técnico, auditoria de código, análise de sistema Delphi, diagnóstico de projeto, detecção de code smells, análise de qualidade, relatório técnico, ou quando enviar arquivos .pas/.dfm/.dpr para análise sistemática. Exemplos: <example>Context: Usuário quer auditar um projeto Delphi legado. user: \"Faça um laudo técnico do meu sistema\" assistant: \"Vou usar o delphi-auditor para conduzir a análise técnica completa.\" <commentary>Solicitação explícita de laudo — invocar delphi-auditor.</commentary> </example>",
+      "model": "inherit"
+    },
+    "delphi-spec-writer.md": {
+      "name": "delphi-spec-writer",
+      "description": "| Subagente especializado em criacao de documentos de especificacao de software (SPEC) para projetos e modulos Delphi. Use quando o usuario solicitar: SPEC, especificacao de software, documento de requisitos, specification document, levantamento de requisitos, mapeamento de funcionalidades, \"documente o sistema\", \"quero uma SPEC do projeto\". IMPORTANTE: A SPEC cobre o projeto inteiro ou um modulo de negocio — nunca uma unit ou classe isolada. Exemplos: <example> Context: Usuario quer documentar o sistema de faturamento. user: \"Crie uma SPEC do modulo de faturamento\" assistant: \"Vou usar o delphi-spec-writer para conduzir o levantamento e gerar a especificacao completa do modulo.\" <commentary>Solicitacao de SPEC de modulo — invocar delphi-spec-writer.</commentary> </example> <example> Context: Usuario quer documentar o sistema completo. user: \"Preciso de um documento de requisitos do meu sistema\" assistant: \"Vou usar o delphi-spec-writer para mapear os requisitos e gerar a SPEC.\" <commentary>Solicitacao de documento de requisitos — invocar delphi-spec-writer.</commentary> </example>",
+      "model": "inherit"
+    },
+    "delphi-tester.md": {
+      "name": "delphi-tester",
+      "description": "| Subagente especializado em implementacao de testes unitarios DUnitX para projetos Delphi. Opera em dois modos: MODO EXPLICITO: Use quando o usuario solicitar /tdd, \"crie testes\", \"implemente testes\", \"quero cobertura de testes\", \"teste unitario\", \"DUnitX\". Nesse modo, analisa o projeto completo e gera a suite de testes inicial. MODO AUTOMATICO: Invocado pelo agente delphi-writer apos cada nova implementacao. Cria testes para a classe recem-criada sem interromper o usuario, notificando ao final. Exemplos: <example> Context: Usuario quer cobrir o projeto existente com testes. user: \"/tdd\" assistant: \"Vou usar o delphi-tester para analisar o projeto e gerar a suite completa de testes DUnitX.\" <commentary>Solicitacao explicita de TDD — invocar delphi-tester em modo explicito.</commentary> </example> <example> Context: delphi-writer acabou de criar TPedidoService. assistant: [invoca delphi-tester automaticamente] delphi-tester: \"✅ Testes criados em TestePedidoService.pas — 7 casos de teste.\" <commentary>Modo automatico — invocado pelo delphi-writer sem interacao do usuario.</commentary> </example>",
+      "model": "inherit"
+    },
+    "delphi-writer.md": {
+      "name": "delphi-writer",
+      "description": "| Subagente especializado em escrever código Delphi novo seguindo rigorosamente todos os padrões de codificação. Use quando o usuário pedir para criar: nova classe, unit, serviço, repositório, formulário, interface ou qualquer elemento de código Delphi do zero. Exemplos: <example>Context: Usuário quer uma nova classe de serviço. user: \"Crie um serviço de pedidos em Delphi\" assistant: \"Vou usar o delphi-writer para criar o serviço com todos os padrões aplicados.\" <commentary>Criação de código novo — invocar delphi-writer.</commentary> </example>",
+      "model": "inherit"
+    }
+  },
+  "skills": {
+    "delphi-acbr": {
+      "frontmatter": {
+        "name": "delphi-acbr",
+        "description": "> Especialista em componentes ACBr. Auto-ativa quando detectar: ACBr, NFe, NFCe, NFS-e, boleto, CTe, SPED, SAT, MDF-e, Danfe, TACBrNFCe, TACBrNFe, TACBrBoleto, pcnConversao, TACBrDFeSSL, \"emissão fiscal\", \"nota fiscal\"."
+      }
+    },
+    "delphi-async": {
+      "frontmatter": {
+        "name": "delphi-async",
+        "description": "> Especialista em programação assíncrona Delphi. Auto-ativa quando detectar: TTask, TParallel, IFuture, TThread, Synchronize, Queue, TMonitor, TEvent, TCriticalSection, \"thread\", \"assíncrono\", \"background\", \"worker\", \"parallel\"."
+      }
+    },
+    "delphi-build": {
+      "frontmatter": {
+        "name": "delphi-build",
+        "description": "> Especialista em build e compilação de projetos Delphi via linha de comando (msbuild/dcc32). Auto-ativa quando detectar: \"compilar\", \"build\", \"msbuild\", \"dcc32\", \"rsvars\", arquivos .bat de build, erros de compilação (E2003, E2065, MSB6003, E8712), \"linha de comando longa demais\", build de Android/iOS, ou pedidos para validar a compilação de um projeto .dproj/.dpr."
+      }
+    },
+    "delphi-claudeignore": {
+      "frontmatter": {
+        "name": "delphi-claudeignore",
+        "description": "> Cria e mantem automaticamente o arquivo .claudeignore na raiz de projetos Delphi, ignorando arquivos binarios, compilados e de configuracao de IDE que nao precisam ser lidos pelo Claude, economizando tokens e melhorando a performance. Use esta skill SEMPRE que detectar arquivos .dpr, .dproj ou .pas em um projeto que ainda nao possui .claudeignore. Tambem use quando o usuario mencionar: \".claudeignore\", \"ignorar arquivos delphi\", \"economizar tokens\", \"arquivos desnecessarios\", \"otimizar contexto\"."
+      }
+    },
+    "delphi-contribute": {
+      "frontmatter": {
+        "name": "delphi-contribute",
+        "description": "Redige, verifica e envia UM aprendizado sobre desenvolvimento Delphi para a base de conhecimento comunitária do delphi-dev, com aprovação explícita do usuário. Use quando o usuário chamar /contribute-kb, disser \"quero contribuir\", \"enviar aprendizado\", \"contribute knowledge\", ou quando a skill delphi-standards indicar que vale sugerir uma contribuição."
+      }
+    },
+    "delphi-e2e": {
+      "frontmatter": {
+        "name": "delphi-e2e",
+        "description": "> Executa cenarios de teste end-to-end em aplicacao Delphi desktop (FMX no Windows): builda, abre o .exe, opera as telas de verdade e emite um veredito por cenario, correlacionando com o log do app. Auto-ativa em: \"/e2e\", \"teste E2E\", \"end-to-end\", \"abre o app e testa\", \"testar a tela\", \"navegar no aplicativo\", \"simular usuario\". NAO e teste unitario — para DUnitX use delphi-tests."
+      }
+    },
+    "delphi-encoding": {
+      "frontmatter": {
+        "name": "delphi-encoding",
+        "description": "> Especialista em encoding de arquivos Delphi. Auto-ativa quando detectar arquivos .pas/.dfm/.dpr/.dpk/.inc/.fmx, problemas de encoding, BOM, acentos quebrados, mojibake, ou menções a \"encoding\", \"UTF-8\", \"BOM\", \"ANSI\", \"acentos\", \"ç\", \"ã\"."
+      }
+    },
+    "delphi-firedac": {
+      "frontmatter": {
+        "name": "delphi-firedac",
+        "description": "> Especialista em FireDAC. Auto-ativa quando detectar: TFDQuery, TFDConnection, TFDTable, TFDMemTable, TFDTransaction, TFDManager, FireDAC, \"connection pool\", \"memory leak query\", \"driver not found\", ADRConnection, TDataSet no contexto FireDAC."
+      }
+    },
+    "delphi-fmx": {
+      "frontmatter": {
+        "name": "delphi-fmx",
+        "description": "> Especialista em FireMonkey (FMX) e desenvolvimento mobile Delphi. Auto-ativa quando detectar: arquivos .fmx, menções a FireMonkey, Android, iOS, mobile, FMX, TForm (em contexto FMX), TFrame (FMX), TLabel/TButton (FMX), TListView, TScrollBox, TTabControl, StyleBook, Skia, ou imports FMX.* no código."
+      }
+    },
+    "delphi-laudo": {
+      "frontmatter": {
+        "name": "delphi-laudo",
+        "description": "> Analisa projetos Delphi abertos em pasta para gerar laudos tecnicos profissionais completos. Use esta skill SEMPRE que o usuario mencionar: analise de sistema Delphi, laudo tecnico de software, auditoria de codigo Delphi, diagnostico de projeto Delphi, avaliacao de qualidade de codigo, analise de codigo legado em Delphi, revisao de arquitetura Delphi, analise de pasta com codigo-fonte, \"analise este projeto\", \"analise esta pasta\", \"faca um laudo\", modernizacao ou migracao Delphi, ou quando o usuario compartilhar arquivos .pas, .dfm, .dpr, .dpk, .dproj para analise. Tambem use ao detectar mencao a Code Smells, Clean Code, SOLID, boas praticas, vicios de programacao, memory leaks, God Class, Long Method, acoplamento, interfaces ou refatoracao em Delphi."
+      }
+    },
+    "delphi-legacy": {
+      "frontmatter": {
+        "name": "delphi-legacy",
+        "description": "> Especialista em modernização de código Delphi legado. Auto-ativa quando detectar: \"legado\", \"antigo\", \"modernizar\", \"migrar\", \"refatorar sistema\", String[N], ShortString, AnsiString (em contexto de migração), código com with em todo lugar, ausência total de interfaces, SQL concatenado, Delphi 7/2007/2009/XE/XE2."
+      }
+    },
+    "delphi-spec": {
+      "frontmatter": {
+        "name": "delphi-spec",
+        "description": "> Especialista em geracao automatica de documentos de especificacao de software (SPEC) a partir do codigo-fonte de projetos Delphi. Use esta skill SEMPRE que o usuario mencionar: SPEC, especificacao de software, specification document, documento de requisitos, \"crie uma SPEC\", \"gere a SPEC\", \"documente o sistema\", \"especificacao do projeto\", \"especificacao do modulo\", \"quero a SPEC do codigo\", \"gerar especificacao\", \"analise o codigo e gere a SPEC\". Tambem use ao detectar pedidos de documentacao formal gerada a partir de codigo-fonte existente — nunca para uma unica unit ou classe isolada."
+      }
+    },
+    "delphi-spring4d": {
+      "frontmatter": {
+        "name": "delphi-spring4d",
+        "description": "> Especialista em Spring4D (Dependency Injection, Collections e padrões) em Delphi. Auto-ativa quando detectar: Spring4D, Spring.Container, GlobalContainer, TContainer, RegisterType, IList<T>, IDictionary<T>, IEnumerable<T>, TCollections, injeção de dependência, DI container, IoC, \"registrar serviço\", \"resolver dependência\"."
+      }
+    },
+    "delphi-standards": {
+      "frontmatter": {
+        "name": "delphi-standards",
+        "description": "> Especialista em padrões de codificação Delphi. Use esta skill SEMPRE que detectar: arquivos .pas, .dpr, .dfm, .dpk, .dproj, código Object Pascal, menções a Delphi, FireMonkey (FMX), VCL, FireDAC, RAD Studio, Embarcadero. Também ativa ao discutir nomenclatura, indentação, prefixos, classes, métodos, componentes ou formatação de código Delphi. Esta skill carrega o Delphi Style Guide completo como contexto ativo."
+      }
+    },
+    "delphi-tests": {
+      "frontmatter": {
+        "name": "delphi-tests",
+        "description": "> Especialista em testes unitarios para projetos Delphi usando DUnitX. Use esta skill SEMPRE que o usuario mencionar: teste unitario, unit test, DUnitX, DUnit, TTestFixture, TTestCase, testes automatizados, cobertura de testes, TDD, test-driven, \"crie testes\", \"implemente testes\", \"adicione testes\", \"quero testar esta classe\". Tambem use automaticamente quando o agente delphi-writer terminar de escrever uma nova implementacao — nesse caso, criar os testes da nova classe e notificar o usuario. Esta skill opera em DOIS MODOS: - Modo Explicito: usuario chama /tdd para cobrir o projeto completo - Modo Automatico: invocada pelo delphi-writer apos cada nova implementacao"
+      }
+    },
+    "delphi-write": {
+      "frontmatter": {
+        "name": "delphi-write",
+        "description": "> Guia a escrita de código Delphi novo seguindo rigorosamente todos os padrões de codificação. Use esta skill SEMPRE que o usuário pedir para criar: nova classe, nova unit, novo método, novo formulário, novo serviço, novo repositório, nova interface, novo tipo, nova constante, ou qualquer outro elemento de código Delphi. Também ativa quando detectar intenção de implementar funcionalidade nova em Delphi."
+      }
+    }
+  },
+  "rootMcpJsonAbsent": true,
+  "runtimeFiles": [
+    [
+      "kb-mcp.mjs",
+      true
+    ],
+    [
+      "hook-inject.mjs",
+      true
+    ],
+    [
+      "hook-fix-encoding.mjs",
+      true
+    ],
+    [
+      "kb-cli.mjs",
+      true
+    ]
+  ],
+  "knowledgeFiles": true
+}
