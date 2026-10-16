@@ -16,7 +16,8 @@ Docs: spec `docs/superpowers/specs/2026-10-15-vscode-multi-agent-design.md`, pla
   resolução do agente (setting → detecção → último usado), aviso de plugin ausente, árvore/status bar/QuickPick.
 - Entrega: Claude `/<id>` (mesmo caminho da extensão antiga), Codex `$delphi-cmd-<id>` (abre o painel e **copia**;
   URI do prompt é experimental, atrás de `delphiDev.codexPromptUri`), OpenCode `/delphi-<id>` pela API HTTP da TUI
-  (`opencode --port 4096` em terminal próprio; nunca digita comando em terminal que já existe).
+  (`opencode --port 4096` em terminal próprio; só digita no terminal que ele mesmo acabou de criar — um terminal
+  de mesmo nome com o servidor fora é descartado e recriado, salvo se criado por nós há menos de 30 s).
 - Versão **3.0.0**, `displayName` "Delphi Dev", `.vscodeignore` (o `.vsix` leva só `dist/extension.js`, README, CHANGELOG,
   LICENSE, ícone e snippets), README/CHANGELOG novos. Removido o `extensionDependencies` da extensão do Claude Code
   (impediria instalar só com Codex/OpenCode).
@@ -25,15 +26,25 @@ Docs: spec `docs/superpowers/specs/2026-10-15-vscode-multi-agent-design.md`, pla
 - Plugin: `/about` e `/update` sugerem `code --install-extension adrianosantos.delphi-dev-vscode` quando a extensão
   falta; `/new-project` cria `.vscode/extensions.json` recomendando-a (seções no fim dos arquivos, frontmatter intacto).
 - `packages/vscode/dist/` é versionado e foi **reconstruído** (estava no bundle da 2.0.0 durante as Tasks 1–6).
-- Gates da última rodada: `packages/vscode` 58 testes + `tsc` + build + `check:registry` OK; `kb` 507 verdes (3 skipped);
+- Gates da última rodada: `packages/vscode` 58 testes (antes da onda de correções) + `tsc` + build + `check:registry` OK; `kb` 507 verdes (3 skipped);
   installer 60; `kb-cli lint` = 0 achados; `claude-surface.mjs --check --validate` = "claude surface unchanged";
   `claude --plugin-dir . -p "/delphi-dev:about" --model haiku` respondeu normalmente.
+- **Onda de correções da revisão independente (2026-10-16, commits `fix(vscode)` depois do 3C):** `commandExists` agora
+  busca no PATH com `fs` (`src/agents/which.ts`, sem `spawnSync`); `delphiDev.agent` é `machine-overridable` e o
+  `package.json` declara `capabilities` (`untrustedWorkspaces: limited` com `restrictedConfigurations` de agent,
+  opencodePort e codexPromptUri; `virtualWorkspaces: false`); ativação não quebra com setting inválido
+  (`parseAgentSetting`); OpenCode: não instalado -> oferece `npm i -g opencode-ai` sem terminal, terminal travado é
+  recriado, `/tui/clear-prompt` (existe no 1.19.1) antes do append, retry só do passo que falhou; aviso de plugin
+  ausente e toast de "copiado" não bloqueiam o envio; cancelar o seletor é silencioso (`Resolution` tipada);
+  "Escolher agente" lista só os instalados (`choose.ts`); Claude sem extensão oferece instalar sem tentar a URI;
+  `workflow_dispatch` só publica a partir de `master`. Testes novos 17–22 em `docs/testes-v4.0-extensao.md`.
+  Gates dessa rodada: `packages/vscode` 90 testes.
 - O que a automação NÃO provou: tudo dentro do VS Code de verdade (painel do Claude, painel do Codex, terminal do
   OpenCode), o Codex real (só lido), publicação.
 
 **Próximo passo concreto:**
 1. **Você executa `docs/testes-v4.0-extensao.md`** (opção A: `code --extensionDevelopmentPath=...`; ou instalar o
-   `.vsix` local). Mais importantes: Claude Code sem regressão (1, 2, 3, 15) e os testes 6 e 11.
+   `.vsix` local). Mais importantes: Claude Code sem regressão (1, 2, 3, 15, 17) e os testes 6 e 11.
 2. Matrizes manuais anteriores: `docs/testes-v4.0-codex-opencode.md` (bloco E = Claude Code intacto).
 3. **Bump 4.0.0** do plugin (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `commands/about.md`
    linha `Versão:`), merge em `master`, release.

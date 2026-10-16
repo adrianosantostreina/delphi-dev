@@ -8,11 +8,11 @@ e o que me mandar se falhar. Nao precisa entender de teste: e so seguir e marcar
 
 | Parte | Provado por automacao | Depende de voce |
 |---|---|---|
-| Logica de entrega dos 3 agentes, escolha do agente, aviso de plugin ausente | Sim, 58 testes unitarios (`packages/vscode`) com dependencias **falsas** (nenhum VS Code, rede ou terminal real) | Ver funcionando no VS Code de verdade |
+| Logica de entrega dos 3 agentes, escolha do agente, aviso de plugin ausente | Sim, 90 testes unitarios (`packages/vscode`) com dependencias **falsas** (nenhum VS Code, rede ou terminal real) | Ver funcionando no VS Code de verdade |
 | Lista de comandos igual ao `portable.json`, `package.json` em sincronia | Sim (`npm run check:registry` + testes) | - |
 | API HTTP da TUI do OpenCode (`/global/health`, `/tui/append-prompt`, `/tui/submit-prompt`) | Provada contra o OpenCode **1.19.1** (ver `docs/testes-v4.0-codex-opencode.md`) | Conferir que o comando **executa** na TUI aberta pelo VS Code (testes 8 a 11) |
 | Codex | **So lido**: nenhum teste conversou com o Codex real. Os comandos `chatgpt.openSidebar` / `chatgpt.newCodexPanel` e o formato `vscode://openai.chatgpt/?prompt=` nao sao documentados | Testes 4 a 7 (o 6 decide o padrao do Codex) |
-| Claude Code | Mesmo caminho de envio da extensao antiga (`claude-vscode.primaryEditor.open` e URI de reserva), coberto por teste unitario | Testes 1 a 3 e 15 |
+| Claude Code | Mesmo caminho de envio da extensao antiga (`claude-vscode.primaryEditor.open` e URI de reserva), coberto por teste unitario | Testes 1 a 3, 15 e 17 |
 | Pacote `.vsix` | Gerado e conferido localmente: `dist/extension.js`, README, CHANGELOG, LICENSE, icone e snippets entram; `src/`, testes e `node_modules` nao | Instalar o `.vsix` (opcao B abaixo) |
 | Publicacao no Marketplace | **Nada** foi publicado. O workflow foi corrigido e validado so como YAML | Criar o segredo `VSCE_TOKEN` e decidir quando publicar |
 
@@ -82,13 +82,13 @@ Feche e abra o VS Code depois de instalar.
 |---|---|---|---|---|---|
 | 1 | Claude | Em `delphiDev.agent` escolha `claude`. Clique em **Auditar projeto** na barra lateral | O painel do Claude Code abre e ja traz `/audit` (em geral enviado sozinho) | Print do painel + Output "Extension Host" | |
 | 2 | Claude | Abra um `.pas`, selecione algumas linhas, clique com o botao direito > **Delphi Dev: Review code** | O Claude recebe `/review @caminho\arquivo.pas:inicio-fim` (com as linhas selecionadas) | O texto que chegou no Claude | |
-| 3 | Claude | Desative (ou rode numa janela sem) a extensao do Claude Code e clique num comando | Aviso de erro "Extensao do Claude Code nao encontrada" com o botao **Instalar Claude Code** | Print do aviso | |
+| 3 | Claude | Desative (ou rode numa janela sem) a extensao do Claude Code e clique num comando | Aviso de erro "Extensao do Claude Code nao encontrada" com o botao **Instalar Claude Code**; a extensao nem tenta o link `vscode://` (que poderia "dar certo" sem destino) | Print do aviso | |
 | 4 | Codex | `delphiDev.agent` = `codex`. Clique em **Auditar projeto** | O painel do Codex abre e aparece o aviso "Comando copiado: `$delphi-cmd-audit` - cole no Codex e tecle Enter." | Print + Output "Extension Host" | |
 | 5 | Codex | Cole (`Ctrl+V`) na caixa do Codex e tecle Enter | O Codex roda o roteiro do `/audit` (ele deve reconhecer `$delphi-cmd-audit` como skill) | Resposta do Codex (ou que ele nao achou a skill) | |
 | 6 | Codex | **Teste informativo.** Num terminal: `code --open-url "vscode://openai.chatgpt/?prompt=%24delphi-cmd-audit"` | **Anotar:** a caixa do Codex fica preenchida? O comando e enviado sozinho? Isso decide se o padrao `delphiDev.codexPromptUri` pode ser ligado | Anotacao: "preenche: sim/nao; envia sozinho: sim/nao" | |
 | 7 | Codex | Teste numa maquina/conta sem o plugin no Codex (ou renomeie temporariamente `~/.agents/skills/delphi-cmd-audit`) e clique num comando | Aviso "O plugin delphi-dev ainda nao esta instalado para Codex. Rode: `npx delphi-dev --target codex`" com o botao **Copiar comando** | Print do aviso | |
 | 8 | OpenCode | `delphiDev.agent` = `opencode`, **sem nenhum OpenCode rodando**. Clique em **Auditar projeto** | Abre o terminal "OpenCode - Delphi Dev", roda `opencode --port 4096`, a TUI sobe e o comando `/delphi-audit` entra e executa sozinho (pode levar uns segundos) | Print do terminal + Output "Extension Host" | |
-| 9 | OpenCode | Com esse terminal ainda aberto, clique em outro comando (ex.: **Revisar codigo**) | Reaproveita o terminal; **nao** digita `opencode --port` outra vez; o comando executa na TUI | O que apareceu no terminal | |
+| 9 | OpenCode | Com esse terminal ainda aberto e a TUI no ar, clique em outro comando (ex.: **Revisar codigo**) | Reaproveita o servidor: **nao** cria terminal nem digita `opencode --port` outra vez; o comando executa na TUI (o rascunho que estava na caixa de prompt e apagado antes) | O que apareceu no terminal | |
 | 10 | OpenCode | Feche tudo. Em um terminal seu rode `opencode --port 4096` (a TUI abre), volte ao VS Code e clique num comando | Usa o servidor que voce abriu: nenhum terminal extra e criado; o comando executa na TUI | Print | |
 | 11 | OpenCode | Com a TUI aberta (teste 8 ou 10), confira o que ela fez com `/delphi-audit` | Executou como **comando** (nao ficou como texto cru na caixa) | Print da TUI | |
 | 12 | Todos | Deixe dois agentes instalados e `delphiDev.agent` = `auto`. Clique num comando | Pergunta **uma vez** "Qual agente deve receber os comandos do Delphi Dev?"; nos cliques seguintes ja usa o escolhido sem perguntar | Print da pergunta e se perguntou de novo | |
@@ -96,6 +96,12 @@ Feche e abra o VS Code depois de instalar.
 | 14 | Todos | Troque o idioma do VS Code (`Ctrl+Shift+P` > "Configure Display Language") entre portugues e ingles e reinicie | Os rotulos da lista lateral acompanham o idioma (ex.: "Auditar projeto" / "Audit project") | Print da lista | |
 | 15 | Claude | Abra uma pasta Delphi **sem** `.claudeignore` | A oferta de criar `.claudeignore` aparece **so** se a extensao do Claude Code estiver instalada | Se apareceu sem o Claude ou deixou de aparecer com ele | |
 | 16 | OpenCode | **Ressalva conhecida.** Suba `opencode serve` (ou `opencode web`) na porta 4096 **sem** abrir a TUI e clique num comando | Pode aparecer como enviado sem que nada aconteca, porque a API responde 200 mesmo sem TUI. Se acontecer, pare esse servidor (ou mude `delphiDev.opencodePort`) e use o terminal da extensao | Confirmar se reproduziu | |
+| 17 | Todos | Com dois agentes instalados e `delphiDev.agent` = `auto`, sem agente "lembrado", clique num comando e **feche a pergunta** (Esc) | **Nada acontece**: nenhum comando enviado e **nenhuma mensagem de erro**. Cancelar nao e o mesmo que "nenhum agente instalado" | Print de qualquer mensagem que apareceu | |
+| 18 | OpenCode | Deixe um terminal chamado "OpenCode - Delphi Dev" aberto **sem servidor** (ex.: rode `opencode` sem `--port` nele, ou deixe a TUI travada) e clique num comando | O terminal antigo e **descartado** e um novo e criado, e so nele a extensao digita `opencode --port 4096`. Cliques repetidos em ate ~30 s depois da criacao reaproveitam o terminal novo sem digitar de novo | Print dos terminais | |
+| 19 | OpenCode | Renomeie/retire o `opencode` do PATH (e nao tenha a extensao `sst-dev.opencode`) e clique num comando | Aviso de que o OpenCode nao foi encontrado, com o botao **Copiar comando de instalacao** (`npm i -g opencode-ai`); **nenhum terminal criado** e sem espera de ~20 s | Print + quanto demorou | |
+| 20 | Todos | Abra uma pasta nova pelo VS Code em modo restrito (Workspace Trust: **Restricted Mode**) cujo `.vscode/settings.json` tenha `"delphiDev.agent": "codex"` | A extensao fica em modo **limitado**: o valor da pasta e ignorado (vale o das configuracoes de usuario). Depois de **confiar** na pasta, o valor da pasta passa a valer. Em workspace virtual (ex.: vscode.dev/repositorios remotos virtuais) a extensao nao e habilitada | Print do banner de Restricted Mode e do agente na barra de baixo | |
+| 21 | Todos | `delphiDev.agent` com valor invalido no `settings.json` (ex.: `"Claude"`) e recarregue a janela | A extensao ativa normalmente (lista, barra de baixo e deteccao do projeto funcionam) e trata o valor como `auto` | Output "Extension Host" | |
+| 22 | Todos | Com **um unico** agente instalado, clique no item **Delphi Dev** da barra de baixo | Mensagem informando qual agente esta em uso (ou que `delphiDev.agent` manda); **sem** QuickPick. Sem nenhum agente instalado: aviso de "Nenhum agente encontrado" | Print | |
 
 ## Antes de dar o teste por encerrado
 
@@ -106,8 +112,8 @@ Feche e abra o VS Code depois de instalar.
 ## Pontos que dependem de confirmacao
 
 - Segredo `VSCE_TOKEN` **nao existe** neste repositorio: precisa ser criado antes de qualquer publicacao
-  (Settings > Secrets and variables > Actions). O workflow so roda em `master` e so quando a versao do
-  `packages/vscode/package.json` muda (ou manualmente, pelo `workflow_dispatch`).
+  (Settings > Secrets and variables > Actions). O workflow so roda em `master`: automaticamente quando a versao do
+  `packages/vscode/package.json` muda e, manualmente (`workflow_dispatch`), somente se disparado a partir de `master`.
 - O `package.json` da extensao estava em **2.0.0** (o CHANGELOG antigo so registrava a 0.1.0) e agora esta em
   **3.0.0**: confira qual versao o Marketplace serve. A 3.0.0 so sai quando o mantenedor decidir.
 - A extensao deixou de exigir a extensao do Claude Code (`extensionDependencies`). Usuarios so de Codex/OpenCode
