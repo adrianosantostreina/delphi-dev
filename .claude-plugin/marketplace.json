@@ -12,7 +12,8 @@
       "name": "delphi-dev",
       "source": {
         "source": "url",
-        "url": "https://github.com/adrianosantostreina/delphi-dev.git"
+        "url": "https://github.com/adrianosantostreina/delphi-dev.git",
+        "ref": "v4.0.0-beta.1"
       },
       "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, project scaffolding, build validation, and RAG-powered knowledge base.",
       "version": "4.0.0-beta.1",

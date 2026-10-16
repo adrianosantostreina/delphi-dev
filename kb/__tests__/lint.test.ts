@@ -159,6 +159,34 @@ description: Sobre o plugin
 `,
     });
 
+    const withSource = (version: string, ref?: string) => ({
+      '.claude-plugin/plugin.json': JSON.stringify({ name: 'delphi-dev', version }),
+      '.claude-plugin/marketplace.json': JSON.stringify({
+        plugins: [{ name: 'delphi-dev', version, source: { source: 'url', url: 'https://example.invalid/r.git', ...(ref ? { ref } : {}) } }],
+      }),
+      'commands/about.md': `---
+description: x
+---
+**Version:** ${version}
+`,
+    });
+    const syncFindings = (files: Record<string, string>) => lintRepo(makeRepo(files)).filter((f) => f.rule === 'version-sync');
+
+    it('requires the marketplace source to pin the plugin to its own tag (otherwise the install fetches the default branch)', () => {
+      expect(syncFindings(withSource(pre, 'v4.0.0-beta.1'))).toEqual([]);
+      expect(syncFindings(withSource(pre))[0].message).toMatch(/source.ref must be "v4.0.0-beta.1"/);
+      expect(syncFindings(withSource(pre, 'v4.0.0-beta.0'))[0].message).toMatch(/source.ref must be "v4.0.0-beta.1".*v4.0.0-beta.0/);
+    });
+
+    it('a stable version must not carry the beta pin', () => {
+      expect(syncFindings(withSource('4.0.0'))).toEqual([]);
+      expect(syncFindings(withSource('4.0.0', 'v4.0.0-beta.1'))[0].message).toMatch(/stable.*remove/i);
+    });
+
+    it('a marketplace whose source is a plain string has no ref to check', () => {
+      expect(syncFindings(trio(pre, pre))).toEqual([]);
+    });
+
     it('accepts a SemVer pre-release suffix when the three files agree', () => {
       expect(lintRepo(makeRepo(trio(pre, pre)))).toEqual([]);
     });

@@ -169,12 +169,27 @@ export function lintRepo(rootArg: string): LintFinding[] {
 
   // --- version sync
   const plugin = readJson(path.join(root, '.claude-plugin', 'plugin.json')) as { version?: string } | undefined;
-  const market = readJson(path.join(root, '.claude-plugin', 'marketplace.json')) as { plugins?: { version?: string }[] } | undefined;
+  type PluginEntry = { version?: string; source?: string | { ref?: string } };
+  const market = readJson(path.join(root, '.claude-plugin', 'marketplace.json')) as { plugins?: PluginEntry[] } | undefined;
   if (plugin?.version) {
     const marketVersion = market?.plugins?.[0]?.version;
     if (marketVersion !== undefined && marketVersion !== plugin.version) {
       add('version-sync', path.join(root, '.claude-plugin', 'marketplace.json'),
         `marketplace.json is ${marketVersion} but plugin.json is ${plugin.version}`);
+    }
+    // A pre-release is installed with `/plugin marketplace add owner/repo#v<version>`, but the plugin itself is
+    // fetched from source.url: without source.ref it would silently be the default branch. A stable version must
+    // not keep the pin, or the stable line would stay frozen on the beta tag.
+    const source = market?.plugins?.[0]?.source;
+    if (source && typeof source === 'object') {
+      const want = `v${plugin.version}`;
+      const prerelease = /^[0-9]+.[0-9]+.[0-9]+-/.test(plugin.version);
+      const marketFile = path.join(root, '.claude-plugin', 'marketplace.json');
+      if (prerelease && source.ref !== want) {
+        add('version-sync', marketFile, `pre-release ${plugin.version}: plugins[0].source.ref must be "${want}" (found ${source.ref === undefined ? 'none' : `"${source.ref}"`})`);
+      } else if (!prerelease && source.ref !== undefined) {
+        add('version-sync', marketFile, `stable ${plugin.version}: remove plugins[0].source.ref ("${source.ref}"), it pins the plugin to a pre-release`);
+      }
     }
     const about = path.join(root, 'commands', 'about.md');
     if (fs.existsSync(about)) {

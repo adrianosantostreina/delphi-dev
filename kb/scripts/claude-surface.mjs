@@ -35,13 +35,17 @@ function frontmatter(text) {
   return out;
 }
 
+// Ignores the release pins (version, and the beta source.ref) by design.
 function withoutVersion(jsonText) {
   const data = JSON.parse(jsonText);
   const strip = (o) => {
     if (Array.isArray(o)) return o.map(strip);
     if (o && typeof o === 'object') {
       const r = {};
-      for (const k of Object.keys(o).sort()) if (k !== 'version') r[k] = strip(o[k]);
+      // A pre-release pins the plugin source to its own tag (source.ref = v<version>), exactly like `version`:
+      // a release pin that changes on every bump, not part of the surface. kb lint (version-sync) checks it.
+      const releasePin = (k) => k === 'version' || (k === 'ref' && o.source === 'url' && typeof o.url === 'string');
+      for (const k of Object.keys(o).sort()) if (!releasePin(k)) r[k] = strip(o[k]);
       return r;
     }
     return o;
