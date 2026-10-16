@@ -162,6 +162,135 @@ describe('kb-cli', () => {
     expect(await runCli(['fix-encoding'], run.value)).toBe(64);
   });
 
+  describe('install / doctor / uninstall', () => {
+    async function checkoutRoot(): Promise<string> {
+      const { makeRepo } = await import('./helpers');
+      return makeRepo();
+    }
+    const posix = (p: string) => p.split(path.sep).join('/');
+
+    it('install --dry-run reports and writes nothing', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      const run = io();
+      const code = await runCli(['install', '--target', 'opencode', '--home', home, '--checkout', root, '--dry-run'], run.value);
+      expect(code).toBe(0);
+      expect(run.out.join('\n')).toContain('[dry-run]');
+      expect(fs.readdirSync(home)).toEqual([]);
+    });
+
+    it('installs, diagnoses and uninstalls', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      const install = io();
+      expect(await runCli(['install', '--target', 'all', '--home', home, '--checkout', root], install.value)).toBe(0);
+      expect(install.out.at(-1)).toMatch(/gravado\(s\)/);
+      expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+
+      const doc = io();
+      expect(await runCli(['doctor', '--target', 'all', '--home', home], doc.value)).toBe(0);
+      expect(doc.out.join('\n')).toContain('ok');
+      expect(doc.out.join('\n')).not.toContain('FAIL');
+
+      const un = io();
+      expect(await runCli(['uninstall', '--target', 'all', '--home', home], un.value)).toBe(0);
+      expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(false);
+    });
+
+    it('accepts --from as an alias of --checkout', async () => {
+      const home = tmpDir();
+      const run = io();
+      const code = await runCli(['install', '--target', 'opencode', '--home', home, '--from', await checkoutRoot()], run.value);
+      expect(code).toBe(0);
+      expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+    });
+
+    it('takes home, CODEX_HOME and XDG_CONFIG_HOME from the injected env, never from the real home', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      const codexHome = tmpDir();
+      const xdg = tmpDir();
+      const env = { HOME: home, USERPROFILE: home, CODEX_HOME: codexHome, XDG_CONFIG_HOME: xdg };
+      expect(await runCli(['install', '--target', 'all', '--checkout', root], io(env).value)).toBe(0);
+      expect(fs.existsSync(path.join(codexHome, 'config.toml'))).toBe(true);
+      expect(fs.existsSync(path.join(xdg, 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+      expect(fs.existsSync(path.join(home, '.agents', 'skills'))).toBe(true);
+      expect(fs.existsSync(path.join(home, '.delphi-dev', 'install-manifest.json'))).toBe(true);
+      expect(await runCli(['doctor', '--target', 'all'], io(env).value)).toBe(0);
+      expect(await runCli(['uninstall', '--target', 'all'], io(env).value)).toBe(0);
+      expect(fs.existsSync(path.join(home, '.delphi-dev', 'install-manifest.json'))).toBe(false);
+    });
+
+    it('uninstall --dry-run removes nothing', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      await runCli(['install', '--target', 'opencode', '--home', home, '--checkout', root], io().value);
+      const run = io();
+      expect(await runCli(['uninstall', '--target', 'opencode', '--home', home, '--dry-run'], run.value)).toBe(0);
+      expect(run.out.join('\n')).toContain('[dry-run]');
+      expect(fs.existsSync(path.join(home, '.config', 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+    });
+
+    it('doctor exits 1 when nothing is installed', async () => {
+      const run = io();
+      expect(await runCli(['doctor', '--target', 'codex', '--home', tmpDir()], run.value)).toBe(1);
+      expect(run.out.join('\n')).toContain('FAIL');
+    });
+
+    it('project scope installs under the project and doctor marks the MCP check n/a', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      const project = tmpDir();
+      const args = ['--target', 'all', '--home', home];
+      expect(await runCli(['install', ...args, '--scope', 'project', '--project', project, '--checkout', root], io().value)).toBe(0);
+      expect(fs.existsSync(path.join(project, '.opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+      expect(fs.existsSync(path.join(home, '.config'))).toBe(false);
+      const doc = io();
+      expect(await runCli(['doctor', ...args, '--scope', 'project'], doc.value)).toBe(0);
+      const text = doc.out.join('\n');
+      expect(text).toContain('n/a');
+      expect(text).not.toContain('FAIL');
+      expect(await runCli(['doctor', ...args], io().value)).toBe(1);
+    });
+
+    it('explains that claude is not managed here and rejects unknown targets', async () => {
+      const a = io();
+      expect(await runCli(['install', '--target', 'claude', '--checkout', await checkoutRoot()], a.value)).toBe(64);
+      expect(a.err.join('\n')).toContain('/plugin install');
+      const b = io();
+      expect(await runCli(['install', '--target', 'gemini'], b.value)).toBe(64);
+      expect(await runCli(['uninstall', '--target', 'gemini'], io().value)).toBe(64);
+      expect(await runCli(['doctor', '--target', 'gemini'], io().value)).toBe(64);
+    });
+
+    it('rejects a missing --project, a bad scope and an unknown flag', async () => {
+      const run = io();
+      const code = await runCli(['install', '--target', 'codex', '--scope', 'project', '--checkout', await checkoutRoot(), '--home', tmpDir()], run.value);
+      expect(code).toBe(64);
+      expect(run.err.join('\n')).toContain('--project');
+      const scope = io();
+      expect(await runCli(['install', '--target', 'codex', '--scope', 'team'], scope.value)).toBe(64);
+      expect(scope.err.join('\n')).toContain('--scope');
+      const flag = io();
+      expect(await runCli(['install', '--bogus'], flag.value)).toBe(64);
+      expect(flag.err.length).toBeGreaterThan(0);
+    });
+
+    it('an invalid checkout is a runtime failure (exit 1), not a crash', async () => {
+      const run = io();
+      expect(await runCli(['install', '--target', 'codex', '--home', tmpDir(), '--checkout', tmpDir()], run.value)).toBe(1);
+      expect(run.err.join('\n')).toContain('checkout invalido');
+    });
+
+    it('prints the paths it wrote', async () => {
+      const root = await checkoutRoot();
+      const home = tmpDir();
+      const run = io();
+      await runCli(['install', '--target', 'opencode', '--home', home, '--checkout', root], run.value);
+      expect(run.out.map(posix).join('\n')).toContain(posix(path.join(home, '.config', 'opencode', 'plugins', 'delphi-dev.js')));
+    });
+  });
+
   it('prints usage for an unknown command', async () => {
     const run = io();
     expect(await runCli(['bogus'], run.value)).toBe(64);

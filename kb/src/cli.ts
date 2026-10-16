@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
-import { fixEncodingCommand, lintCommand } from './cli-install';
+import { doctorCommand, fixEncodingCommand, installCommand, lintCommand, uninstallCommand } from './cli-install';
 import { contribute, defaultDeps, SecretFoundError, type ContributeDeps } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
@@ -43,6 +43,9 @@ const USAGE = [
   '  sync [--apply] [--source <dir>] [--knowledge <dir>]',
   '  lint [--root <dir>]',
   '  fix-encoding <arquivo...>',
+  '  install --target codex|opencode|all [--scope user|project] [--project <dir>] [--home <dir>] [--checkout <dir> | --from <dir>] [--dry-run] [--force]',
+  '  uninstall --target codex|opencode|all [--home <dir>] [--dry-run] [--force]',
+  '  doctor [--target codex|opencode|all] [--scope user|project] [--home <dir>]',
 ].join('\n');
 
 function mdFiles(target: string): string[] {
@@ -181,6 +184,9 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
     }
     case 'lint': return lintCommand(rest, io);
     case 'fix-encoding': return fixEncodingCommand(rest, io);
+    case 'install': return installCommand(rest, io);
+    case 'uninstall': return uninstallCommand(rest, io);
+    case 'doctor': return doctorCommand(rest, io);
     default: io.err(USAGE); return 64;
   }
 }

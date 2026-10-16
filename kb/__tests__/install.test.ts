@@ -444,6 +444,35 @@ describe('doctor', () => {
     expect(checks.find((c) => c.name === 'sem alteracao manual')!.ok).toBe(false);
   });
 
+  it('project scope: the MCP check is n/a (that scope configures no MCP), the file checks still run', () => {
+    const project = tmpDir('kb-proj-');
+    const o = opts({ scope: 'project', project });
+    installTargets(o);
+    const user = doctor({ targets: ['codex', 'opencode'], home: o.home, env: {} });
+    expect(user.filter((c) => c.name === 'mcp configurado').every((c) => !c.ok)).toBe(true);
+
+    const checks = doctor({ targets: ['codex', 'opencode'], home: o.home, env: {}, scope: 'project' });
+    const mcp = checks.filter((c) => c.name === 'mcp configurado');
+    expect(mcp).toHaveLength(2);
+    expect(mcp.every((c) => c.ok && c.na === true && /n\/a/.test(c.detail))).toBe(true);
+    expect(checks.every((c) => c.ok)).toBe(true);
+    expect(checks.filter((c) => c.name === 'arquivos presentes')).toHaveLength(2);
+
+    fs.appendFileSync(path.join(project, '.opencode', 'agents', 'delphi-writer.md'), 'x');
+    const edited = doctor({ targets: ['opencode'], home: o.home, env: {}, scope: 'project' });
+    expect(edited.find((c) => c.name === 'sem alteracao manual')!.ok).toBe(false);
+  });
+
+  it('user scope keeps flagging a missing MCP as a failure', () => {
+    const o = opts();
+    installTargets(o);
+    fs.rmSync(path.join(o.home, '.codex', 'config.toml'));
+    const checks = doctor({ targets: ['codex'], home: o.home, env: {}, scope: 'user' });
+    const mcp = checks.find((c) => c.name === 'mcp configurado')!;
+    expect(mcp.ok).toBe(false);
+    expect(mcp.na).toBeUndefined();
+  });
+
   it('says nothing is installed on a clean home', () => {
     const checks = doctor({ targets: ['codex'], home: tmpDir('kb-home-'), env: {} });
     expect(checks).toEqual([{ target: 'codex', name: 'instalado', ok: false, detail: 'nada registrado no manifesto' }]);

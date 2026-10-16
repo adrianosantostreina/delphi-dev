@@ -421,9 +421,13 @@ export interface DoctorCheck {
   name: string;
   ok: boolean;
   detail: string;
+  /** Not applicable in this scope: `ok` is true so it never fails the diagnosis, but it is shown as "n/a". */
+  na?: boolean;
 }
 
-export function doctor(o: { targets: AnyTarget[]; home: string; env: NodeJS.ProcessEnv; checkout?: string }): DoctorCheck[] {
+export function doctor(
+  o: { targets: AnyTarget[]; home: string; env: NodeJS.ProcessEnv; checkout?: string; scope?: 'user' | 'project' },
+): DoctorCheck[] {
   const file = manifestPath(o);
   const corrupt = manifestIsCorrupt(file);
   const manifest = readManifest(file);
@@ -464,7 +468,10 @@ export function doctor(o: { targets: AnyTarget[]; home: string; env: NodeJS.Proc
     ];
     checks.push({ target, name: 'sem alteracao manual', ok: edited.length === 0, detail: edited.length ? edited.join(', ') : 'ok' });
 
-    if (target === 'codex') {
+    if (o.scope === 'project') {
+      // The project scope writes skills, commands and agents only; MCP and hooks are the user's (see installCodex/installOpencode).
+      checks.push({ target, name: 'mcp configurado', ok: true, na: true, detail: 'n/a (o escopo de projeto nao configura MCP)' });
+    } else if (target === 'codex') {
       const block = rec.blocks.find((f) => fs.existsSync(f) && fs.readFileSync(f, 'utf8').includes(BLOCK_START));
       checks.push({ target, name: 'mcp configurado', ok: !!block, detail: block ?? 'bloco do delphi-dev ausente no config.toml' });
     } else {

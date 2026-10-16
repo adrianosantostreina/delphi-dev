@@ -39,6 +39,37 @@ describe('runtime bundles', () => {
     expect(JSON.parse(r.stdout).source).toBe('embedded');
   });
 
+  it('kb-cli install, doctor and uninstall run end to end in an isolated home', () => {
+    const home = tmpDir('kb-cli-home-');
+    const codexHome = tmpDir('kb-cli-codex-');
+    const xdg = tmpDir('kb-cli-xdg-');
+    // Every location the CLI could write to is redirected: the real home is never touched.
+    const isolated = {
+      ...env(), HOME: home, USERPROFILE: home, CODEX_HOME: codexHome, XDG_CONFIG_HOME: xdg, DELPHI_DEV_DATA: path.join(home, '.delphi-dev'),
+    };
+    const cli = path.join(RUNTIME, 'kb-cli.mjs');
+    const run = (...args: string[]) => spawnSync('node', [cli, ...args, '--target', 'all'], { env: isolated, encoding: 'utf8' });
+
+    const dry = run('install', '--dry-run');
+    expect(dry.status).toBe(0);
+    expect(dry.stdout).toContain('[dry-run]');
+    expect(fs.readdirSync(home)).toEqual([]);
+
+    const install = run('install');
+    expect(install.status).toBe(0);
+    expect(fs.existsSync(path.join(xdg, 'opencode', 'commands', 'delphi-audit.md'))).toBe(true);
+    expect(fs.existsSync(path.join(codexHome, 'config.toml'))).toBe(true);
+    expect(run('install').stdout).toMatch(/0 gravado\(s\)/);
+
+    const doc = run('doctor');
+    expect(doc.status).toBe(0);
+    expect(doc.stdout).not.toContain('FAIL');
+
+    expect(run('uninstall').status).toBe(0);
+    expect(fs.existsSync(path.join(xdg, 'opencode', 'commands', 'delphi-audit.md'))).toBe(false);
+    expect(fs.existsSync(path.join(home, '.delphi-dev', 'install-manifest.json'))).toBe(false);
+  }, 60_000);
+
   it('kb-mcp serves kb_search over stdio', async () => {
     const child = spawn('node', [path.join(RUNTIME, 'kb-mcp.mjs')], { env: env() });
     const lines: string[] = [];
