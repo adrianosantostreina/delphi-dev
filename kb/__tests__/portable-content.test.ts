@@ -70,3 +70,19 @@ describe('kb: notation', () => {
     expect(using).toBeGreaterThanOrEqual(6);
   });
 });
+
+describe('neutral wording', () => {
+  it('delphi-spec does not name a write tool', () => {
+    expect(read('skills/delphi-spec/SKILL.md')).not.toContain('ferramenta Write');
+  });
+
+  it('delphi-contribute keeps its per-agent tool list behind the allow marker', () => {
+    const text = read('skills/delphi-contribute/SKILL.md');
+    const line = text.split('\n').find((l) => l.includes('AskUserQuestion'))!;
+    expect(line).toContain('<!-- portability:allow tool-names -->');
+  });
+
+  it('new-project says the claudeignore step is Claude Code only', () => {
+    expect(read('commands/new-project.md')).toContain('(somente no Claude Code; nos demais agentes, pule este passo)');
+  });
+});

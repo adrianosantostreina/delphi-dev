@@ -221,6 +221,6 @@ Depois do `Build OK`:
    fornecedor, versão e caminhos de DLL — reconhecimento gratuito. Gerar middleware de erro que
    loga o detalhe e devolve mensagem genérica.
 4. **Semear `tests/`** invocando o agente `delphi-tester` para a suíte inicial DUnitX.
-5. **Rodar a skill `delphi-claudeignore`** para criar o `.claudeignore`.
+5. **Rodar a skill `delphi-claudeignore`** para criar o `.claudeignore` (somente no Claude Code; nos demais agentes, pule este passo).
 6. Informar ao usuário: caminho do `.exe`, como rodar, e o que ainda precisa ser configurado
    (banco de dados, credenciais).

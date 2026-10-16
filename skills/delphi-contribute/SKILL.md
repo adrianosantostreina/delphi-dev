@@ -57,7 +57,7 @@ Respeite pedidos explícitos ("respond in English", "responda em português").
      Nenhum código, dado, arquivo ou credencial do seu projeto vai junto. Revise antes de aprovar."
    - **en-US:** "I'll share only the text below — a learning about Delphi development. No code,
      data, files or credentials from your project go with it. Review it before approving."
-6. **Pergunte** com a ferramenta de pergunta do seu ambiente (no Claude Code, `AskUserQuestion`;
+6. **Pergunte** com a ferramenta de pergunta do seu ambiente (no Claude Code, `AskUserQuestion`; <!-- portability:allow tool-names -->
    no Codex, `request_user_input`; no OpenCode, `question`). Sem ferramenta, ofereça opções numeradas.
 
    | pt-BR | en-US |

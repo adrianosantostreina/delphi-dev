@@ -71,7 +71,7 @@ Mapeie as seguintes informacoes diretamente do codigo:
 
 ### 5. SAVE
 - Grave o documento como `SPEC.md` na raiz do projeto (diretorio de trabalho atual).
-- Use a ferramenta Write para criar o arquivo.
+- Grave o arquivo no disco (crie-o; não apenas exiba o conteúdo na conversa).
 
 ### 6. REPORT
 - Informe ao usuario:
