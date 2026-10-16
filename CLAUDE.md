@@ -58,7 +58,7 @@ When bumping the plugin version, update **all** of:
 
 1. `.claude-plugin/plugin.json` → `"version"`
 2. `.claude-plugin/marketplace.json` → `plugins[0].version`
-3. `commands/about.md` → the `Versão:` line
+3. `commands/about.md` → as linhas `Versão:` / `Version:` (o `kb-cli lint` regra `version-sync` confere os três)
 4. ~~`README.md` and `README.pt-BR.md`~~ — **the READMEs carry no version string**; nothing to
    update there. (Verified 2026-08-31; this item used to point at text that does not exist.)
 
@@ -70,3 +70,4 @@ When bumping the plugin version, update **all** of:
 - Skill `description:` frontmatter is the auto-activation trigger — be precise about file extensions and trigger phrases. Vague descriptions cause the skill to either never activate or activate spuriously.
 - Don't add a new command without also: (a) listing it in both READMEs' feature table, (b) mentioning it in `commands/about.md`, (c) wiring it to a skill or agent that does the actual work.
 - `/sync-kb` lives in `.claude/commands/` (project-only) and is never shipped in the plugin.
+- `portable.json` lista os comandos e as exceções de skill por agente; um comando novo exige a entrada lá (o lint do CI cobra) e fica disponível no Codex (`$delphi-cmd-<id>`) e no OpenCode (`/delphi-<id>`) sem mais nada.

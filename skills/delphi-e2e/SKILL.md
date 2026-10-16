@@ -199,7 +199,7 @@ Set-Content -Path $dst -Value $conteudoDoReferences -Encoding UTF8
 
 ### TODA invocacao PowerShell recomeca do dot-source
 
-**Cada invocacao da ferramenta PowerShell e um processo novo, com uma sessao nova.** Nada
+**Cada execucao de PowerShell pelo terminal do agente e um processo novo, com uma sessao nova.** Nada
 sobrevive de uma para a seguinte: as funcoes dot-sourcidas somem, e — pior, porque falha em
 silencio — `$script:DelphiKeepBottom` volta a `$false`, o que torna o modo ao fundo
 **inerte** em toda interacao depois da chamada que o ligou. Nao existe "chamada de setup"

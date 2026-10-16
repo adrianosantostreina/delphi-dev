@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { REAL_ROOT } from './helpers';
+import { lintRepo } from '../src/lint';
 
 function walkMd(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -84,5 +85,12 @@ describe('neutral wording', () => {
 
   it('new-project says the claudeignore step is Claude Code only', () => {
     expect(read('commands/new-project.md')).toContain('(somente no Claude Code; nos demais agentes, pule este passo)');
+  });
+});
+
+describe('the real repository is portable', () => {
+  it('has no lint findings', () => {
+    const findings = lintRepo(REAL_ROOT);
+    expect(findings.map((f) => `${f.file}:${f.line ?? 0} [${f.rule}] ${f.message}`)).toEqual([]);
   });
 });

@@ -2,10 +2,10 @@ name: Runtime check
 
 on:
   pull_request:
-    paths: ['kb/**', 'runtime/**', 'knowledge/**']
+    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json']
   push:
     branches: [master]
-    paths: ['kb/**', 'runtime/**', 'knowledge/**']
+    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json']
   workflow_dispatch:
 
 jobs:
@@ -24,4 +24,6 @@ jobs:
       - run: npm run build:runtime
       - name: runtime/ must match the committed bundles
         run: git diff --exit-code -- ../runtime/
+      - name: Portability lint (skills, commands, agents)
+        run: node ../runtime/kb-cli.mjs lint --root ..
       - run: npm test
