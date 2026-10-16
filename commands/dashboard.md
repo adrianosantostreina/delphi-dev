@@ -54,12 +54,12 @@ Extract from the JSON:
 
 ### 2. Total commits on default branch
 ```bash
-gh api "repos/<owner>/<repo>/commits?per_page=100" --paginate -q 'length' | awk '{s+=$1} END {print s}'
+gh api "repos/<owner>/<repo>/commits?per_page=100" --paginate -q 'length' | awk '{s+=$(1)} END {print s}'
 ```
 
 ### 3. Total releases
 ```bash
-gh api "repos/<owner>/<repo>/releases?per_page=100" --paginate -q 'length' | awk '{s+=$1} END {print s}'
+gh api "repos/<owner>/<repo>/releases?per_page=100" --paginate -q 'length' | awk '{s+=$(1)} END {print s}'
 ```
 
 ### 4. Issue counts (excluding PRs)
@@ -76,7 +76,7 @@ gh api "search/issues?q=repo:<owner>/<repo>+is:pr+is:merged&per_page=1" -q '.tot
 
 ### 6. Contributors count
 ```bash
-gh api "repos/<owner>/<repo>/contributors?per_page=100&anon=true" --paginate -q 'length' | awk '{s+=$1} END {print s}'
+gh api "repos/<owner>/<repo>/contributors?per_page=100&anon=true" --paginate -q 'length' | awk '{s+=$(1)} END {print s}'
 ```
 
 ### 7. Top 3 contributors (by commit count)
