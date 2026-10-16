@@ -59,6 +59,8 @@ vi.mock('../src/ui', () => ({
   summary: rec('summary'),
 }));
 
+let logged: string[] = [];
+
 class ExitSignal extends Error {
   constructor(public code: number) { super(`exit ${code}`); }
 }
@@ -87,9 +89,10 @@ beforeEach(() => {
   calls.length = 0;
   Object.assign(sys, { hasClaudeCLI: true, hasGit: true });
   Object.assign(state, { detected: { codex: false, opencode: false }, installed: [], portableThrows: '' });
+  logged = [];
   process.exitCode = undefined;
   vi.spyOn(process, 'exit').mockImplementation(((code?: number) => { throw new ExitSignal(code ?? 0); }) as never);
-  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => { logged.push(a.join(' ')); });
 });
 
 afterEach(() => {
@@ -151,24 +154,20 @@ describe('install --target', () => {
     expect(calls[0]).toMatch(/^error\|.*gemini/);
   });
 
-  it('detects Codex next to Claude Code when no flag is given, and says what it detected', async () => {
+  it('Codex detected next to Claude Code and no flag: installs ONLY Claude and prints the exact hint', async () => {
     state.detected.codex = true;
     expect(await runCli()).toBeUndefined();
-    expect(calls.slice(0, 4)).toEqual([
-      'header|Installing delphi-dev for codex',
-      'step|Detected: claude, codex',
-      'runPortable|install|codex|{}',
-      'success|delphi-dev installed for codex — restart the agent session',
-    ]);
+    expect(calls.filter((c) => c.startsWith('runPortable'))).toEqual([]);
     expect(calls).toContain('installPlugin');
+    expect(logged.join('\n')).toContain('npx delphi-dev --target codex');
   });
 
-  it('with only Codex detected and no Claude CLI, installs for Codex and stops', async () => {
+  it('with only Codex detected and no Claude CLI, the default flow fails like it always did and writes nothing to Codex', async () => {
     sys.hasClaudeCLI = false;
     state.detected.codex = true;
-    expect(await runCli()).toBeUndefined();
-    expect(calls).not.toContain('installPlugin');
-    expect(calls.some((c) => c.startsWith('error'))).toBe(false);
+    expect(await runCli()).toBe(1);
+    expect(calls.filter((c) => c.startsWith('runPortable'))).toEqual([]);
+    expect(calls).toContain('error|Claude Code CLI not found. Install from https://claude.ai/code');
   });
 });
 

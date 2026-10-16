@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
 import {
-  detectTargets, ensureCheckout, installedPortableTargets, kbCliArgs, manifestFile, resolveTargets, REPO_URL, type Probe,
+  detectTargets, ensureCheckout, installedPortableTargets, kbCliArgs, manifestFile, portableHints, resolveTargets, REPO_URL, type Probe,
 } from '../src/targets';
 
 function probe(over: Partial<Probe> & { commands?: string[]; paths?: string[] } = {}): Probe {
@@ -32,8 +32,9 @@ describe('detectTargets', () => {
 
 describe('resolveTargets', () => {
   const detected = { claude: true, codex: false, opencode: true };
-  it('uses what was detected when there is no flag', () => {
-    expect(resolveTargets(undefined, detected)).toEqual(['claude', 'opencode']);
+  it('without a flag it is ALWAYS just Claude Code, whatever was detected (conservative default)', () => {
+    expect(resolveTargets(undefined, detected)).toEqual(['claude']);
+    expect(resolveTargets(undefined, { claude: false, codex: true, opencode: true })).toEqual(['claude']);
   });
   it('all means every target, detected or not', () => {
     expect(resolveTargets('all', detected)).toEqual(['claude', 'codex', 'opencode']);
@@ -47,6 +48,15 @@ describe('resolveTargets', () => {
   });
   it('rejects an empty list', () => {
     expect(() => resolveTargets(' , ', detected)).toThrow(/--target/);
+  });
+});
+
+describe('portableHints', () => {
+  it('suggests the exact command for each detected agent and nothing else', () => {
+    expect(portableHints({ claude: true, codex: false, opencode: false })).toEqual([]);
+    expect(portableHints({ claude: true, codex: true, opencode: false })).toEqual(['npx delphi-dev --target codex']);
+    expect(portableHints({ claude: false, codex: true, opencode: true }))
+      .toEqual(['npx delphi-dev --target codex', 'npx delphi-dev --target opencode']);
   });
 });
 

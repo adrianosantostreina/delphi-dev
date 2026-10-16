@@ -114,8 +114,10 @@ Este único comando:
 npx delphi-dev --target codex      # ou: opencode, ou: all
 ```
 
-Sem `--target` o instalador **detecta** quais agentes você tem (CLI, pasta de configuração ou
-extensão do VS Code) e instala para cada um. Ele clona o plugin em `~/.delphi-dev/plugin` e grava:
+Sem `--target`, o `npx delphi-dev` instala **só o Claude Code**, exatamente como antes. Se detectar
+Codex ou OpenCode (CLI, pasta de configuração ou extensão do VS Code), apenas mostra o comando a
+rodar; ele nunca grava na configuração deles sem `--target codex|opencode|all`. Com `--target` ele
+clona o plugin em `~/.delphi-dev/plugin` e grava:
 
 | | Codex | OpenCode |
 |---|---|---|

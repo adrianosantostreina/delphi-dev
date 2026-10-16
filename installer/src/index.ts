@@ -7,15 +7,15 @@ import { removeHooks } from './hooks';
 import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, summary } from './ui';
 import chalk from 'chalk';
-import { detectTargets, installedPortableTargets, readInstallManifest, realProbe, resolveTargets, runPortable, type Target } from './targets';
+import { detectTargets, installedPortableTargets, portableHints, readInstallManifest, realProbe, resolveTargets, runPortable, type Target } from './targets';
 
 const program = new Command();
 program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
 
 program
   .command('install', { isDefault: true })
-  .description('Install delphi-dev for Claude Code, Codex and OpenCode (and the VS Code extension)')
-  .option('--target <list>', 'claude, codex, opencode, a comma list, or all (default: detect)')
+  .description('Install delphi-dev for Claude Code (and the VS Code extension); Codex/OpenCode only with --target')
+  .option('--target <list>', 'claude, codex, opencode, a comma list, or all (default: claude only)')
   .option('--from <path>', 'use an existing checkout instead of ~/.delphi-dev/plugin (development)')
   .option('--scope <scope>', 'user (default) or project (Codex/OpenCode only)')
   .option('--project <dir>', 'project folder for --scope project')
@@ -24,7 +24,7 @@ program
   .action(async (opts: { target?: string; from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean }) => {
     let targets: Target[];
     try {
-      targets = resolveTargets(opts.target, detectTargets(realProbe()));
+      targets = resolveTargets(opts.target);
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
       process.exit(1);
@@ -33,7 +33,6 @@ program
     let portableFailed = false;
     if (portable.length) {
       header(`Installing delphi-dev for ${portable.join(' + ')}`);
-      if (!opts.target) step(`Detected: ${targets.join(', ')}`);
       try {
         runPortable('install', portable, opts);
         if (opts.dryRun) success(`Dry run for ${portable.join(' + ')} — nothing was written`);
@@ -48,6 +47,13 @@ program
     }
 
     header('Installing delphi-dev v2.2');
+
+    // Codex/OpenCode are never touched without --target: if they are around, only say how to opt in.
+    if (!opts.target) {
+      for (const cmd of portableHints(detectTargets(realProbe()))) {
+        console.log(chalk.dim(`Tip: Codex/OpenCode detected - to install delphi-dev there too, run: ${cmd}`));
+      }
+    }
 
     const sys = detectSystem();
     if (!sys.hasClaudeCLI) {

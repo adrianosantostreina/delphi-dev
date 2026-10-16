@@ -40,8 +40,9 @@ validação com os CLIs reais em `docs/testes-v4.0-codex-opencode.md`.
    no PATH etc.); o bloco E/F2 da nova matriz cobre parte disso.
 
 **Decisões (e o porquê):**
-- `npx delphi-dev` **sem `--target`** detecta Codex/OpenCode/Claude instalados (CLI, pasta de config ou
-  extensão do VS Code) e instala para cada um detectado — quem só usa Claude Code tem o comportamento de antes.
+- `npx delphi-dev` **sem `--target`** instala **só o Claude Code** (comportamento de sempre). Se detectar Codex/OpenCode
+  (CLI, pasta de config ou extensão do VS Code), apenas imprime a dica com o comando exato; só escreve neles com
+  `--target codex|opencode|all` explícito (config do usuário nunca é tocada por detecção).
   Falha em Codex/OpenCode nunca impede a instalação do Claude Code pedida junto.
 - **Fonte única:** `skills/`, `commands/`, `agents/` geram os arquivos de Codex/OpenCode. Nunca editar os
   gerados à mão; mudar a fonte e rodar o install de novo.

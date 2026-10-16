@@ -27,14 +27,24 @@ export function detectTargets(p: Probe): Record<Target, boolean> {
   };
 }
 
-export function resolveTargets(flag: string | undefined, detected: Record<Target, boolean>): Target[] {
-  if (!flag) return ALL_TARGETS.filter((t) => detected[t]);
+/**
+ * Without `--target` the install is the historical one: Claude Code only. Detection never decides
+ * what gets written to Codex/OpenCode (their config files are the user's); it only feeds
+ * `portableHints`, which prints the command that would do it.
+ */
+export function resolveTargets(flag: string | undefined, _detected?: Record<Target, boolean>): Target[] {
+  if (!flag) return ['claude'];
   if (flag.trim() === 'all') return [...ALL_TARGETS];
   const picked = flag.split(',').map((s) => s.trim()).filter(Boolean);
   if (!picked.length) throw new Error('--target vazio (use claude, codex, opencode ou all)');
   const unknown = picked.filter((t) => !ALL_TARGETS.includes(t as Target));
   if (unknown.length) throw new Error(`alvo(s) desconhecido(s): ${unknown.join(', ')} (use claude, codex, opencode ou all)`);
   return ALL_TARGETS.filter((t) => picked.includes(t));
+}
+
+/** The exact commands to suggest when Codex/OpenCode are around but `--target` was not given. */
+export function portableHints(detected: Record<Target, boolean>): string[] {
+  return (['codex', 'opencode'] as Target[]).filter((t) => detected[t]).map((t) => `npx delphi-dev --target ${t}`);
 }
 
 export function checkoutDir(home: string = os.homedir()): string {

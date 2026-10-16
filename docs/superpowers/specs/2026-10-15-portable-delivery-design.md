@@ -270,9 +270,12 @@ duplicado aqui).
 
 `npx delphi-dev [--target claude|codex|opencode|all] [--from <checkout>] [--scope …]`
 
-- Sem `--target`: **detecta** — `claude` se o CLI existir; `codex` se `codex` no PATH, `~/.codex` ou a
-  extensão `openai.chatgpt` existir; `opencode` se `opencode` no PATH, `~/.config/opencode` ou a extensão
-  `sst-dev.opencode` existir. Mostra o que detectou antes de agir.
+- Sem `--target`: **conservador** — instala apenas o Claude Code (comportamento publicado, idêntico ao
+  de sempre). A detecção continua existindo, mas só gera uma **dica**: `codex` se `codex` no PATH,
+  `~/.codex` ou a extensão `openai.chatgpt` existir; `opencode` se `opencode` no PATH,
+  `~/.config/opencode` ou a extensão `sst-dev.opencode` existir; para cada um imprime o comando exato
+  (`npx delphi-dev --target codex`). Config de Codex/OpenCode só é escrita com `--target` explícito
+  (`codex|opencode|all`).
 - Para `codex`/`opencode`: garante o checkout (§5.2) e executa `kb-cli install`.
 - Alvo `claude`: comportamento atual, intocado (inclui a extensão VS Code).
 - `update`: `git pull` do checkout + reexecuta `kb-cli install` dos alvos já instalados.

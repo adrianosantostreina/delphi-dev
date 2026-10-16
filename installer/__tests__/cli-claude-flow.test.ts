@@ -9,7 +9,7 @@ const verify = { claudeOk: true, pluginOk: true, vscodeOk: true };
 const calls: string[] = [];
 const rec = (name: string) => (...a: unknown[]) => { calls.push([name, ...a.map(String)].join('|')); };
 
-const state = { vscodeAvailable: true, vscodeInstalled: true, vscodeInstallThrows: '' as string, installPluginThrows: false };
+const state = { codexHome: false, vscodeAvailable: true, vscodeInstalled: true, vscodeInstallThrows: '' as string, installPluginThrows: false };
 
 vi.mock('../src/detect', () => ({
   detectSystem: () => ({ ...sys }),
@@ -20,7 +20,7 @@ vi.mock('../src/targets', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/targets')>()),
   realProbe: () => ({
     commandExists: (cmd: string) => (cmd.startsWith('claude') ? sys.hasClaudeCLI : false),
-    pathExists: () => false,
+    pathExists: (p: string) => state.codexHome && /[\\/]\.codex$/.test(p),
     home: '/nowhere',
     vscodeExtensions: [],
   }),
@@ -86,7 +86,7 @@ beforeEach(() => {
   logged = [];
   Object.assign(sys, { hasClaudeCLI: true, hasVSCode: true, hasGit: true });
   Object.assign(verify, { claudeOk: true, pluginOk: true, vscodeOk: true });
-  Object.assign(state, { vscodeAvailable: true, vscodeInstalled: true, vscodeInstallThrows: '', installPluginThrows: false });
+  Object.assign(state, { codexHome: false, vscodeAvailable: true, vscodeInstalled: true, vscodeInstallThrows: '', installPluginThrows: false });
   vi.spyOn(process, 'exit').mockImplementation(((code?: number) => { throw new ExitSignal(code ?? 0); }) as never);
   vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => { logged.push(a.join(' ')); });
 });
@@ -117,6 +117,17 @@ describe('npx delphi-dev (no arguments) -> Claude Code flow', () => {
       ])}`,
     ]);
     expect(logged).toEqual([]);
+  });
+
+  it('Claude + ~/.codex present: same Claude-only flow, NOTHING written outside Claude, only a hint is printed', async () => {
+    state.codexHome = true;
+    const code = await runCli();
+    expect(code).toBeUndefined();
+    expect(calls.filter((c) => c.startsWith('runPortable'))).toEqual([]);
+    expect(calls).toContain('installPlugin');
+    expect(calls.some((c) => /codex|opencode/i.test(c))).toBe(false);
+    expect(logged.join('\n')).toContain('npx delphi-dev --target codex');
+    expect(logged.join('\n')).not.toContain('--target opencode');
   });
 
   it('exits 1 with the legacy message when the Claude Code CLI is missing', async () => {
