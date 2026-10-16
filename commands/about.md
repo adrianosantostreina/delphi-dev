@@ -15,7 +15,7 @@ Honor explicit overrides:
 
 **delphi-dev** — Claude Code Plugin
 
-- **Version:** 3.2.0
+- **Version:** 4.0.0-beta.1
 - **Author:** Adriano Santos
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev
@@ -75,7 +75,7 @@ user's first message and responds in that language. Switch any time with
 
 **delphi-dev** — Claude Code Plugin
 
-- **Versão:** 3.2.0
+- **Versão:** 4.0.0-beta.1
 - **Autor:** Adriano Santos
 - **Email:** adrianosantospro@gmail.com
 - **GitHub:** https://github.com/adrianosantostreina/delphi-dev

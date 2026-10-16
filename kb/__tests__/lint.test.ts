@@ -144,4 +144,32 @@ describe('lintRepo', () => {
     });
     expect(rules(root)).toContain('version-sync');
   });
+
+  describe('pre-release versions (beta)', () => {
+    const pre = '4.0.0-beta.1';
+    const trio = (market: string, about: string) => ({
+      '.claude-plugin/plugin.json': JSON.stringify({ name: 'delphi-dev', version: pre }),
+      '.claude-plugin/marketplace.json': JSON.stringify({ plugins: [{ name: 'delphi-dev', version: market }] }),
+      'commands/about.md': `---
+description: Sobre o plugin
+---
+**Versão:** ${about}
+
+**Version:** ${about}
+`,
+    });
+
+    it('accepts a SemVer pre-release suffix when the three files agree', () => {
+      expect(lintRepo(makeRepo(trio(pre, pre)))).toEqual([]);
+    });
+
+    it('flags the marketplace when it drops the suffix', () => {
+      expect(lintRepo(makeRepo(trio('4.0.0', pre))).map((f) => f.file)).toEqual(['.claude-plugin/marketplace.json']);
+    });
+
+    it('flags /about when it shows the stable number or another beta', () => {
+      expect(lintRepo(makeRepo(trio(pre, '4.0.0'))).filter((f) => f.rule === 'version-sync')).toHaveLength(2);
+      expect(lintRepo(makeRepo(trio(pre, '4.0.0-beta.2'))).filter((f) => f.rule === 'version-sync')).toHaveLength(2);
+    });
+  });
 });
