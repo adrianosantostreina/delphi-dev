@@ -13,8 +13,8 @@ Padrao: pt-BR. Idiomas suportados: pt-BR, en-US.
 Honre overrides: "respond in English" / "responda em portugues".
 
 **Selecao do template:**
-- pt-BR → `references/spec-template.md`
-- en-US → `references/spec-template.en.md`
+- pt-BR → na skill `delphi-spec`, arquivo `references/spec-template.md`
+- en-US → na skill `delphi-spec`, arquivo `references/spec-template.en.md`
 
 Siga este protocolo sem interromper o usuario com perguntas:
 
@@ -36,8 +36,8 @@ Siga este protocolo sem interromper o usuario com perguntas:
    - Restricoes Tecnicas (versao Delphi, banco, SO alvo)
 
 4. **GENERATE** — Preencha todas as secoes do template do idioma selecionado:
-   - pt-BR → `references/spec-template.md` — marque inferencias com `[INFERIDO]`
-   - en-US → `references/spec-template.en.md` — marque inferencias com `[INFERRED]`
+   - pt-BR → na skill `delphi-spec`, arquivo `references/spec-template.md` — marque inferencias com `[INFERIDO]`
+   - en-US → na skill `delphi-spec`, arquivo `references/spec-template.en.md` — marque inferencias com `[INFERRED]`
    Nunca deixe secoes em branco (use "Nao identificado no codigo-fonte." / "Not
    identified in source code.").
 

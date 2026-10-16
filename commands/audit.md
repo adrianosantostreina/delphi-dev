@@ -10,8 +10,8 @@ laudo nesse idioma. Padrão: pt-BR. Idiomas suportados: pt-BR, en-US.
 Honre overrides: "respond in English" / "responda em português".
 
 Carregue o template do idioma selecionado:
-- pt-BR → `references/estrutura-laudo.md`
-- en-US → `references/estrutura-laudo.en.md`
+- pt-BR → na skill `delphi-laudo`, arquivo `references/estrutura-laudo.md`
+- en-US → na skill `delphi-laudo`, arquivo `references/estrutura-laudo.en.md`
 
 Siga este protocolo:
 

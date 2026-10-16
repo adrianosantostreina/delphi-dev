@@ -76,6 +76,50 @@ describe('lintRepo', () => {
     }))).not.toContain('references-exist');
   });
 
+  describe('references/ cited by a command (it has no references/ of its own)', () => {
+    const owner = {
+      'skills/delphi-demo/references/guia.md': '# guia\n',
+    };
+    const command = (body: string) => ({ 'commands/audit.md': `---\ndescription: x\n---\n${body}\n`, ...owner });
+
+    it('flags a reference that no skill has', () => {
+      const found = lintRepo(makeRepo(command('Leia `references/nao-existe.md` da skill `delphi-demo`.')));
+      expect(found.map((f) => f.rule)).toContain('references-exist');
+      expect(found.find((f) => f.file === 'commands/audit.md')?.message).toMatch(/does not exist/);
+    });
+
+    it('flags a reference that exists but whose owning skill is not named on the line (the relative path would not resolve in Codex/OpenCode)', () => {
+      const found = lintRepo(makeRepo(command('Leia `references/guia.md`.')));
+      const hit = found.find((f) => f.file === 'commands/audit.md');
+      expect(hit?.rule).toBe('references-exist');
+      expect(hit?.message).toMatch(/delphi-demo/);
+      expect(hit?.line).toBe(4);
+    });
+
+    it('a different skill named on the line does not count', () => {
+      const repo = makeRepo({
+        ...command('Leia `references/guia.md` com a skill `delphi-outra`.'),
+        'skills/delphi-outra/SKILL.md': skill('delphi-outra', 'D.'),
+      });
+      expect(lintRepo(repo).some((f) => f.file === 'commands/audit.md')).toBe(true);
+    });
+
+    it('passes when the owning skill is named on the same line', () => {
+      expect(lintRepo(makeRepo(command('Leia `references/guia.md` da skill `delphi-demo`.')))).toEqual([]);
+    });
+  });
+
+  it('applies the same rules when the root is given as a relative path (kb-cli lint --root .)', () => {
+    const repo = makeRepo({ 'skills/delphi-demo/SKILL.md': skill('delphi-demo', 'D.', '# T\n\nVeja knowledge/core/x.md.\n') });
+    const before = process.cwd();
+    try {
+      process.chdir(repo);
+      expect(lintRepo('.').map((f) => f.rule)).toContain('path-ref');
+    } finally {
+      process.chdir(before);
+    }
+  });
+
   it('checks commands against the registry in both directions', () => {
     expect(rules(makeRepo({ 'commands/extra.md': '---\ndescription: x\n---\ny\n' }))).toContain('command-registry');
     expect(rules(makeRepo({ 'commands/audit.md': null }))).toContain('command-registry');

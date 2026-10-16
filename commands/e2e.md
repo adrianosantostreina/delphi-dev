@@ -20,8 +20,8 @@ comando e uma porta explicita para a skill, nao um protocolo paralelo.
 
 **Flags:**
 - `--background` — roda com a janela ao fundo, sem interromper quem esta na maquina.
-  Mapeia direto para `Set-DelphiBackgroundMode -Enabled $true` (ver `references/gui.ps1`
-  na skill). **Essa chamada se repete em TODA invocacao PowerShell**, logo depois do
+  Mapeia direto para `Set-DelphiBackgroundMode -Enabled $true` (ver `references/gui.ps1` da skill `delphi-e2e`).
+  **Essa chamada se repete em TODA invocacao PowerShell**, logo depois do
   dot-source do harness: cada invocacao de ferramenta e um processo novo, entao
   `$script:DelphiKeepBottom` volta a `$false` e a flag fica inerte em tudo que vier
   depois da primeira chamada (ver "Carregar o harness" no `SKILL.md`). Em modo ao fundo

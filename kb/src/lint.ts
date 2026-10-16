@@ -50,7 +50,9 @@ function readJson(file: string): unknown {
   }
 }
 
-export function lintRepo(root: string): LintFinding[] {
+export function lintRepo(rootArg: string): LintFinding[] {
+  // Absolute: the path rules below look for '/skills/' and '/commands/' inside each file path, which a relative root (--root .) would not have.
+  const root = path.resolve(rootArg);
   const findings: LintFinding[] = [];
   const add = (rule: string, file: string, message: string, line?: number): void => {
     findings.push({ rule, file: posix(path.relative(root, file)), line, message });
@@ -103,6 +105,22 @@ export function lintRepo(root: string): LintFinding[] {
         }
       }
     });
+
+    if (posix(file).includes('/commands/')) {
+      // A command has no references/ of its own: the relative path only resolves when the agent
+      // loads the owning skill, so the text must name that skill (Codex/OpenCode do not guess it).
+      lines.forEach((text, i) => {
+        for (const m of text.matchAll(REFERENCE)) {
+          const rel = m[1];
+          const owners = skillNames.filter((s) => fs.existsSync(path.join(skillsDir, s, 'references', ...rel.split('/'))));
+          if (!owners.length) {
+            add('references-exist', file, `references/${rel} does not exist in any skill`, i + 1);
+          } else if (!owners.some((o) => new RegExp(`(?<![\\w-])${o}(?![\\w-])`).test(text))) {
+            add('references-exist', file, `references/${rel} belongs to the skill ${owners.join(' / ')}; name it on the same line`, i + 1);
+          }
+        }
+      });
+    }
 
     if (isSkillFile) {
       const skill = path.basename(path.dirname(file));
