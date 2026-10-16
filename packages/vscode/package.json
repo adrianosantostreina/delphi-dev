@@ -1,8 +1,8 @@
 {
   "name": "delphi-dev-vscode",
-  "displayName": "Delphi Dev for Claude Code",
-  "description": "VS Code integration for the delphi-dev Claude Code plugin. Senior Delphi expert with code review, audit, TDD, and coding standards enforcement.",
-  "version": "2.0.0",
+  "displayName": "Delphi Dev",
+  "description": "Remote control for the delphi-dev plugin: Delphi expert commands for Claude Code, Codex and OpenCode inside VS Code.",
+  "version": "3.0.0",
   "publisher": "adrianosantos",
   "author": {
     "name": "Adriano Santos",
@@ -11,7 +11,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AdrianosantosTreina/delphi-dev-vscode"
+    "url": "https://github.com/adrianosantostreina/delphi-dev.git",
+    "directory": "packages/vscode"
   },
   "engines": {
     "vscode": "^1.98.0"
@@ -28,6 +29,8 @@
     "pascal",
     "claude",
     "claude-code",
+    "codex",
+    "opencode",
     "clean-code",
     "code-review",
     "firemonkey",
@@ -35,9 +38,6 @@
     "firedac"
   ],
   "icon": "media/delphi-dev-icon.png",
-  "extensionDependencies": [
-    "anthropic.claude-code"
-  ],
   "activationEvents": [
     "workspaceContains:**/*.dpr",
     "workspaceContains:**/*.pas",

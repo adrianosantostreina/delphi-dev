@@ -2,10 +2,10 @@ name: Publish VS Code Extension
 
 on:
   push:
+    branches: [master]
     paths:
       - 'packages/vscode/package.json'
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   check-version:
@@ -18,21 +18,26 @@ jobs:
           fetch-depth: 2
       - id: check
         run: |
-          OLD=$(git show HEAD^:packages/vscode/package.json | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).version))")
+          set -euo pipefail
+          OLD=$(git show HEAD^:packages/vscode/package.json | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
           NEW=$(node -e "console.log(require('./packages/vscode/package.json').version)")
           echo "Old: $OLD, New: $NEW"
-          [ "$OLD" != "$NEW" ] && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+          if [ "$OLD" != "$NEW" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
 
   publish:
     needs: check-version
-    if: needs.check-version.outputs.should_publish == 'true'
+    if: needs.check-version.outputs.should_publish == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - run: npm ci --workspace=packages/vscode
+          node-version: '22'
+      # No root package-lock.json is committed, so install (not ci).
+      - run: npm install --workspace=packages/vscode
+      - name: Registry in sync with the plugin
+        run: npm run check:registry --workspace=packages/vscode
+      - run: npm test --workspace=packages/vscode
       - run: npm run build --workspace=packages/vscode
       - name: Publish to VS Code Marketplace
         run: npx vsce publish --no-dependencies

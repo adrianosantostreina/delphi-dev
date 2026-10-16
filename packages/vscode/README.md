@@ -1,13 +1,13 @@
-# Delphi Dev for Claude Code
+# Delphi Dev
 
-VS Code extension that integrates the [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) Claude Code plugin with Visual Studio Code.
+VS Code extension that integrates the [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) plugin with Visual Studio Code. It works with **Claude Code, Codex and OpenCode**.
 
 Transform Claude Code into a **senior Delphi expert** with code review, technical audit, TDD, SPEC generation, and coding standards enforcement — all accessible from the VS Code UI.
 
 ## Requirements
 
-- [Claude Code VS Code Extension](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) installed and configured
-- [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) plugin installed in Claude Code
+- At least one supported agent (see [Supported agents](#supported-agents)); for Claude Code, the [Claude Code VS Code Extension](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)
+- The [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) plugin installed for that agent (`npx delphi-dev`)
 
 ## Features
 
@@ -23,6 +23,9 @@ Access all delphi-dev commands from the activity bar:
 | **Generate Spec** | Auto-generate SPEC document from source code |
 | **Generate Tests (TDD)** | Generate DUnitX test suite |
 | **New Project** | Scaffold a new Delphi project with standard structure |
+| **E2E Test** | End-to-end scenarios on the running desktop app |
+| **Dashboard** | GitHub repository metrics |
+| **Update Knowledge Base** | Update the knowledge base and check the plugin |
 
 ### Context Menu
 
@@ -69,11 +72,28 @@ Automatically configures Pascal/ObjectPascal files with:
 | `delphiDev.autoCreateClaudeignore` | `true` | Offer to create .claudeignore for Delphi projects |
 | `delphiDev.showStatusBar` | `true` | Show status bar indicator |
 | `delphiDev.language` | `pt-BR` | Language for prompts sent to Claude Code |
+| `delphiDev.agent` | `auto` | Agent that receives the commands: `auto`, `claude`, `codex` or `opencode` |
+| `delphiDev.opencodePort` | `4096` | Port of the OpenCode server (`opencode --port`); a server already listening there is reused |
+| `delphiDev.codexPromptUri` | `false` | Experimental: try to prefill the Codex composer through its prompt URI |
 
 ## How It Works
 
-The extension acts as a **graphical front-end** for the delphi-dev Claude Code plugin. When you click a command, it opens Claude Code with the appropriate slash command (e.g., `/review @file.pas`) pre-filled. The delphi-dev plugin handles all the AI-powered analysis.
+The extension acts as a **graphical front-end** for the delphi-dev plugin. When you click a command, it hands the matching command (e.g., `/review @file.pas`) to the chosen agent. The delphi-dev plugin handles all the AI-powered analysis.
 
+## Supported agents
+
+| Agent | How commands are delivered |
+|---|---|
+| Claude Code | Sent straight to the Claude Code panel |
+| Codex | Opens the Codex panel and copies `$delphi-cmd-<name>`; paste and press Enter |
+| OpenCode | Runs `opencode --port 4096` in a terminal and submits `/delphi-<name>` through its API |
+
+Install the plugin for your agent with `npx delphi-dev` (it detects Claude Code, Codex and OpenCode).
+Choose the agent in the status bar or with the `delphiDev.agent` setting.
+
+**OpenCode caveat:** if an `opencode serve` / `opencode web` server is already running on the configured port
+without a TUI attached, the command may not reach anything (the API answers 200 even with no TUI connected).
+In that case use the terminal created by the extension (stop the other server, or change `delphiDev.opencodePort`).
 ## Author
 
 **Adriano Santos** — [adrianosantospro@gmail.com](mailto:adrianosantospro@gmail.com)

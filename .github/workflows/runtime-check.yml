@@ -2,10 +2,10 @@ name: Runtime check
 
 on:
   pull_request:
-    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json']
+    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json', 'packages/vscode/**']
   push:
     branches: [master]
-    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json']
+    paths: ['kb/**', 'runtime/**', 'knowledge/**', 'skills/**', 'commands/**', 'agents/**', 'portable.json', 'packages/vscode/**']
   workflow_dispatch:
 
 jobs:
@@ -27,3 +27,15 @@ jobs:
       - name: Portability lint (skills, commands, agents)
         run: node ../runtime/kb-cli.mjs lint --root ..
       - run: npm test
+
+  vscode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --workspace=packages/vscode
+      - run: npm run check:registry --workspace=packages/vscode
+      - run: npm test --workspace=packages/vscode
+      - run: npx tsc --noEmit -p packages/vscode
