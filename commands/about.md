@@ -140,3 +140,4 @@ termine com **uma** linha, no idioma do usuário:
   `code --install-extension adrianosantos.delphi-dev-vscode`."
 
 Nunca instale sozinho. Não mostre a dica se a extensão já estiver instalada ou se `code` não existir.
+A checagem é opcional e silenciosa: se `code` não existir, se o comando falhar ou não responder, não mostre a dica, não mostre erro e não interrompa o restante do comando.

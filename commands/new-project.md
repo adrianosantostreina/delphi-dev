@@ -235,4 +235,4 @@ No fim do scaffold, se a pasta do projeto ainda não tiver `.vscode/extensions.j
 }
 ```
 
-Se o arquivo já existir, não o sobrescreva. Com isso o VS Code oferece a extensão ao abrir a pasta.
+Se o arquivo já existir (com qualquer conteúdo), não o sobrescreva nem o altere: criar o `.vscode/extensions.json` só acontece quando o projeto não tem um. Este passo não executa `code` nem depende do VS Code estar instalado. Com isso o VS Code oferece a extensão ao abrir a pasta.
