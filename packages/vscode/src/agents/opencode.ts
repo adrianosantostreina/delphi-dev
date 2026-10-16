@@ -1,0 +1,89 @@
+import type { AdapterDeps, AgentAdapter, DeliveryResult } from './types';
+import { say } from './types';
+
+export const OPENCODE_TERMINAL_NAME = 'OpenCode - Delphi Dev';
+const HEALTH_ATTEMPTS = 40;
+const HEALTH_INTERVAL_MS = 500;
+const APPEND_ATTEMPTS = 5;
+// /tui/append-prompt is fire-and-forget (it publishes an event and answers 200 even when no TUI is
+// listening), and the server answers /global/health before the TUI has subscribed to events.
+const TUI_SETTLE_MS = 2000;
+
+export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
+  const port = (): number => d.getSetting<number>('opencodePort', 4096);
+  const base = (): string => `http://127.0.0.1:${port()}`;
+
+  async function healthy(): Promise<boolean> {
+    try {
+      return (await d.fetch(`${base()}/global/health`)).ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function post(path: string, body: unknown): Promise<boolean> {
+    try {
+      const r = await d.fetch(`${base()}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function deliver(text: string): Promise<boolean> {
+    for (let attempt = 0; attempt < APPEND_ATTEMPTS; attempt++) {
+      if ((await post('/tui/append-prompt', { text })) && (await post('/tui/submit-prompt', {}))) return true;
+      await d.sleep(HEALTH_INTERVAL_MS);
+    }
+    return false;
+  }
+
+  async function waitHealthy(): Promise<boolean> {
+    for (let attempt = 0; attempt < HEALTH_ATTEMPTS; attempt++) {
+      if (await healthy()) return true;
+      await d.sleep(HEALTH_INTERVAL_MS);
+    }
+    return false;
+  }
+
+  async function copyFallback(text: string): Promise<DeliveryResult> {
+    await d.writeClipboard(text);
+    await d.showInfo(
+      say(d, `Comando copiado: ${text} — cole no OpenCode e tecle Enter.`, `Command copied: ${text} — paste it into OpenCode and press Enter.`),
+    );
+    return 'copied';
+  }
+
+  return {
+    id: 'opencode',
+    label: 'OpenCode',
+    isInstalled: () => d.hasExtension('sst-dev.opencode') || d.commandExists('opencode'),
+    invocation: (command, arg) => `/delphi-${command.id}${arg ? ` ${arg}` : ''}`,
+    async send(text): Promise<DeliveryResult> {
+      if (await healthy()) {
+        if (await deliver(text)) return 'sent';
+        return copyFallback(text);
+      }
+
+      let terminal = d.findTerminal(OPENCODE_TERMINAL_NAME);
+      if (!terminal) {
+        terminal = d.createTerminal({ name: OPENCODE_TERMINAL_NAME, cwd: d.workspaceCwd() });
+        terminal.show(true);
+        // Only a terminal we just created is safe to type into: an older one may already be running the TUI.
+        terminal.sendText(`opencode --port ${port()}`, true);
+      } else {
+        terminal.show(true);
+      }
+
+      if (await waitHealthy()) {
+        await d.sleep(TUI_SETTLE_MS);
+        if (await deliver(text)) return 'sent';
+      }
+      return copyFallback(text);
+    },
+  };
+}
