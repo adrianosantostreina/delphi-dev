@@ -49,38 +49,58 @@
   "contributes": {
     "commands": [
       {
-        "command": "delphi-dev.write",
-        "title": "Delphi Dev: Write Code",
-        "icon": "$(edit)"
-      },
-      {
         "command": "delphi-dev.audit",
-        "title": "Delphi Dev: Audit Project",
+        "title": "Delphi Dev: Audit project",
         "icon": "$(checklist)"
       },
       {
         "command": "delphi-dev.review",
-        "title": "Delphi Dev: Review Code",
+        "title": "Delphi Dev: Review code",
         "icon": "$(eye)"
       },
       {
+        "command": "delphi-dev.write",
+        "title": "Delphi Dev: Write code",
+        "icon": "$(edit)"
+      },
+      {
         "command": "delphi-dev.spec",
-        "title": "Delphi Dev: Generate Spec",
+        "title": "Delphi Dev: Generate SPEC",
         "icon": "$(file-text)"
       },
       {
         "command": "delphi-dev.tdd",
-        "title": "Delphi Dev: Generate Tests (TDD)",
+        "title": "Delphi Dev: Generate tests (TDD)",
         "icon": "$(beaker)"
       },
       {
         "command": "delphi-dev.newProject",
-        "title": "Delphi Dev: New Project",
+        "title": "Delphi Dev: New project",
         "icon": "$(folder-opened)"
       },
       {
+        "command": "delphi-dev.e2e",
+        "title": "Delphi Dev: E2E test",
+        "icon": "$(play)"
+      },
+      {
+        "command": "delphi-dev.dashboard",
+        "title": "Delphi Dev: Repository dashboard",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "delphi-dev.update",
+        "title": "Delphi Dev: Update knowledge base",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "delphi-dev.contributeKb",
+        "title": "Delphi Dev: Contribute knowledge",
+        "icon": "$(cloud-upload)"
+      },
+      {
         "command": "delphi-dev.about",
-        "title": "Delphi Dev: About",
+        "title": "Delphi Dev: About the plugin",
         "icon": "$(info)"
       },
       {
@@ -89,24 +109,9 @@
         "icon": "$(file-add)"
       },
       {
-        "command": "delphi-dev.build",
-        "title": "Delphi Dev: Build Project",
-        "icon": "$(play)"
-      },
-      {
-        "command": "delphi-dev.refactor",
-        "title": "Delphi Dev: Refactor Code",
-        "icon": "$(wand)"
-      },
-      {
-        "command": "delphi-dev.migrate",
-        "title": "Delphi Dev: Migrate Legacy Code",
-        "icon": "$(arrow-right)"
-      },
-      {
-        "command": "delphi-dev.contributeKb",
-        "title": "Delphi Dev: Contribute to Knowledge Base",
-        "icon": "$(cloud-upload)"
+        "command": "delphi-dev.chooseAgent",
+        "title": "Delphi Dev: Choose Agent",
+        "icon": "$(account)"
       }
     ],
     "viewsContainers": {
@@ -218,13 +223,17 @@
       "[pascal]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true,
-        "editor.rulers": [120],
+        "editor.rulers": [
+          120
+        ],
         "editor.wordWrap": "off"
       },
       "[objectpascal]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true,
-        "editor.rulers": [120],
+        "editor.rulers": [
+          120
+        ],
         "editor.wordWrap": "off"
       }
     }
@@ -234,7 +243,10 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "lint": "eslint src --ext ts",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "vitest run",
+    "sync": "node scripts/sync-registry.mjs --write",
+    "check:registry": "node scripts/sync-registry.mjs --check"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -243,6 +255,7 @@
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.20.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.0"
   }
 }
