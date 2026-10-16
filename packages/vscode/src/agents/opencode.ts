@@ -1,4 +1,4 @@
-import type { AdapterDeps, AgentAdapter, DeliveryResult } from './types';
+import type { AdapterDeps, AgentAdapter, DeliveryResult, TerminalLike } from './types';
 import { say } from './types';
 
 export const OPENCODE_TERMINAL_NAME = 'OpenCode - Delphi Dev';
@@ -9,6 +9,8 @@ const APPEND_ATTEMPTS = 5;
 // listening), and the server answers /global/health before the TUI has subscribed to events.
 const TUI_SETTLE_MS = 2000;
 const DEFAULT_PORT = 4096;
+// A terminal we created less than this long ago may still be booting; an older one with the server still down is stuck.
+const STARTING_GRACE_MS = 30_000;
 const INSTALL_COMMAND = 'npm i -g opencode-ai';
 
 export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
@@ -41,9 +43,16 @@ export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
     }
   }
 
+  // Each step is retried on its own: once the text is in the prompt it must not be appended again.
   async function deliver(text: string): Promise<boolean> {
+    let appended = false;
     for (let attempt = 0; attempt < APPEND_ATTEMPTS; attempt++) {
-      if ((await post('/tui/append-prompt', { text })) && (await post('/tui/submit-prompt', {}))) return true;
+      if (!appended) {
+        // Best effort: drop whatever draft the user left in the prompt so the command is not glued to it.
+        await post('/tui/clear-prompt', {});
+        appended = await post('/tui/append-prompt', { text });
+      }
+      if (appended && (await post('/tui/submit-prompt', {}))) return true;
       await d.sleep(HEALTH_INTERVAL_MS);
     }
     return false;
@@ -78,6 +87,9 @@ export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
     return 'unavailable';
   }
 
+  // The one terminal this adapter started, and when. Only that one may be waited on without being replaced.
+  let started: { terminal: TerminalLike; at: number } | undefined;
+
   return {
     id: 'opencode',
     label: 'OpenCode',
@@ -92,14 +104,17 @@ export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
         return copyFallback(text);
       }
 
-      let terminal = d.findTerminal(OPENCODE_TERMINAL_NAME);
-      if (!terminal) {
-        terminal = d.createTerminal({ name: OPENCODE_TERMINAL_NAME, cwd: d.workspaceCwd() });
-        terminal.show(true);
-        // Only a terminal we just created is safe to type into: an older one may already be running the TUI.
-        terminal.sendText(`opencode --port ${port()}`, true);
+      const existing = d.findTerminal(OPENCODE_TERMINAL_NAME);
+      if (existing && started?.terminal === existing && d.now() - started.at < STARTING_GRACE_MS) {
+        // Ours and still starting up: just wait for it, never type into it again.
+        existing.show(true);
       } else {
+        // Server down: whatever terminal carries this name is stuck or foreign (a restored one, an old TUI). Do not trust it.
+        existing?.dispose();
+        const terminal = d.createTerminal({ name: OPENCODE_TERMINAL_NAME, cwd: d.workspaceCwd() });
+        started = { terminal, at: d.now() };
         terminal.show(true);
+        terminal.sendText(`opencode --port ${port()}`, true);
       }
 
       if (await waitHealthy()) {

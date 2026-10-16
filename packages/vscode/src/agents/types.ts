@@ -6,6 +6,7 @@ export type DeliveryResult = 'sent' | 'prefilled' | 'copied' | 'unavailable';
 export interface TerminalLike {
   sendText(text: string, addNewLine?: boolean): void;
   show(preserveFocus?: boolean): void;
+  dispose(): void;
 }
 
 export interface FetchResult {
@@ -27,6 +28,7 @@ export interface AdapterDeps {
   createTerminal(opts: { name: string; cwd?: string }): TerminalLike;
   findTerminal(name: string): TerminalLike | undefined;
   sleep(ms: number): Promise<void>;
+  now(): number;
   workspaceCwd(): string | undefined;
   isPortuguese(): boolean;
 }

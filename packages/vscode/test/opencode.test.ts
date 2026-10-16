@@ -1,14 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createOpencodeAdapter, OPENCODE_TERMINAL_NAME } from '../src/agents/opencode';
 import type { FetchResult } from '../src/agents/types';
 import { cmd, fakeDeps } from './helpers';
 
 interface Hit { url: string; method?: string; body?: string }
 
-function server(opts: { healthyAfter?: number; appendFailures?: number } = {}) {
+function server(opts: { healthyAfter?: number; appendFailures?: number; submitFailures?: number } = {}) {
   const hits: Hit[] = [];
   let healthChecks = 0;
   let appendFailures = opts.appendFailures ?? 0;
+  let submitFailures = opts.submitFailures ?? 0;
   const fetch = async (url: string, init?: { method?: string; body?: string }): Promise<FetchResult> => {
     hits.push({ url, method: init?.method, body: init?.body });
     if (url.endsWith('/global/health')) {
@@ -18,6 +19,10 @@ function server(opts: { healthyAfter?: number; appendFailures?: number } = {}) {
     }
     if (url.endsWith('/tui/append-prompt') && appendFailures > 0) {
       appendFailures--;
+      return { ok: false, status: 400 };
+    }
+    if (url.endsWith('/tui/submit-prompt') && submitFailures > 0) {
+      submitFailures--;
       return { ok: false, status: 400 };
     }
     return { ok: true, status: 200 };
@@ -44,7 +49,7 @@ describe('opencode adapter', () => {
     const s = server();
     const d = fakeDeps({ fetch: s.fetch });
     expect(await createOpencodeAdapter(d).send('/delphi-audit')).toBe('sent');
-    expect(posts(s.hits)).toEqual(['/tui/append-prompt', '/tui/submit-prompt']);
+    expect(posts(s.hits)).toEqual(['/tui/clear-prompt', '/tui/append-prompt', '/tui/submit-prompt']);
     expect(JSON.parse(s.hits.find((h) => h.url.endsWith('/tui/append-prompt'))!.body!)).toEqual({ text: '/delphi-audit' });
     expect(d.terminals).toEqual([]);
   });
@@ -60,7 +65,7 @@ describe('opencode adapter', () => {
     expect(d.terminals[0].name).toBe(OPENCODE_TERMINAL_NAME);
     expect(d.terminals[0].sent).toEqual([{ text: 'opencode --port 4321', newline: true }]);
     expect(s.hits[0].url).toBe('http://127.0.0.1:4321/global/health');
-    expect(posts(s.hits)).toEqual(['/tui/append-prompt', '/tui/submit-prompt']);
+    expect(posts(s.hits)).toEqual(['/tui/clear-prompt', '/tui/append-prompt', '/tui/submit-prompt']);
   });
 
   it('gives a freshly started TUI time to subscribe before the first append (events are fire-and-forget)', async () => {
@@ -128,14 +133,92 @@ describe('opencode adapter', () => {
     expect(d.clipboard).toEqual(['/delphi-audit']);
   });
 
-  it('never types the opencode command into a terminal that already exists', async () => {
-    const sent: string[] = [];
-    const existing = { sendText: (t: string) => sent.push(t), show: () => undefined };
+  it('discards a stale terminal it did not just create and types only into the new one', async () => {
+    const staleSent: string[] = [];
+    let staleDisposed = false;
+    const stale = { sendText: (t: string) => staleSent.push(t), show: () => undefined, dispose: () => { staleDisposed = true; } };
     const s = server({ healthyAfter: 1_000_000 });
-    const d = fakeDeps({ fetch: s.fetch, findTerminal: () => existing });
+    let first = true;
+    const d = fakeDeps({
+      fetch: s.fetch,
+      findTerminal: (name) => {
+        if (first) { first = false; return stale; }
+        return d.terminals.find((t) => t.name === name && !t.disposed)?.like;
+      },
+    });
     expect(await createOpencodeAdapter(d).send('/delphi-audit')).toBe('copied');
-    expect(sent).toEqual([]);
-    expect(d.terminals).toEqual([]);
+    expect(staleDisposed).toBe(true);
+    expect(staleSent).toEqual([]);
+    expect(d.terminals).toHaveLength(1);
+    expect(d.terminals[0].sent).toEqual([{ text: 'opencode --port 4096', newline: true }]);
+  });
+
+  it('reuses its own terminal while it is still starting (younger than 30 s) without typing again', async () => {
+    const s = server({ healthyAfter: 1_000_000 });
+    let clock = 1_000_000;
+    const d = fakeDeps({ fetch: s.fetch, now: () => clock });
+    const adapter = createOpencodeAdapter(d);
+    expect(await adapter.send('/delphi-audit')).toBe('copied');
+    clock += 10_000;
+    expect(await adapter.send('/delphi-audit')).toBe('copied');
+    expect(d.terminals).toHaveLength(1);
+    expect(d.terminals[0].disposed).toBe(false);
+    expect(d.terminals[0].sent).toHaveLength(1);
+  });
+
+  it('recreates its own terminal once the server stayed down for more than 30 s (stuck TUI)', async () => {
+    const s = server({ healthyAfter: 1_000_000 });
+    let clock = 1_000_000;
+    const d = fakeDeps({ fetch: s.fetch, now: () => clock });
+    const adapter = createOpencodeAdapter(d);
+    await adapter.send('/delphi-audit');
+    clock += 31_000;
+    await adapter.send('/delphi-audit');
+    expect(d.terminals).toHaveLength(2);
+    expect(d.terminals[0].disposed).toBe(true);
+    expect(d.terminals[1].sent).toEqual([{ text: 'opencode --port 4096', newline: true }]);
+    expect(d.terminals[0].sent).toHaveLength(1);
+  });
+
+  it('clears a draft in the prompt before appending the command', async () => {
+    const s = server();
+    const d = fakeDeps({ fetch: s.fetch });
+    await createOpencodeAdapter(d).send('/delphi-audit');
+    const order = posts(s.hits);
+    expect(order.indexOf('/tui/clear-prompt')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('/tui/clear-prompt')).toBeLessThan(order.indexOf('/tui/append-prompt'));
+  });
+
+  it('retries only the submit when the append already worked (no duplicated text)', async () => {
+    const s = server({ submitFailures: 2 });
+    const d = fakeDeps({ fetch: s.fetch });
+    expect(await createOpencodeAdapter(d).send('/delphi-audit')).toBe('sent');
+    const order = posts(s.hits);
+    expect(order.filter((p) => p === '/tui/append-prompt')).toHaveLength(1);
+    expect(order.filter((p) => p === '/tui/submit-prompt')).toHaveLength(3);
+  });
+
+  it('waits on a real clock for a slow server and for the TUI to settle (fake timers)', async () => {
+    vi.useFakeTimers();
+    try {
+      const s = server({ healthyAfter: 5 });
+      const d = fakeDeps({
+        fetch: s.fetch,
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        now: () => Date.now(),
+      });
+      let result: string | undefined;
+      const pending = createOpencodeAdapter(d).send('/delphi-audit').then((r) => { result = r; });
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(result).toBeUndefined();
+      expect(posts(s.hits)).toEqual([]);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await pending;
+      expect(result).toBe('sent');
+      expect(posts(s.hits)).toEqual(['/tui/clear-prompt', '/tui/append-prompt', '/tui/submit-prompt']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not start a terminal nor wait when OpenCode is not installed: offers the install command', async () => {

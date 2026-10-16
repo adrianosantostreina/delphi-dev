@@ -19,6 +19,7 @@ export function realDeps(): AdapterDeps {
     createTerminal: ({ name, cwd }) => vscode.window.createTerminal({ name, cwd }),
     findTerminal: (name) => vscode.window.terminals.find((t) => t.name === name),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    now: () => Date.now(),
     workspaceCwd: () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
     isPortuguese: () => vscode.env.language.toLowerCase().startsWith('pt'),
   };

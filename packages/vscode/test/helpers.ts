@@ -6,7 +6,7 @@ export interface Fake extends AdapterDeps {
   clipboard: string[];
   infos: string[];
   errors: string[];
-  terminals: { name: string; sent: { text: string; newline?: boolean }[]; shown: number }[];
+  terminals: { name: string; sent: { text: string; newline?: boolean }[]; shown: number; disposed: boolean; like: TerminalLike }[];
 }
 
 export function cmd(id: string, takesFile = false): RegistryCommand {
@@ -50,18 +50,24 @@ export function fakeDeps(over: Partial<AdapterDeps> = {}): Fake {
     getSetting: <T>(_key: string, fallback: T) => fallback,
     fetch: async () => ({ ok: true, status: 200 }),
     createTerminal: ({ name }) => {
-      const t = { name, sent: [] as { text: string; newline?: boolean }[], shown: 0 };
+      const t = { name, sent: [] as { text: string; newline?: boolean }[], shown: 0, disposed: false, like: undefined as unknown as TerminalLike };
       terminals.push(t);
       const like: TerminalLike = {
         sendText: (text, newline) => t.sent.push({ text, newline }),
         show: () => {
           t.shown++;
         },
+        dispose: () => {
+          t.disposed = true;
+        },
       };
+      t.like = like;
       return like;
     },
-    findTerminal: () => undefined,
+    // Like vscode.window.terminals: only live terminals are found, by name.
+    findTerminal: (name) => terminals.find((t) => t.name === name && !t.disposed)?.like,
     sleep: async () => undefined,
+    now: () => Date.now(),
     workspaceCwd: () => '/work',
     isPortuguese: () => true,
   };
