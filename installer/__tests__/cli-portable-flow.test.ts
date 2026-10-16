@@ -50,6 +50,15 @@ vi.mock('../src/vscode-ext', () => ({
   isVSCodeAvailable: () => false,
   isVSCodeExtensionInstalled: () => false,
 }));
+// These files characterize the STABLE line: pin the package version (the real one is a pre-release now)
+// and keep the ref state out of the real home. A stable install must never write or clear it.
+vi.mock('../src/version', () => ({ packageVersion: () => '2.2.2' }));
+vi.mock('../src/ref', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/ref')>()),
+  readRefState: () => null,
+  writeRefState: () => { calls.push('writeRefState'); },
+  clearRefState: () => { calls.push('clearRefState'); },
+}));
 vi.mock('../src/hooks', () => ({ removeHooks: () => { calls.push('removeHooks'); } }));
 vi.mock('../src/verify', () => ({ verifyInstallation: () => ({ claudeOk: true, pluginOk: true, vscodeOk: true }) }));
 vi.mock('../src/ui', () => ({

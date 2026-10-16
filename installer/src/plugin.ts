@@ -2,6 +2,7 @@ import { execSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { checkoutRef, cloneAtRef, returnToDefaultBranch } from './ref';
 
 const PLUGIN_DEST = path.join(os.homedir(), '.claude', 'plugins', 'delphi-dev');
 const REPO_URL = 'https://github.com/adrianosantostreina/delphi-dev.git';
@@ -19,9 +20,23 @@ function spawn(cmd: string, args: string[]): void {
   }
 }
 
-export function installPlugin(): void {
+/** git is a real executable on every platform: no shell, so a ref can never be interpreted by one. */
+const runGit = (cmd: string, args: string[]): { status: number | null } => spawnSync(cmd, args, { stdio: 'inherit' });
+
+export interface PluginRefOptions {
+  /** Tag, branch or sha to leave the plugin checkout on. Absent: the default branch, as always. */
+  ref?: string;
+  /** No ref, but the checkout is pinned from an earlier install: go back to the default branch. */
+  unpin?: boolean;
+}
+
+export function installPlugin(opt: PluginRefOptions = {}): void {
   if (fs.existsSync(PLUGIN_DEST)) {
-    spawn('git', ['-C', PLUGIN_DEST, 'pull', '--ff-only']);
+    if (opt.ref) checkoutRef(PLUGIN_DEST, opt.ref, runGit);
+    else if (opt.unpin) returnToDefaultBranch(PLUGIN_DEST, runGit);
+    else spawn('git', ['-C', PLUGIN_DEST, 'pull', '--ff-only']);
+  } else if (opt.ref) {
+    cloneAtRef(PLUGIN_DEST, opt.ref, runGit, REPO_URL);
   } else {
     spawn('git', ['clone', '--depth=1', REPO_URL, PLUGIN_DEST]);
   }

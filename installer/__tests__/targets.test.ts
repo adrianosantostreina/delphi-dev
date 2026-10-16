@@ -119,6 +119,52 @@ describe('ensureCheckout', () => {
   });
 });
 
+describe('ensureCheckout with a ref', () => {
+  const dest = path.join('/h', '.delphi-dev', 'plugin');
+  const gitDir = path.join(dest, '.git');
+
+  it('no checkout yet: shallow clone of exactly that tag/branch', () => {
+    const calls: string[][] = [];
+    const out = ensureCheckout(dest, undefined, { run: (c, a) => { calls.push([c, ...a]); return { status: 0 }; }, exists: () => false }, false, { ref: 'v4.0.0-beta.1' });
+    expect(out).toBe(dest);
+    expect(calls).toEqual([['git', 'clone', '--depth=1', '--branch', 'v4.0.0-beta.1', '-c', 'advice.detachedHead=false', REPO_URL, dest]]);
+  });
+
+  it('existing checkout: fetches and detaches on the ref instead of pulling the default branch', () => {
+    const calls: string[][] = [];
+    ensureCheckout(dest, undefined, { run: (c, a) => { calls.push([c, ...a]); return { status: 0 }; }, exists: (p) => p === gitDir }, false, { ref: 'v4.0.0-beta.1' });
+    expect(calls.some((c) => c.includes('pull'))).toBe(false);
+    expect(calls[calls.length - 1]).toEqual(['git', '-C', dest, 'checkout', '--detach', '--quiet', 'refs/tags/v4.0.0-beta.1']);
+  });
+
+  it('a ref that does not exist fails loudly (unlike an offline pull)', () => {
+    expect(() => ensureCheckout(dest, undefined, { run: () => ({ status: 1 }), exists: (p) => p === gitDir }, false, { ref: 'ghost' })).toThrow(/"ghost"/);
+    expect(() => ensureCheckout(dest, undefined, { run: () => ({ status: 128 }), exists: () => false }, false, { ref: 'ghost' })).toThrow(/"ghost"/);
+  });
+
+  it('unpin: leaves the pinned ref and returns to master', () => {
+    const calls: string[][] = [];
+    ensureCheckout(dest, undefined, { run: (c, a) => { calls.push([c, ...a]); return { status: 0 }; }, exists: (p) => p === gitDir }, false, { unpin: true });
+    expect(calls[calls.length - 1]).toEqual(['git', '-C', dest, 'checkout', '--quiet', '-B', 'master', 'refs/remotes/origin/master']);
+  });
+
+  it('dry run never runs git, with or without a ref', () => {
+    const calls: string[][] = [];
+    const run = (c: string, a: string[]) => { calls.push([c, ...a]); return { status: 0 }; };
+    expect(ensureCheckout(dest, undefined, { run, exists: (p) => p === gitDir }, true, { ref: 'v1' })).toBe(dest);
+    expect(ensureCheckout(dest, undefined, { run, exists: () => false }, true, { ref: 'v1' })).toBeNull();
+    expect(ensureCheckout(dest, undefined, { run, exists: (p) => p === gitDir }, true, { unpin: true })).toBe(dest);
+    expect(calls).toEqual([]);
+  });
+
+  it('--from still wins over a ref and never runs git', () => {
+    const from = path.resolve('/src/delphi-dev');
+    let ran = 0;
+    expect(ensureCheckout(dest, from, { run: () => { ran++; return { status: 0 }; }, exists: () => true }, false, { ref: 'v1' })).toBe(from);
+    expect(ran).toBe(0);
+  });
+});
+
 describe('kbCliArgs', () => {
   it('maps one target and the pair to the kb-cli values', () => {
     const base = path.join('/c', 'runtime', 'kb-cli.mjs');

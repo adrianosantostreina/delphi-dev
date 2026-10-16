@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { commandExists } from './detect';
+import { checkoutRef, cloneAtRef, returnToDefaultBranch } from './ref';
 
 export type Target = 'claude' | 'codex' | 'opencode';
 export const ALL_TARGETS: Target[] = ['claude', 'codex', 'opencode'];
@@ -60,7 +61,20 @@ export interface CheckoutDeps {
  * `dryRun` never runs git: an existing checkout is reused as is, and a missing one is reported as
  * `null` ("would be cloned") because there is nothing to run `kb-cli --dry-run` from.
  */
-export function ensureCheckout(dest: string, from: string | undefined, deps: CheckoutDeps, dryRun = false): string | null {
+export interface CheckoutRefOptions {
+  /** Tag, branch or sha to leave the checkout on. Absent: the historical default-branch behaviour. */
+  ref?: string;
+  /** No ref, but the checkout is pinned from an earlier install: put it back on the default branch. */
+  unpin?: boolean;
+}
+
+export function ensureCheckout(
+  dest: string,
+  from: string | undefined,
+  deps: CheckoutDeps,
+  dryRun = false,
+  opt: CheckoutRefOptions = {},
+): string | null {
   if (from) {
     if (!deps.exists(path.join(from, 'runtime', 'kb-cli.mjs'))) {
       throw new Error(`--from ${from}: runtime/kb-cli.mjs nao encontrado (esse checkout e da v4?)`);
@@ -68,11 +82,21 @@ export function ensureCheckout(dest: string, from: string | undefined, deps: Che
     return from;
   }
   if (deps.exists(path.join(dest, '.git'))) {
-    // Offline or diverged: keep what is already there.
-    if (!dryRun) deps.run('git', ['-C', dest, 'pull', '--ff-only']);
+    if (opt.ref) {
+      if (!dryRun) checkoutRef(dest, opt.ref, deps.run);
+    } else if (opt.unpin) {
+      if (!dryRun) returnToDefaultBranch(dest, deps.run);
+    } else if (!dryRun) {
+      // Offline or diverged: keep what is already there.
+      deps.run('git', ['-C', dest, 'pull', '--ff-only']);
+    }
     return dest;
   }
   if (dryRun) return null;
+  if (opt.ref) {
+    cloneAtRef(dest, opt.ref, deps.run, REPO_URL);
+    return dest;
+  }
   const result = deps.run('git', ['clone', '--depth=1', REPO_URL, dest]);
   if (result.status !== 0) throw new Error('git clone falhou');
   return dest;
@@ -134,7 +158,7 @@ export function portableOutcome(cmd: 'install' | 'uninstall', status: number | n
 export function runPortable(
   cmd: 'install' | 'uninstall',
   targets: Target[],
-  o: { from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean },
+  o: { from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean; ref?: string; unpin?: boolean },
 ): 'ok' | 'partial' {
   const portable = targets.filter((t) => t !== 'claude');
   if (!portable.length) return 'ok';
@@ -143,9 +167,9 @@ export function runPortable(
     run: (c, a) => spawnSync(c, a, { stdio: 'inherit' }),
     exists: (p) => fs.existsSync(p),
   };
-  const checkout = ensureCheckout(checkoutDir(), o.from ? path.resolve(o.from) : undefined, deps, !!o.dryRun);
+  const checkout = ensureCheckout(checkoutDir(), o.from ? path.resolve(o.from) : undefined, deps, !!o.dryRun, { ref: o.ref, unpin: o.unpin });
   if (checkout === null) {
-    console.log(`[dry-run] would clone ${REPO_URL} to ${checkoutDir()} and then run kb-cli ${cmd} --dry-run`);
+    console.log(`[dry-run] would clone ${REPO_URL}${o.ref ? ` at ${o.ref}` : ''} to ${checkoutDir()} and then run kb-cli ${cmd} --dry-run`);
     return 'ok';
   }
   const args = kbCliArgs(cmd, checkout, portable, o);

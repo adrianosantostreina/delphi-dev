@@ -7,10 +7,29 @@ import { removeHooks } from './hooks';
 import { verifyInstallation } from './verify';
 import { header, step, success, warn, error, summary } from './ui';
 import chalk from 'chalk';
+import { packageVersion } from './version';
+import { DEFAULT_BRANCH, clearRefState, planInstallRef, planUpdateRef, readRefState, writeRefState, type RefPlan } from './ref';
 import { detectTargets, installedPortableTargets, portableHints, readInstallManifest, realProbe, resolveTargets, runPortable, type Target } from './targets';
 
 const program = new Command();
-program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version('2.2.2');
+program.name('delphi-dev').description('delphi-dev Claude Code plugin installer').version(packageVersion());
+
+/** Prints which ref is being installed (nothing for a stable install, whose behaviour is unchanged). */
+function describeRef(plan: RefPlan): string | null {
+  if (plan.ref) return `Ref: ${plan.ref} (${plan.explicit ? 'chosen with --ref' : 'pre-release version of this package'})`;
+  if (plan.unpin) return `Returning to the stable line (${DEFAULT_BRANCH}): leaving the ref installed earlier`;
+  return null;
+}
+
+/** Remembers the ref in use so that "update" keeps it. Never fails the install. */
+function recordRef(plan: RefPlan): void {
+  try {
+    if (plan.ref) writeRefState({ ref: plan.ref, explicit: plan.explicit, version: packageVersion() });
+    else if (plan.unpin) clearRefState();
+  } catch (err) {
+    warn(`Could not record the installed ref: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 program
   .command('install', { isDefault: true })
@@ -21,21 +40,37 @@ program
   .option('--project <dir>', 'project folder for --scope project')
   .option('--dry-run', 'show what would change; executes and writes nothing')
   .option('--force', 'overwrite files that are not ours (a backup is made)')
-  .action(async (opts: { target?: string; from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean }) => {
+  .option('--ref <ref>', 'tag, branch or sha of the repository to install (default: the latest stable; a pre-release package installs its own tag)')
+  .action(async (opts: { target?: string; from?: string; scope?: string; project?: string; dryRun?: boolean; force?: boolean; ref?: string }) => {
     let targets: Target[];
+    let plan: RefPlan;
     try {
       targets = resolveTargets(opts.target);
+      plan = planInstallRef({ flag: opts.ref, version: packageVersion(), state: readRefState() });
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
     const portable = targets.filter((t) => t !== 'claude');
+    // --from uses a checkout the user already has: the ref does not apply to the portable part then.
+    const refUsed = targets.includes('claude') || !opts.from;
+    let refAnnounced = false;
+    const announceRef = (): void => {
+      const text = describeRef(plan);
+      if (text && refUsed && !refAnnounced) {
+        refAnnounced = true;
+        step(text);
+      }
+    };
+    const portableOpts = { ...opts, ref: plan.ref, ...(plan.unpin ? { unpin: true } : {}) };
     let portableFailed = false;
     let portablePartial = false;
     if (portable.length) {
       header(`Installing delphi-dev for ${portable.join(' + ')}`);
+      announceRef();
       try {
-        const outcome = runPortable('install', portable, opts);
+        const outcome = runPortable('install', portable, portableOpts);
+        if (refUsed && !opts.dryRun) recordRef(plan);
         if (outcome === 'partial') {
           // kb-cli exit 2: it ran, but protected some of the user's files. Not a success, not a crash.
           portablePartial = true;
@@ -55,6 +90,7 @@ program
     }
 
     header('Installing delphi-dev v2.2');
+    announceRef();
 
     // Codex/OpenCode are never touched without --target: if they are around, only say how to opt in.
     if (!opts.target) {
@@ -66,6 +102,7 @@ program
     if (opts.dryRun) {
       // Dry run executes nothing at all: not even the Claude Code part (plugin, settings.json, VS Code).
       step('[dry-run] would install the Claude Code plugin (git clone/pull + claude plugin marketplace add/install)');
+      if (plan.ref) step(`[dry-run] would leave the plugin checkout on ${plan.ref}`);
       step('[dry-run] would remove legacy delphi-dev hooks from ~/.claude/settings.json');
       if (isVSCodeAvailable()) step('[dry-run] would install the VS Code extension');
       success('Dry run - nothing was changed');
@@ -83,7 +120,8 @@ program
     }
 
     step('Installing Claude Code plugin...');
-    installPlugin();
+    installPlugin({ ref: plan.ref, unpin: plan.unpin });
+    recordRef(plan);
     success('Plugin installed');
 
     // v4: hooks are declared by the plugin itself (hooks/hooks.json). The installer only
@@ -133,20 +171,35 @@ program
 program
   .command('update')
   .description('Update the delphi-dev plugin (the knowledge base updates itself; use /update in a session)')
-  .action(() => {
+  .option('--ref <ref>', 'tag, branch or sha to update to (default: the ref recorded at install time)')
+  .action((opts: { ref?: string }) => {
     header('Updating delphi-dev');
+    let plan: ReturnType<typeof planUpdateRef>;
+    try {
+      plan = planUpdateRef({ flag: opts.ref, version: packageVersion(), state: readRefState() });
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    if (plan.ref) {
+      step(`Ref: ${plan.ref} (${plan.explicit ? 'chosen with --ref' : 'pre-release version of this package'})`);
+      if (plan.kept) warn(`update keeps the ref recorded at install time (${plan.ref}); to return to the stable line run: npx delphi-dev`);
+    }
     const installed = installedPortableTargets(readInstallManifest());
     // Without a Codex/OpenCode install this is exactly the historical Claude Code update.
     if (!installed.length || detectSystem().hasClaudeCLI) {
       step('Pulling latest plugin...');
-      installPlugin();
+      installPlugin({ ref: plan.ref });
+      if (plan.ref) recordRef(plan);
       success('Plugin updated — restart your Claude Code session');
     }
     if (installed.length) {
       step(`Updating ${installed.join(' + ')}...`);
       let partial = false;
       try {
-        if (runPortable('install', installed, {}) === 'partial') {
+        const outcome = runPortable('install', installed, { ref: plan.ref });
+        if (plan.ref) recordRef(plan);
+        if (outcome === 'partial') {
           partial = true;
           warn(`Update of ${installed.join(' + ')} was PARTIAL: some items were not applied (see the ! and ? lines above)`);
         } else {
