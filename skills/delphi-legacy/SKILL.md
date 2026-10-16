@@ -14,7 +14,7 @@ Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explí
 
 ## Protocolo para código legado
 
-Antes de qualquer mudança, leia `rules/legacy.md` integralmente.
+Antes de qualquer mudança, ative a skill `delphi-standards` e leia `references/rules/legacy.md` integralmente.
 
 ## Diagnóstico rápido de nível de legado
 

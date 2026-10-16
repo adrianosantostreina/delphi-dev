@@ -15,7 +15,7 @@ Detecte o idioma da primeira mensagem. Padrão: pt-BR. Respeite overrides explí
 ## Quando usar Spring4D
 
 - **DI Container** — quando o grafo de dependências cresce e o constructor injection
-  manual fica trabalhoso de montar (ver `rules/architecture.md` para a base de DI).
+  manual fica trabalhoso de montar (ver `references/rules/architecture.md` da skill `delphi-standards` para a base de DI).
 - **Collections** — `IList<T>`, `IDictionary<TK,TV>`, `IEnumerable<T>` com semântica
   de interface (ARC) em vez de `TObjectList<T>` manual.
 
@@ -66,5 +66,5 @@ end;
 - Registrar **interfaces → implementações**, nunca classes concretas diretamente
 - Preferir `AsSingleton` para services/repositories sem estado mutável
 - `IList<T>` / `IDictionary<T>` (interface) em vez de `TList<T>` quando quer ARC
-- O container não substitui o `rules/architecture.md` — é a ferramenta que automatiza
+- O container não substitui o `references/rules/architecture.md` (skill `delphi-standards`) — é a ferramenta que automatiza
   o constructor injection que aquele documento exige
