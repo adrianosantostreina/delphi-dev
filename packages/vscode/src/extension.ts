@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { createServices } from './agents/services';
+import type { AgentId } from './agents/types';
 import { registerCommands } from './commands/delphiCommands';
 import { detectDelphiProject, watchDelphiFiles } from './context/delphiDetector';
 import { createStatusBar, setStatusAgent, updateStatusBar } from './context/statusBar';
@@ -17,10 +18,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   createStatusBar(context);
   const refreshAgent = async (): Promise<void> => {
-    const installed = services.installedAgents();
-    const configured = vscode.workspace.getConfiguration('delphiDev').get<string>('agent', 'auto');
-    const id = configured !== 'auto' ? (configured as 'claude' | 'codex' | 'opencode') : installed.length === 1 ? installed[0] : undefined;
-    setStatusAgent(id ? services.adapters[id].label : undefined);
+    // The status bar label is cosmetic: whatever goes wrong here must not stop the activation.
+    try {
+      const configured = services.agentSetting();
+      let id: AgentId | undefined;
+      if (configured !== 'auto') id = configured;
+      else {
+        const installed = services.installedAgents();
+        if (installed.length === 1) id = installed[0];
+      }
+      setStatusAgent(id ? services.adapters[id].label : undefined);
+    } catch {
+      setStatusAgent(undefined);
+    }
   };
   context.subscriptions.push(
     vscode.commands.registerCommand('delphi-dev.refreshStatus', refreshAgent),

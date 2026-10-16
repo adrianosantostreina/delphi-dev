@@ -8,7 +8,7 @@ import { createCodexAdapter } from './codex';
 import { realDeps } from './deps';
 import { createOpencodeAdapter } from './opencode';
 import { installCommandFor, pluginPresent } from './presence';
-import { resolveAgent } from './resolve';
+import { parseAgentSetting, resolveAgent } from './resolve';
 import type { AgentAdapter, AgentId } from './types';
 
 const LAST_AGENT_KEY = 'delphiDev.lastAgent';
@@ -18,6 +18,8 @@ export interface Services {
   run: RunServices;
   adapters: Record<AgentId, AgentAdapter>;
   installedAgents(): AgentId[];
+  /** The validated delphiDev.agent setting; an invalid value reads as 'auto'. */
+  agentSetting(): 'auto' | AgentId;
   current(): Promise<AgentId | undefined>;
   chooseAgent(): Promise<AgentId | undefined>;
 }
@@ -44,10 +46,8 @@ export function createServices(context: vscode.ExtensionContext): Services {
     return choice?.id;
   }
 
-  const setting = (): 'auto' | AgentId => {
-    const value = vscode.workspace.getConfiguration('delphiDev').get<string>('agent', 'auto');
-    return value === 'claude' || value === 'codex' || value === 'opencode' ? value : 'auto';
-  };
+  const setting = (): 'auto' | AgentId =>
+    parseAgentSetting(vscode.workspace.getConfiguration('delphiDev').get<unknown>('agent', 'auto'));
 
   const current = (): Promise<AgentId | undefined> =>
     resolveAgent({ setting: setting(), installed: installedAgents(), last: lastAgent(), pick });
@@ -91,5 +91,5 @@ export function createServices(context: vscode.ExtensionContext): Services {
     },
   };
 
-  return { run, adapters, installedAgents, current, chooseAgent };
+  return { run, adapters, installedAgents, agentSetting: setting, current, chooseAgent };
 }

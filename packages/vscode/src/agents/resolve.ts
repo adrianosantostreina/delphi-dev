@@ -14,3 +14,8 @@ export async function resolveAgent(i: ResolveInput): Promise<AgentId | undefined
   if (i.last && i.installed.includes(i.last)) return i.last;
   return i.pick(i.installed);
 }
+
+/** Setting values come from hand-editable JSON: anything unknown means "auto", never an exception. */
+export function parseAgentSetting(value: unknown): 'auto' | AgentId {
+  return value === 'claude' || value === 'codex' || value === 'opencode' ? value : 'auto';
+}

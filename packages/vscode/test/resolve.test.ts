@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveAgent } from '../src/agents/resolve';
+import { parseAgentSetting, resolveAgent } from '../src/agents/resolve';
 import type { AgentId } from '../src/agents/types';
 
 const never = async (): Promise<AgentId | undefined> => {
@@ -38,5 +38,17 @@ describe('resolveAgent', () => {
 
   it('returns undefined when the user dismisses the question', async () => {
     expect(await resolveAgent({ setting: 'auto', installed: ['claude', 'codex'], last: undefined, pick: async () => undefined })).toBeUndefined();
+  });
+});
+
+describe('parseAgentSetting', () => {
+  it('accepts the known agents and auto', () => {
+    for (const v of ['auto', 'claude', 'codex', 'opencode'] as const) expect(parseAgentSetting(v)).toBe(v);
+  });
+
+  it('falls back to auto for anything else, never throwing (a hand-edited settings.json)', () => {
+    for (const v of ['Claude', 'CLAUDE', ' codex', '', 'gemini', 7, null, undefined, {}, [], ['claude'], true]) {
+      expect(parseAgentSetting(v)).toBe('auto');
+    }
   });
 });

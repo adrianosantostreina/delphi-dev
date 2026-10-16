@@ -28,6 +28,7 @@ function fakeServices(sent: string[], chosen?: AgentId): Services {
   return {
     adapters,
     installedAgents: () => ['claude'],
+    agentSetting: () => 'auto',
     current: async () => 'claude',
     chooseAgent: async () => chosen,
     run: {
