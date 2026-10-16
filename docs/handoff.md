@@ -1,9 +1,83 @@
 # Handoff — delphi-dev
 
-> Onde estamos e qual o próximo passo. Atualizado em **2026-10-16**.
+> Onde estamos e qual o próximo passo. Atualizado em **2026-10-16 (noite)**.
 > No início de uma nova sessão, ler este arquivo para retomar.
 
-## Ponto de retomada (2026-10-16) — Sprint 3A+3B (entrega portátil Codex/OpenCode) IMPLEMENTADO; falta teste manual + 3C
+## Ponto de retomada (2026-10-16, noite) — Sprint 3C (extensão VS Code multiagente) IMPLEMENTADO; falta teste manual, bump 4.0.0 e release
+
+**Branch `feature/v4.0-multi-agente`, só local — NÃO pushada.** Sobre o 3A+3B (seção seguinte).
+Docs: spec `docs/superpowers/specs/2026-10-15-vscode-multi-agent-design.md`, plano
+`docs/superpowers/plans/2026-10-15-vscode-multi-agent.md` (Tasks 1–9 feitas), matriz manual passo a passo em
+`docs/testes-v4.0-extensao.md`.
+
+**Feito (3C):**
+- `packages/vscode` controla Claude Code, Codex e OpenCode: registro copiado do `portable.json`
+  (`npm run sync` / `check:registry`), `contributes.commands` gerado, adaptadores com dependências injetadas,
+  resolução do agente (setting → detecção → último usado), aviso de plugin ausente, árvore/status bar/QuickPick.
+- Entrega: Claude `/<id>` (mesmo caminho da extensão antiga), Codex `$delphi-cmd-<id>` (abre o painel e **copia**;
+  URI do prompt é experimental, atrás de `delphiDev.codexPromptUri`), OpenCode `/delphi-<id>` pela API HTTP da TUI
+  (`opencode --port 4096` em terminal próprio; nunca digita comando em terminal que já existe).
+- Versão **3.0.0**, `displayName` "Delphi Dev", `.vscodeignore` (o `.vsix` leva só `dist/extension.js`, README, CHANGELOG,
+  LICENSE, ícone e snippets), README/CHANGELOG novos. Removido o `extensionDependencies` da extensão do Claude Code
+  (impediria instalar só com Codex/OpenCode).
+- CI: `publish-vscode.yml` corrigido (branch `master`, `npm install`, `check:registry` + testes antes do publish,
+  `workflow_dispatch`); job `vscode` em `runtime-check.yml`. YAML validado só com parser (nada rodou no GitHub).
+- Plugin: `/about` e `/update` sugerem `code --install-extension adrianosantos.delphi-dev-vscode` quando a extensão
+  falta; `/new-project` cria `.vscode/extensions.json` recomendando-a (seções no fim dos arquivos, frontmatter intacto).
+- `packages/vscode/dist/` é versionado e foi **reconstruído** (estava no bundle da 2.0.0 durante as Tasks 1–6).
+- Gates da última rodada: `packages/vscode` 58 testes + `tsc` + build + `check:registry` OK; `kb` 507 verdes (3 skipped);
+  installer 60; `kb-cli lint` = 0 achados; `claude-surface.mjs --check --validate` = "claude surface unchanged";
+  `claude --plugin-dir . -p "/delphi-dev:about" --model haiku` respondeu normalmente.
+- O que a automação NÃO provou: tudo dentro do VS Code de verdade (painel do Claude, painel do Codex, terminal do
+  OpenCode), o Codex real (só lido), publicação.
+
+**Próximo passo concreto:**
+1. **Você executa `docs/testes-v4.0-extensao.md`** (opção A: `code --extensionDevelopmentPath=...`; ou instalar o
+   `.vsix` local). Mais importantes: Claude Code sem regressão (1, 2, 3, 15) e os testes 6 e 11.
+2. Matrizes manuais anteriores: `docs/testes-v4.0-codex-opencode.md` (bloco E = Claude Code intacto).
+3. **Bump 4.0.0** do plugin (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `commands/about.md`
+   linha `Versão:`), merge em `master`, release.
+4. **Publicações só no fim e só com seu OK:** `npm publish` do installer (`npm login` antes) e a extensão no Marketplace.
+   Para a extensão: criar o segredo **`VSCE_TOKEN`** (Settings > Secrets and variables > Actions; token do
+   Marketplace do publisher `adrianosantos`) — hoje ele **não existe**. O workflow publica ao mudar a versão em
+   `packages/vscode/package.json` no `master`, ou manualmente (`workflow_dispatch`). Conferir antes qual versão
+   o Marketplace serve (o `package.json` estava em 2.0.0 e o CHANGELOG só registrava a 0.1.0).
+5. **Aviso no repositório antigo `delphi-dev-vscode`** (apontar para `packages/vscode` deste repo / a nova extensão).
+6. Aberto desde 2026-06-22: o `package.json` da extensão referencia os language IDs `pascal`/`objectpascal`
+   sem declará-los em `contributes.languages` ("Unknown language" no Runtime Status, inofensivo). Não foi tratado no 3C.
+
+**Decisões (e o porquê):**
+- `extensionDependencies` removido: a extensão agora serve a três agentes; o Claude Code é oferecido só quando é o
+  escolhido (`Instalar Claude Code`).
+- Codex nunca finge envio: sem URI de prompt documentada, o resultado é `copied` (aviso "Comando copiado…").
+- OpenCode: a API `/tui/append-prompt` responde 200 mesmo sem TUI conectada; por isso o adaptador espera a saúde do
+  servidor + 2 s e cai para cópia se não entregar. **Ressalva:** se um `opencode serve`/`web` já estiver na porta sem
+  TUI, o comando pode "sumir" — usar o terminal criado pela extensão (documentado no README).
+- Porta do OpenCode e `codexPromptUri` são settings **machine-scoped** (um `.vscode/settings.json` de repositório
+  clonado não os altera; o valor da porta é validado antes de ser digitado no shell).
+
+**Armadilhas / o que não fazer:**
+- `packages/vscode/dist/` é **versionado**: depois de mudar `src/`, rodar `npm run build` e commitar `dist/extension.js`
+  e `.map` junto (o bundle é minificado; o diff é ilegível, normal).
+- `package.json` e `src/generated/registry.json` são **gerados**: mudou `portable.json` ou a lista de comandos extras?
+  `cd packages/vscode && npm run sync` e commitar; o teste e a CI falham se divergirem.
+- CRLF / `core.autocrlf=true`: working tree CRLF, índice LF. O script de sync lê normalizando `\r\n`.
+- `python3` trava neste shell — usar `node`. `packages/vscode/src` é ASCII (exceto literais de UI em pt-BR); as
+  ferramentas de edição convertem `\uXXXX`, então conferir com `perl -ne 'print "$ARGV:$.\n" if /[^\x00-\x7F]/'`.
+- Não gerar o `.vsix` dentro do repositório (não há `*.vsix` no `.gitignore`); usar `--out "%TEMP%\..."`.
+- Não commitar `.github/copilot-instructions.md` e `.github/instructions/` (untracked, de outro trabalho).
+- Não rodar `vsce publish`/`npm publish` sem o seu pedido explícito. Push também só com confirmação.
+
+**Como rodar e validar (da raiz do repo):**
+- `cd packages/vscode && npx vitest run && npx tsc --noEmit && npm run build && npm run check:registry`
+- `cd kb && npx vitest run` · `cd installer && npx vitest run`
+- `node kb/scripts/claude-surface.mjs --check --validate` (o Claude Code não pode mudar) e
+  `node runtime/kb-cli.mjs lint --root .` (0 achados)
+- Conferir o pacote: `cd packages/vscode && npx vsce ls --no-dependencies` (8 arquivos).
+
+**Sincronização:** branch local `feature/v4.0-multi-agente` (3C: commits `2b9bb01`…`aa1eacd`); `master` em v3.2.1.
+
+## Ponto de retomada (2026-10-16) — Sprint 3A+3B (entrega portátil Codex/OpenCode) IMPLEMENTADO; falta teste manual (o 3C está na seção acima)
 
 **Branch `feature/v4.0-multi-agente`, só local — NÃO pushada.** Sobre o estado de 2026-10-15 (abaixo).
 Docs: spec `docs/superpowers/specs/2026-10-15-portable-delivery-design.md`, plano
