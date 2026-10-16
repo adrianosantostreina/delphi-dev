@@ -118,6 +118,18 @@ describe('kb-cli', () => {
     expect(await runCli(['issue-to-file', '--out-dir', tmpDir()], run.value)).toBe(1);
   });
 
+  it('lints a repo and exits 1 with findings', async () => {
+    const { makeRepo } = await import('./helpers');
+    const clean = io();
+    expect(await runCli(['lint', '--root', makeRepo()], clean.value)).toBe(0);
+    expect(clean.out.at(-1)).toBe('0 achado(s) de portabilidade');
+
+    const bad = io();
+    const root = makeRepo({ 'commands/audit.md': null });
+    expect(await runCli(['lint', '--root', root], bad.value)).toBe(1);
+    expect(bad.out.join('\n')).toContain('[command-registry]');
+  });
+
   it('prints usage for an unknown command', async () => {
     const run = io();
     expect(await runCli(['bogus'], run.value)).toBe(64);

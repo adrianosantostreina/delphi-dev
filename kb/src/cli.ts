@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
+import { lintCommand } from './cli-install';
 import { contribute, defaultDeps, SecretFoundError, type ContributeDeps } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
@@ -40,6 +41,7 @@ const USAGE = [
   '  prefs get | prefs set [--suggestions on|off] [--offline true|false]',
   '  contribute <file>',
   '  sync [--apply] [--source <dir>] [--knowledge <dir>]',
+  '  lint [--root <dir>]',
 ].join('\n');
 
 function mdFiles(target: string): string[] {
@@ -176,6 +178,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
       if (values.apply) applySync(items, source, knowledge, state);
       return 0;
     }
+    case 'lint': return lintCommand(rest, io);
     default: io.err(USAGE); return 64;
   }
 }
