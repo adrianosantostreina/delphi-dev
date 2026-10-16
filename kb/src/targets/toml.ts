@@ -143,6 +143,24 @@ export function hasTableOutsideBlock(text: string, table: string): boolean {
   return false;
 }
 
-export function codexMcpBlockBody(serverScript: string): string {
-  return ['[mcp_servers.delphi-dev-kb]', 'command = "node"', `args = [${JSON.stringify(serverScript)}]`].join('\n');
+/**
+ * A TOML string value: a literal 'string' when nothing needs escaping (Windows backslashes and
+ * double quotes stay as they are), else a basic "string" with the escapes TOML defines.
+ */
+export function tomlStringValue(value: string): string {
+  if (!value.includes("'") && !/[\x00-\x1F\x7F]/.test(value)) return `'${value}'`;
+  return JSON.stringify(value).replace(/\x7f/g, '\\u007f');
+}
+
+/**
+ * `cwd` makes Codex start the server from the trusted checkout instead of the project folder that is
+ * open (Codex accepts `cwd` in `mcp_servers.<name>`; verified with --strict-config in validate-targets).
+ */
+export function codexMcpBlockBody(serverScript: string, cwd: string): string {
+  return [
+    '[mcp_servers.delphi-dev-kb]',
+    'command = "node"',
+    `args = [${JSON.stringify(serverScript)}]`,
+    `cwd = ${tomlStringValue(cwd)}`,
+  ].join('\n');
 }

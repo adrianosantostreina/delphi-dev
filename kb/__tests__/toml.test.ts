@@ -5,19 +5,32 @@ import {
 } from '../src/targets/toml';
 
 const SCRIPT = 'D:/2.2 GitHub Adriano Santos/delphi-dev/runtime/kb-mcp.mjs';
-const body = codexMcpBlockBody(SCRIPT);
+const CHECKOUT = 'D:/2.2 GitHub Adriano Santos/delphi-dev';
+const body = codexMcpBlockBody(SCRIPT, CHECKOUT);
 const user = 'model = "gpt-5"\n\n[mcp_servers.outro]\ncommand = "x"\n';
 const TABLE = 'mcp_servers.delphi-dev-kb';
 
 describe('codex managed TOML block', () => {
   it('builds the mcp table with a path that has spaces', () => {
     expect(body).toBe(
-      '[mcp_servers.delphi-dev-kb]\ncommand = "node"\nargs = ["D:/2.2 GitHub Adriano Santos/delphi-dev/runtime/kb-mcp.mjs"]',
+      '[mcp_servers.delphi-dev-kb]\ncommand = "node"\nargs = ["D:/2.2 GitHub Adriano Santos/delphi-dev/runtime/kb-mcp.mjs"]\n'
+      + "cwd = 'D:/2.2 GitHub Adriano Santos/delphi-dev'",
     );
   });
 
   it('escapes backslashes and quotes so the TOML string stays valid', () => {
-    expect(codexMcpBlockBody('C:\\a "b"\\kb-mcp.mjs')).toContain('args = ["C:\\\\a \\"b\\"\\\\kb-mcp.mjs"]');
+    expect(codexMcpBlockBody('C:\\a "b"\\kb-mcp.mjs', 'C:/x')).toContain('args = ["C:\\\\a \\"b\\"\\\\kb-mcp.mjs"]');
+  });
+
+  it('writes cwd as a literal string when safe (Windows paths and double quotes need no escaping)', () => {
+    expect(codexMcpBlockBody('C:/x/kb-mcp.mjs', 'C:\\Users\\Ana "A"\\delphi-dev')).toContain(`cwd = 'C:\\Users\\Ana "A"\\delphi-dev'`);
+  });
+
+  it("falls back to an escaped basic string when the path has a single quote or a control character", () => {
+    expect(codexMcpBlockBody('C:/x/kb-mcp.mjs', "C:/o'brien/dd")).toContain('cwd = "C:/o\'brien/dd"');
+    expect(codexMcpBlockBody('C:/x/kb-mcp.mjs', 'C:/a\\b\'c')).toContain('cwd = "C:/a\\\\b\'c"');
+    const withTab = codexMcpBlockBody('C:/x/kb-mcp.mjs', 'C:/a\tb');
+    expect(withTab).toContain('cwd = "C:/a\\tb"');
   });
 
   it('appends after the user content without touching it', () => {
@@ -39,7 +52,7 @@ describe('codex managed TOML block', () => {
 
   it('replaces the existing block instead of duplicating it', () => {
     const once = upsertManagedBlock(user, body);
-    const twice = upsertManagedBlock(once, codexMcpBlockBody('C:/outro/runtime/kb-mcp.mjs'));
+    const twice = upsertManagedBlock(once, codexMcpBlockBody('C:/outro/runtime/kb-mcp.mjs', 'C:/outro'));
     expect(twice.split(BLOCK_START)).toHaveLength(2);
     expect(twice).toContain('C:/outro/runtime/kb-mcp.mjs');
     expect(twice).not.toContain('D:/2.2 GitHub');
@@ -66,7 +79,7 @@ describe('codex managed TOML block', () => {
   it('keeps the user content that comes after the block', () => {
     const middle = `a = 1\n\n${BLOCK_START}\n${body}\n${BLOCK_END}\nb = 2\n`;
     expect(removeManagedBlock(middle)).toBe('a = 1\nb = 2\n');
-    const replaced = upsertManagedBlock(middle, codexMcpBlockBody('C:/n/runtime/kb-mcp.mjs'));
+    const replaced = upsertManagedBlock(middle, codexMcpBlockBody('C:/n/runtime/kb-mcp.mjs', 'C:/n'));
     expect(replaced.startsWith('a = 1\n')).toBe(true);
     expect(replaced.endsWith('b = 2\n')).toBe(true);
     expect(replaced).toContain('C:/n/runtime/kb-mcp.mjs');

@@ -61,6 +61,8 @@ describe('installTargets (user scope)', () => {
     const toml = read(o.home, '.codex', 'config.toml');
     expect(toml).toContain(BLOCK_START);
     expect(toml).toContain('[mcp_servers.delphi-dev-kb]');
+    // the MCP server runs from the trusted checkout, not from whatever project is open
+    expect(toml).toContain(`cwd = '${o.checkout.replace(/\\/g, '/')}'`);
     const hooks = JSON.parse(read(o.home, '.codex', 'hooks.json'));
     expect(hooks.hooks.PostToolUse[0].matcher).toBe('apply_patch|Write|Edit');
     expect(hooks.hooks.UserPromptSubmit).toHaveLength(1);

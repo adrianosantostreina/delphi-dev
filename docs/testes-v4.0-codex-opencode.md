@@ -119,8 +119,12 @@ pasta de trabalho: D:\Temp\dd-validate
   `--work` dentro do perfil). Tambem e preciso limpar `PWD` herdado do shell: o OpenCode usa `PWD` como diretorio do
   projeto (o script define `PWD` para o `cwd` de cada processo).
 - `mcp_servers.<nome>.cwd` existe no Codex 0.162 e e aplicado ao processo do servidor MCP (probe do script com um MCP de
-  teste). Isso permitiria rodar o `kb-mcp.mjs` a partir do checkout confiavel em vez da pasta do projeto. O OpenCode nao
-  foi investigado quanto a isso.
+  teste). O bloco gerenciado do `config.toml` agora grava `cwd = '<checkout>'` (literal TOML seguro para caminhos Windows) e
+  o script confirmou com o Codex real que o config continua aceito (`--strict-config`) e que o MCP conecta.
+- OpenCode: o schema atual (`https://opencode.ai/config.json`, `McpLocalConfig`) tem `cwd` e o `opencode 1.19.1` o aceita e
+  aplica (probe isolado: o servidor viu o `cwd` configurado). Mesmo assim o instalador NAO o grava no `opencode.json`: o
+  schema tem `additionalProperties: false`, entao um OpenCode antigo que nao conheca `cwd` rejeitaria o config inteiro do
+  usuario. Fica como melhoria futura (condicionada a versao minima do OpenCode).
 
 ## O que foi verificado automaticamente e o que NAO foi
 

@@ -253,7 +253,7 @@ function codexMcpConfig(o: InstallOptions, base: Base, ctx: Ctx, rec: TargetReco
       `${configToml}: ja existe [mcp_servers.${MCP_SERVER}] fora do bloco do delphi-dev; MCP nao configurado`,
     );
   } else {
-    const next = upsertManagedBlock(toml, codexMcpBlockBody(`${posix(o.checkout)}/runtime/kb-mcp.mjs`));
+    const next = upsertManagedBlock(toml, codexMcpBlockBody(`${posix(o.checkout)}/runtime/kb-mcp.mjs`, posix(o.checkout)));
     writeConfigText(ctx, configToml, next);
     rec.blocks.push(configToml);
   }
