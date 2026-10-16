@@ -18,7 +18,7 @@ function adapter(id: AgentId, log: string[]): AgentAdapter {
 function services(over: Partial<RunServices> = {}, log: string[] = []): RunServices {
   return {
     adapters: { claude: adapter('claude', log), codex: adapter('codex', log), opencode: adapter('opencode', log) },
-    resolve: async () => 'claude',
+    resolve: async () => ({ kind: 'agent', id: 'claude' }),
     fileRef: (withRange) => (withRange ? '@src/U.pas:3-9' : '@src/U.pas'),
     pluginPresent: () => true,
     remember: (a) => log.push(`remember:${a}`),
@@ -35,7 +35,7 @@ function services(over: Partial<RunServices> = {}, log: string[] = []): RunServi
 describe('runCommand', () => {
   it('sends the invocation of the resolved agent', async () => {
     const log: string[] = [];
-    expect(await runCommand(cmd('audit'), services({ resolve: async () => 'codex' }, log))).toBe('sent');
+    expect(await runCommand(cmd('audit'), services({ resolve: async () => ({ kind: 'agent', id: 'codex' }) }, log))).toBe('sent');
     expect(log).toEqual(['remember:codex', 'send:codex:$delphi-cmd-audit']);
   });
 
@@ -60,7 +60,7 @@ describe('runCommand', () => {
 
   it('warns about a missing plugin but still sends', async () => {
     const log: string[] = [];
-    await runCommand(cmd('audit'), services({ resolve: async () => 'opencode', pluginPresent: () => false }, log));
+    await runCommand(cmd('audit'), services({ resolve: async () => ({ kind: 'agent', id: 'opencode' }), pluginPresent: () => false }, log));
     expect(log).toEqual(['remember:opencode', 'missing:opencode', 'send:opencode:/delphi-audit']);
   });
 
@@ -68,7 +68,7 @@ describe('runCommand', () => {
     const log: string[] = [];
     const never = new Promise<void>(() => undefined);
     const result = await Promise.race([
-      runCommand(cmd('audit'), services({ resolve: async () => 'opencode', pluginPresent: () => false, notifyMissingPlugin: () => never }, log)),
+      runCommand(cmd('audit'), services({ resolve: async () => ({ kind: 'agent', id: 'opencode' }), pluginPresent: () => false, notifyMissingPlugin: () => never }, log)),
       new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 200)),
     ]);
     expect(result).toBe('sent');
@@ -90,9 +90,15 @@ describe('runCommand', () => {
     expect(log.some((l) => l.startsWith('missing:'))).toBe(false);
   });
 
-  it('tells the user when no agent can be resolved', async () => {
+  it('tells the user when no agent is installed', async () => {
     const log: string[] = [];
-    expect(await runCommand(cmd('audit'), services({ resolve: async () => undefined }, log))).toBe('no-agent');
+    expect(await runCommand(cmd('audit'), services({ resolve: async () => ({ kind: 'none' }) }, log))).toBe('no-agent');
     expect(log).toEqual(['no-agent']);
+  });
+
+  it('stays silent when the user cancels the picker: no error, no send, no remember', async () => {
+    const log: string[] = [];
+    expect(await runCommand(cmd('audit'), services({ resolve: async () => ({ kind: 'cancelled' }) }, log))).toBe('cancelled');
+    expect(log).toEqual([]);
   });
 });

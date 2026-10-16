@@ -1,9 +1,10 @@
 import type { AgentAdapter, AgentId, DeliveryResult } from '../agents/types';
+import type { Resolution } from '../agents/resolve';
 import type { RegistryCommand } from '../registry';
 
 export interface RunServices {
   adapters: Record<AgentId, AgentAdapter>;
-  resolve(): Promise<AgentId | undefined>;
+  resolve(): Promise<Resolution>;
   /** `@path` of the active editor (plus `:range` for a selection when withRange), or undefined when there is no file. */
   fileRef(withRange: boolean): string | undefined;
   pluginPresent(agent: AgentId): boolean | undefined;
@@ -12,12 +13,15 @@ export interface RunServices {
   notifyNoAgent(): Promise<void>;
 }
 
-export async function runCommand(command: RegistryCommand, s: RunServices): Promise<DeliveryResult | 'no-agent'> {
-  const id = await s.resolve();
-  if (!id) {
+export async function runCommand(command: RegistryCommand, s: RunServices): Promise<DeliveryResult | 'no-agent' | 'cancelled'> {
+  const resolution = await s.resolve();
+  // Dismissing the picker is a choice, not an error: say nothing.
+  if (resolution.kind === 'cancelled') return 'cancelled';
+  if (resolution.kind === 'none') {
     await s.notifyNoAgent();
     return 'no-agent';
   }
+  const id = resolution.id;
   const adapter = s.adapters[id];
   s.remember(id);
   // A notification only resolves when the user reacts to it: it must never hold the command back.

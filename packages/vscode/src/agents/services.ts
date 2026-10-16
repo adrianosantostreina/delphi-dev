@@ -8,7 +8,7 @@ import { createCodexAdapter } from './codex';
 import { realDeps } from './deps';
 import { createOpencodeAdapter } from './opencode';
 import { installCommandFor, pluginPresent } from './presence';
-import { parseAgentSetting, resolveAgent } from './resolve';
+import { parseAgentSetting, resolveAgent, type Resolution } from './resolve';
 import type { AgentAdapter, AgentId } from './types';
 
 const LAST_AGENT_KEY = 'delphiDev.lastAgent';
@@ -20,7 +20,7 @@ export interface Services {
   installedAgents(): AgentId[];
   /** The validated delphiDev.agent setting; an invalid value reads as 'auto'. */
   agentSetting(): 'auto' | AgentId;
-  current(): Promise<AgentId | undefined>;
+  current(): Promise<Resolution>;
   chooseAgent(): Promise<AgentId | undefined>;
 }
 
@@ -49,8 +49,11 @@ export function createServices(context: vscode.ExtensionContext): Services {
   const setting = (): 'auto' | AgentId =>
     parseAgentSetting(vscode.workspace.getConfiguration('delphiDev').get<unknown>('agent', 'auto'));
 
-  const current = (): Promise<AgentId | undefined> =>
-    resolveAgent({ setting: setting(), installed: installedAgents(), last: lastAgent(), pick });
+  const current = (): Promise<Resolution> => {
+    const chosen = setting();
+    // An explicit setting wins: do not probe the machine for installed agents it does not need.
+    return resolveAgent({ setting: chosen, installed: chosen === 'auto' ? installedAgents() : [], last: lastAgent(), pick });
+  };
 
   async function chooseAgent(): Promise<AgentId | undefined> {
     const choice = await pick(ALL);

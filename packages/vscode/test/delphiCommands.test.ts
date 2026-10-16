@@ -29,11 +29,11 @@ function fakeServices(sent: string[], chosen?: AgentId): Services {
     adapters,
     installedAgents: () => ['claude'],
     agentSetting: () => 'auto',
-    current: async () => 'claude',
+    current: async () => ({ kind: 'agent', id: 'claude' }),
     chooseAgent: async () => chosen,
     run: {
       adapters,
-      resolve: async () => 'claude',
+      resolve: async () => ({ kind: 'agent', id: 'claude' }),
       fileRef: () => '@src/U.pas',
       pluginPresent: () => true,
       remember: () => undefined,
