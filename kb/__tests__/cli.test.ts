@@ -130,6 +130,38 @@ describe('kb-cli', () => {
     expect(bad.out.join('\n')).toContain('[command-registry]');
   });
 
+  it('fix-encoding adds the BOM to sources and reports what changed', async () => {
+    const dir = tmpDir();
+    const pas = path.join(dir, 'U.pas');
+    const dfm = path.join(dir, 'F.dfm');
+    fs.writeFileSync(pas, 'unit U;');
+    fs.writeFileSync(dfm, "object F: TForm\n  Caption = 'Serviço'\nend");
+    const run = io();
+    expect(await runCli(['fix-encoding', pas, dfm], run.value)).toBe(0);
+    expect(fs.readFileSync(pas)[0]).toBe(0xef);
+    expect(fs.readFileSync(dfm, 'latin1')).toContain("Caption = 'Servi'#231'o'");
+    expect(run.out).toEqual([`corrigido ${pas}`, `corrigido ${dfm}`, '2 arquivo(s) corrigido(s)']);
+
+    const again = io();
+    await runCli(['fix-encoding', pas], again.value);
+    expect(again.out[0]).toBe(`ok ${pas}`);
+  });
+
+  it('fix-encoding reports a missing file on stderr and keeps going', async () => {
+    const dir = tmpDir();
+    const pas = path.join(dir, 'U.pas');
+    fs.writeFileSync(pas, 'unit U;');
+    const run = io();
+    expect(await runCli(['fix-encoding', path.join(dir, 'nope.pas'), pas], run.value)).toBe(0);
+    expect(run.err).toEqual([`nao encontrado: ${path.join(dir, 'nope.pas')}`]);
+    expect(fs.readFileSync(pas)[0]).toBe(0xef);
+  });
+
+  it('fix-encoding without files is a usage error', async () => {
+    const run = io();
+    expect(await runCli(['fix-encoding'], run.value)).toBe(64);
+  });
+
   it('prints usage for an unknown command', async () => {
     const run = io();
     expect(await runCli(['bogus'], run.value)).toBe(64);

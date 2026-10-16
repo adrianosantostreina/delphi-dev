@@ -181,6 +181,12 @@ describe('payloads', () => {
     expect(pathsFromPayload(payload)).toEqual([path.join(cwd, 'B.pas')]);
   });
 
+  it('reads OpenCode filePath and a bare path', () => {
+    const cwd = tmpDir();
+    expect(pathsFromPayload({ tool_name: 'edit', cwd, tool_input: { filePath: 'A.pas' } })).toEqual([path.join(cwd, 'A.pas')]);
+    expect(pathsFromPayload({ cwd, tool_input: { path: 'B.dpr' } })).toEqual([path.join(cwd, 'B.dpr')]);
+  });
+
   it('ignores garbage payloads', () => {
     expect(pathsFromPayload(null)).toEqual([]);
     expect(pathsFromPayload({ tool_input: 42 })).toEqual([]);

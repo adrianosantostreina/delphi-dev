@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseArgs } from 'node:util';
-import { lintCommand } from './cli-install';
+import { fixEncodingCommand, lintCommand } from './cli-install';
 import { contribute, defaultDeps, SecretFoundError, type ContributeDeps } from './contribute';
 import { ensureIndex } from './index';
 import { communityFileName, extractLearning, slugify } from './issue';
@@ -42,6 +42,7 @@ const USAGE = [
   '  contribute <file>',
   '  sync [--apply] [--source <dir>] [--knowledge <dir>]',
   '  lint [--root <dir>]',
+  '  fix-encoding <arquivo...>',
 ].join('\n');
 
 function mdFiles(target: string): string[] {
@@ -179,6 +180,7 @@ export async function runCli(argv: string[], io: CliIO = defaultIO): Promise<num
       return 0;
     }
     case 'lint': return lintCommand(rest, io);
+    case 'fix-encoding': return fixEncodingCommand(rest, io);
     default: io.err(USAGE); return 64;
   }
 }

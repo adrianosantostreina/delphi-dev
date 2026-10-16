@@ -118,14 +118,19 @@ function collectPatches(value: unknown, acc: string[]): void {
   }
 }
 
-/** Claude Code sends tool_input.file_path; Codex sends an apply_patch body. */
+/** Claude Code sends tool_input.file_path; OpenCode sends filePath (or path); Codex sends an apply_patch body. */
 export function pathsFromPayload(payload: unknown): string[] {
   const p = payload as { tool_input?: unknown; cwd?: unknown } | null;
   if (!p || typeof p !== 'object') return [];
   const cwd = typeof p.cwd === 'string' ? p.cwd : process.cwd();
-  const input = p.tool_input as { file_path?: unknown } | undefined;
+  const input = p.tool_input as { file_path?: unknown; filePath?: unknown; path?: unknown } | undefined;
   const raw: string[] = [];
-  if (input && typeof input === 'object' && typeof input.file_path === 'string') raw.push(input.file_path);
+  if (input && typeof input === 'object') {
+    for (const key of ['file_path', 'filePath', 'path'] as const) {
+      const value = input[key];
+      if (typeof value === 'string') raw.push(value);
+    }
+  }
   const patches: string[] = [];
   collectPatches(input, patches);
   for (const patch of patches) raw.push(...extractPatchPaths(patch));
