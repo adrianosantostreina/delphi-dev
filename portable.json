@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "skills": {
+    "delphi-claudeignore": { "targets": ["claude"] }
+  },
+  "commands": [
+    { "id": "audit", "title": { "pt-BR": "Auditar projeto", "en-US": "Audit project" },
+      "description": { "pt-BR": "Laudo técnico completo com score e recomendações", "en-US": "Complete technical audit with score and recommendations" },
+      "takesFile": false, "icon": "checklist" },
+    { "id": "review", "title": { "pt-BR": "Revisar código", "en-US": "Review code" },
+      "description": { "pt-BR": "Revisão rápida de violações de padrão", "en-US": "Quick review of style violations" },
+      "takesFile": true, "icon": "eye" },
+    { "id": "write", "title": { "pt-BR": "Escrever código", "en-US": "Write code" },
+      "description": { "pt-BR": "Código novo com todos os padrões aplicados", "en-US": "New code with all standards applied" },
+      "takesFile": false, "icon": "edit" },
+    { "id": "spec", "title": { "pt-BR": "Gerar SPEC", "en-US": "Generate SPEC" },
+      "description": { "pt-BR": "Documento de especificação do projeto ou módulo", "en-US": "Software specification document for the project or module" },
+      "takesFile": false, "icon": "file-text" },
+    { "id": "tdd", "title": { "pt-BR": "Gerar testes (TDD)", "en-US": "Generate tests (TDD)" },
+      "description": { "pt-BR": "Suíte DUnitX do projeto ou da classe", "en-US": "DUnitX test suite for the project or class" },
+      "takesFile": true, "icon": "beaker" },
+    { "id": "new-project", "title": { "pt-BR": "Novo projeto", "en-US": "New project" },
+      "description": { "pt-BR": "Estrutura padronizada de projeto Delphi", "en-US": "Standardized Delphi project scaffold" },
+      "takesFile": false, "icon": "folder-opened" },
+    { "id": "e2e", "title": { "pt-BR": "Teste E2E", "en-US": "E2E test" },
+      "description": { "pt-BR": "Cenários ponta a ponta no app desktop em execução", "en-US": "End-to-end scenarios on the running desktop app" },
+      "takesFile": false, "icon": "play" },
+    { "id": "dashboard", "title": { "pt-BR": "Dashboard do repositório", "en-US": "Repository dashboard" },
+      "description": { "pt-BR": "Métricas do repositório no GitHub", "en-US": "GitHub repository metrics" },
+      "takesFile": false, "icon": "graph" },
+    { "id": "update", "title": { "pt-BR": "Atualizar base", "en-US": "Update knowledge base" },
+      "description": { "pt-BR": "Atualiza a base de conhecimento e verifica o plugin", "en-US": "Updates the knowledge base and checks the plugin" },
+      "takesFile": false, "icon": "sync" },
+    { "id": "contribute-kb", "title": { "pt-BR": "Contribuir com a base", "en-US": "Contribute knowledge" },
+      "description": { "pt-BR": "Compartilhar um aprendizado sobre Delphi", "en-US": "Share a Delphi learning" },
+      "takesFile": false, "icon": "cloud-upload" },
+    { "id": "about", "title": { "pt-BR": "Sobre o plugin", "en-US": "About the plugin" },
+      "description": { "pt-BR": "Versão, comandos e status da base", "en-US": "Version, commands and knowledge-base status" },
+      "takesFile": false, "icon": "info" }
+  ]
+}
