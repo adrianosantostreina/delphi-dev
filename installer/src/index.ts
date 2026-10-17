@@ -104,7 +104,11 @@ program
       step('[dry-run] would install the Claude Code plugin (git clone/pull + claude plugin marketplace add/install)');
       if (plan.ref) step(`[dry-run] would leave the plugin checkout on ${plan.ref}`);
       step('[dry-run] would remove legacy delphi-dev hooks from ~/.claude/settings.json');
-      if (isVSCodeAvailable()) step('[dry-run] would install the VS Code extension');
+      if (isVSCodeAvailable()) {
+        step(isPrerelease(packageVersion())
+          ? '[dry-run] would skip the Marketplace extension (the beta is a .vsix on the GitHub Release)'
+          : '[dry-run] would install the VS Code extension');
+      }
       success('Dry run - nothing was changed');
       return;
     }
