@@ -289,7 +289,8 @@ async function validateOpencode() {
     const saved = { ...process.env };
     Object.assign(process.env, { DELPHI_DEV_DATA: env.DELPHI_DEV_DATA, HOME: home, USERPROFILE: home });
     const mod = await import(`${pathToFileURL(pluginFile).href}?v=${Date.now()}`);
-    const hooks = await mod.default({ directory: proj });
+    // PluginModule shape: default export is an object whose server() returns the hooks
+    const hooks = await mod.default.server({ directory: proj });
     const names = Object.keys(hooks).sort();
     check(T, 'plugin imports and exposes chat.message, system.transform, tool.execute.after',
       JSON.stringify(names) === JSON.stringify(['chat.message', 'experimental.chat.system.transform', 'tool.execute.after']), names.join(', '));

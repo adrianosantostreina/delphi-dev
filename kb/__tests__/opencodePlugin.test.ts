@@ -13,6 +13,12 @@ describe('renderOpencodePlugin', () => {
     expect(js).toContain('gerenciado');
   });
 
+  it('default-exports a PluginModule object with server(), not a bare function', () => {
+    const js = renderOpencodePlugin('/opt/delphi-dev');
+    expect(js).toMatch(/export default { id: "delphi-dev", server };/);
+    expect(js).not.toMatch(/export default (async )?function/);
+  });
+
   it('spawns node from the trusted checkout, never from the project being edited', () => {
     const js = renderOpencodePlugin('/opt/delphi-dev');
     expect(js).toMatch(/spawnSync\("node", \[script\], \{[^}]*cwd: ROOT/s);
@@ -28,7 +34,7 @@ describe('renderOpencodePlugin', () => {
     const runner = path.join(work, 'runner.mjs');
     fs.writeFileSync(runner, `
       import plugin from ${JSON.stringify(pathToFileURL(plugin).href)};
-      const hooks = await plugin({ directory: ${JSON.stringify(work)} });
+      const hooks = await plugin.server({ directory: ${JSON.stringify(work)} });
       const out = { keys: Object.keys(hooks).sort() };
       await hooks['chat.message']({ sessionID: 's1' }, { parts: [{ type: 'text', text: 'erro E2356 property accessor class var' }] });
       const output = { system: [] };
@@ -57,7 +63,7 @@ describe('renderOpencodePlugin', () => {
     const runner = path.join(work, 'runner.mjs');
     fs.writeFileSync(runner, `
       import plugin from ${JSON.stringify(pathToFileURL(plugin).href)};
-      const hooks = await plugin({});
+      const hooks = await plugin.server({});
       await hooks['chat.message']({}, { parts: [{ type: 'text', text: 'E2356' }] });
       const output = { system: [] };
       await hooks['experimental.chat.system.transform']({}, output);
@@ -88,7 +94,7 @@ describe('renderOpencodePlugin', () => {
     fs.writeFileSync(runner, `
       import plugin from ${JSON.stringify(pathToFileURL(plugin).href)};
       for (const ctx of [undefined, null, {}, { directory: 5 }]) {
-        const hooks = await plugin(ctx);
+        const hooks = await plugin.server(ctx);
         for (const args of [[], [undefined, undefined], [null, null], [{}, { parts: 'x' }], [{}, { parts: [null, 1, { type: 'text' }] }]]) {
           await hooks['chat.message'](...args);
         }

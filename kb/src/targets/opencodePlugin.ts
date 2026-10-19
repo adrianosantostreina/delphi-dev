@@ -37,7 +37,7 @@ function safeCwd(ctx) {
   }
 }
 
-export default async function DelphiDev(ctx) {
+async function server(ctx) {
   const cwd = safeCwd(ctx);
   let lastPrompt = "";
   return {
@@ -68,5 +68,10 @@ export default async function DelphiDev(ctx) {
     },
   };
 }
+
+// Canonical OpenCode plugin module (PluginModule in @opencode-ai/plugin): an object whose server()
+// returns the hooks. Builds that enforce the shape reject anything else with
+// "must default export an object with server()"; 1.19.x and the V2 dev builds load this form.
+export default { id: "delphi-dev", server };
 `;
 }
