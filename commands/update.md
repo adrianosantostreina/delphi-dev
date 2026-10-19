@@ -23,7 +23,7 @@ Detecte o idioma do usuário (pt-BR padrão, en-US) e responda nele.
    agente em uso, oferecendo rodar o comando com confirmação:
    - **Claude Code:** `/plugin` → marketplace `delphi-dev` → atualizar.
    - **Codex:** atualizar o marketplace `delphi-dev` (`codex plugin marketplace …`).
-   - **OpenCode:** `npx delphi-dev update`.
+   - **OpenCode:** `npx delphi-dev update` (se o beta foi instalado: `npx delphi-dev@beta update`).
 
    E sempre:
    - **pt-BR:** "Depois de atualizar o plugin, reinicie a sessão para carregar as skills, comandos e hooks novos."

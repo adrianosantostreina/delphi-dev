@@ -7,7 +7,7 @@ Transform Claude Code into a **senior Delphi expert** with code review, technica
 ## Requirements
 
 - At least one supported agent (see [Supported agents](#supported-agents)); for Claude Code, the [Claude Code VS Code Extension](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)
-- The [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) plugin installed for that agent (`npx delphi-dev`)
+- The [delphi-dev](https://github.com/adrianosantostreina/delphi-dev) plugin installed for that agent (beta: `npx delphi-dev@beta --target claude|codex|opencode`)
 
 ## Features
 
@@ -88,7 +88,7 @@ The extension acts as a **graphical front-end** for the delphi-dev plugin. When 
 | Codex | Opens the Codex panel and copies `$delphi-cmd-<name>`; paste and press Enter |
 | OpenCode | Runs `opencode --port 4096` in a terminal and submits `/delphi-<name>` through its API |
 
-Install the plugin for your agent with `npx delphi-dev` (it detects Claude Code, Codex and OpenCode).
+Install the plugin for your agent with `npx delphi-dev@beta --target codex` (or `opencode`, or `all`); Claude Code installs with plain `npx delphi-dev@beta`. During the beta the plain `npx delphi-dev` is still the previous stable installer, which does not know `--target`.
 Choose the agent in the status bar or with the `delphiDev.agent` setting.
 
 **OpenCode caveat:** if an `opencode serve` / `opencode web` server is already running on the configured port

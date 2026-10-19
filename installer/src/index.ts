@@ -94,7 +94,7 @@ program
 
     // Codex/OpenCode are never touched without --target: if they are around, only say how to opt in.
     if (!opts.target) {
-      for (const cmd of portableHints(detectTargets(realProbe()))) {
+      for (const cmd of portableHints(detectTargets(realProbe()), packageVersion())) {
         console.log(chalk.dim(`Tip: Codex/OpenCode detected - to install delphi-dev there too, run: ${cmd}`));
       }
     }

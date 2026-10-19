@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { commandExists } from './detect';
-import { checkoutRef, cloneAtRef, returnToDefaultBranch } from './ref';
+import { checkoutRef, cloneAtRef, isPrerelease, returnToDefaultBranch } from './ref';
 
 export type Target = 'claude' | 'codex' | 'opencode';
 export const ALL_TARGETS: Target[] = ['claude', 'codex', 'opencode'];
@@ -43,9 +43,14 @@ export function resolveTargets(flag: string | undefined, _detected?: Record<Targ
   return ALL_TARGETS.filter((t) => picked.includes(t));
 }
 
-/** The exact commands to suggest when Codex/OpenCode are around but `--target` was not given. */
-export function portableHints(detected: Record<Target, boolean>): string[] {
-  return (['codex', 'opencode'] as Target[]).filter((t) => detected[t]).map((t) => `npx delphi-dev --target ${t}`);
+/**
+ * The exact commands to suggest when Codex/OpenCode are around but `--target` was not given.
+ * A pre-release must name its own version: a bare `npx delphi-dev` resolves to the stable package,
+ * which does not know `--target` (the stable line only gains it with 4.0.0).
+ */
+export function portableHints(detected: Record<Target, boolean>, version?: string): string[] {
+  const spec = version && isPrerelease(version) ? `delphi-dev@${version}` : 'delphi-dev';
+  return (['codex', 'opencode'] as Target[]).filter((t) => detected[t]).map((t) => `npx ${spec} --target ${t}`);
 }
 
 export function checkoutDir(home: string = os.homedir()): string {

@@ -219,6 +219,10 @@ Só depois de o beta ter sido testado e você aprovar. Tudo abaixo é **AÇÃO D
 7. **Tag e Release finais** na `master`: `git tag -a v4.0.0 -m "delphi-dev 4.0.0"` e
    `git push origin v4.0.0` (essa tag **não** dispara o workflow de beta, que só reage a tags com
    hífen), e crie o Release normal no GitHub.
+7b. **Extensão e textos que citam o canal beta:** em `packages/vscode/src/agents/presence.ts` troque
+   `INSTALLER_SPEC = 'delphi-dev@beta'` por `'delphi-dev'` (e ajuste `packages/vscode/test/presence.test.ts`).
+   Sem isso a extensão final continuaria mandando instalar o beta. Confira também com
+   `grep -rn "@beta" packages/vscode/src commands installer/src`.
 8. **npm:** `cd installer`, `Remove-Item -Recurse -Force dist`, `npm run build`, `npm publish`
    **sem** `--tag` (agora o `latest` passa a ser a 4.0.0). Confira com `npm view delphi-dev dist-tags`.
    Opcional: `npm dist-tag rm delphi-dev beta`.

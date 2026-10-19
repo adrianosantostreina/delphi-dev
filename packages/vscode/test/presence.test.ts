@@ -32,7 +32,7 @@ describe('pluginPresent', () => {
   });
 
   it('suggests the installer command', () => {
-    expect(installCommandFor('codex')).toBe('npx delphi-dev --target codex');
-    expect(installCommandFor('opencode')).toBe('npx delphi-dev --target opencode');
+    expect(installCommandFor('codex')).toBe('npx delphi-dev@beta --target codex');
+    expect(installCommandFor('opencode')).toBe('npx delphi-dev@beta --target opencode');
   });
 });

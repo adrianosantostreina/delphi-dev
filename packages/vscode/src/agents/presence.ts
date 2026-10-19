@@ -21,6 +21,11 @@ export function pluginPresent(
   return candidates.some(exists);
 }
 
+// BETA: the stable `delphi-dev` on npm (2.2.x) does not know `--target`, so a bare `npx delphi-dev --target ...`
+// fails with "unknown option". Until 4.0.0 is the `latest` package, name the beta channel.
+// When promoting to the final release, drop `@beta` here (see docs/release-beta.md).
+export const INSTALLER_SPEC = 'delphi-dev@beta';
+
 export function installCommandFor(agent: AgentId): string {
-  return `npx delphi-dev --target ${agent}`;
+  return `npx ${INSTALLER_SPEC} --target ${agent}`;
 }

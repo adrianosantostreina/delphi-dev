@@ -71,6 +71,13 @@ describe('portableHints', () => {
     expect(portableHints({ claude: false, codex: true, opencode: true }))
       .toEqual(['npx delphi-dev --target codex', 'npx delphi-dev --target opencode']);
   });
+
+  it('a pre-release names its own version, otherwise npx would fetch the stable package (which has no --target)', () => {
+    const both = { claude: true, codex: true, opencode: true };
+    expect(portableHints(both, '4.0.0-beta.1'))
+      .toEqual(['npx delphi-dev@4.0.0-beta.1 --target codex', 'npx delphi-dev@4.0.0-beta.1 --target opencode']);
+    expect(portableHints(both, '4.0.0')).toEqual(['npx delphi-dev --target codex', 'npx delphi-dev --target opencode']);
+  });
 });
 
 describe('ensureCheckout', () => {
