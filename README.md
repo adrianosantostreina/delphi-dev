@@ -4,7 +4,7 @@
 > 🇧🇷 [Leia em Português](README.pt-BR.md)
 
 > [!WARNING]
-> **BETA — `v4.0.0-beta.1` (pre-release, for testing).** This is a preview of the next major version,
+> **BETA — `v4.0.0-beta.2` (pre-release, for testing).** This is a preview of the next major version,
 > published so it can be tried on real projects before the final release. **Nothing below changes
 > the stable version**: `npx delphi-dev` still installs the stable one, and the beta is only
 > installed on purpose, with the commands in [Beta: install, go back, report](#beta-install-go-back-report).
@@ -26,10 +26,10 @@
 |---|---|
 | Claude Code, via `npx` | `npx delphi-dev@beta` |
 | Codex and/or OpenCode | `npx delphi-dev@beta --target codex` (or `opencode`, or `all` — `all` also installs Claude Code) |
-| Claude Code, via the plugin marketplace | `/plugin marketplace add adrianosantostreina/delphi-dev#v4.0.0-beta.1` and then `/plugin install delphi-dev@delphi-dev` |
-| VS Code extension | download `delphi-dev-vscode-v4.0.0-beta.1.vsix` from the [Releases page](https://github.com/adrianosantostreina/delphi-dev/releases) (the one marked *Pre-release*) and run `code --install-extension delphi-dev-vscode-v4.0.0-beta.1.vsix` |
+| Claude Code, via the plugin marketplace | `/plugin marketplace add adrianosantostreina/delphi-dev#v4.0.0-beta.2` and then `/plugin install delphi-dev@delphi-dev` |
+| VS Code extension | download `delphi-dev-vscode-v4.0.0-beta.2.vsix` from the [Releases page](https://github.com/adrianosantostreina/delphi-dev/releases) (the one marked *Pre-release*) and run `code --install-extension delphi-dev-vscode-v4.0.0-beta.2.vsix` |
 
-- `@beta` selects the beta on npm; plain `npx delphi-dev` is still the stable version. In the marketplace command, the `#v4.0.0-beta.1` part is what pins the beta.
+- `@beta` selects the beta on npm; plain `npx delphi-dev` is still the stable version. In the marketplace command, the `#v4.0.0-beta.2` part is what pins the beta.
 - If you already have delphi-dev in Claude Code, remove it first: `/plugin marketplace remove delphi-dev` (this also uninstalls the plugin). Claude Code refuses to add a second marketplace named `delphi-dev` from a different source.
 - `npx delphi-dev@beta update` keeps you on the beta; it never silently jumps back to the stable version.
 - The beta extension is **not** on the VS Code Marketplace, and the installer does not install it for you.

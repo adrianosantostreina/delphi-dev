@@ -13,10 +13,10 @@
       "source": {
         "source": "url",
         "url": "https://github.com/adrianosantostreina/delphi-dev.git",
-        "ref": "v4.0.0-beta.1"
+        "ref": "v4.0.0-beta.2"
       },
       "description": "Delphi development expert for Claude Code. Automatically applies Delphi Style Guide, Clean Code principles, and SOLID patterns. Includes technical audit, code review, standardized code writing, project scaffolding, build validation, and RAG-powered knowledge base.",
-      "version": "4.0.0-beta.1",
+      "version": "4.0.0-beta.2",
       "author": {
         "name": "Adriano Santos",
         "email": "adrianosantospro@gmail.com"
